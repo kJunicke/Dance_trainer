@@ -17,3 +17,7 @@
 	- values
 		- id
 		- name
+-
+- RLS:
+	- Read + Write for all users
+	- TODO change after auth is introduced

@@ -36,9 +36,10 @@ Build software to document dance training progress. This is a rebuild of an earl
 - Use Loqgseq markdown formating
 
 # Supabase
-- Github is connected to Supabase.
+- Github is connected to Supabase. Migrations will get pushed to Supabase automatically when they are pushed to main. Use this as the main way to apply migrations
+
 
 # Github
 - is connected to remote repo Dance_trainer
-
+- always commit everything that has changed even if you didn't make the changes. Look at the diff and include them in your commit message
 - 
