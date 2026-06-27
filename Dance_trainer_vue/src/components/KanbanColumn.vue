@@ -15,12 +15,14 @@ const emit = defineEmits<{
   delete: []
   'card-drag-start': [cardId: number]
   'card-dropped': []
+  'card-dropped-on-card': [targetCardId: number, position: 'before' | 'after']
 }>()
 
 const isEditing = ref(false)
 const editValue = ref('')
 const inputEl = ref<HTMLInputElement | null>(null)
 const dragOverCount = ref(0)
+const dropIndicator = ref<{ cardId: number; position: 'before' | 'after' } | null>(null)
 
 async function startEdit() {
   editValue.value = props.title
@@ -38,6 +40,30 @@ function confirmEdit() {
 function cancelEdit() {
   isEditing.value = false
 }
+
+function onCardDragOver(event: Event, cardId: number) {
+  const e = event as DragEvent
+  const el = e.currentTarget as HTMLElement
+  const rect = el.getBoundingClientRect()
+  dropIndicator.value = {
+    cardId,
+    position: e.clientY < rect.top + rect.height / 2 ? 'before' : 'after',
+  }
+}
+
+function onCardDrop(cardId: number) {
+  if (!dropIndicator.value) return
+  const position = dropIndicator.value.position
+  dropIndicator.value = null
+  dragOverCount.value = 0
+  emit('card-dropped-on-card', cardId, position)
+}
+
+function onColumnDrop() {
+  dropIndicator.value = null
+  dragOverCount.value = 0
+  emit('card-dropped')
+}
 </script>
 
 <template>
@@ -47,7 +73,7 @@ function cancelEdit() {
     @dragover.prevent
     @dragenter="dragOverCount++"
     @dragleave="dragOverCount--"
-    @drop.prevent="dragOverCount = 0; emit('card-dropped')"
+    @drop.prevent="onColumnDrop"
   >
     <div class="column-header">
       <input
@@ -63,16 +89,26 @@ function cancelEdit() {
       <button class="delete-btn" @click="emit('delete')">×</button>
     </div>
     <div class="card-list">
-      <TaskCard
-        v-for="card in cards"
-        :key="card.id"
-        :id="card.id"
-        :title="card.title"
-        :description="card.description"
-        @rename="emit('rename-card', card.id, $event)"
-        @delete="emit('delete-card', card.id)"
-        @drag-start="emit('card-drag-start', $event)"
-      />
+      <template v-for="card in cards" :key="card.id">
+        <div
+          v-if="dropIndicator?.cardId === card.id && dropIndicator.position === 'before'"
+          class="drop-line"
+        />
+        <TaskCard
+          :id="card.id"
+          :title="card.title"
+          :description="card.description"
+          @rename="emit('rename-card', card.id, $event)"
+          @delete="emit('delete-card', card.id)"
+          @drag-start="emit('card-drag-start', $event)"
+          @dragover.prevent="onCardDragOver($event, card.id)"
+          @drop.prevent.stop="onCardDrop(card.id)"
+        />
+        <div
+          v-if="dropIndicator?.cardId === card.id && dropIndicator.position === 'after'"
+          class="drop-line"
+        />
+      </template>
     </div>
     <button class="add-card-btn" @click="emit('add-card')">+ Add Card</button>
   </div>
@@ -159,6 +195,13 @@ function cancelEdit() {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.drop-line {
+  height: 3px;
+  border-radius: 2px;
+  background: #6aabdf;
+  margin: -4px 0;
 }
 
 .add-card-btn {

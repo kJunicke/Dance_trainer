@@ -92,6 +92,34 @@ function onColumnDrop(targetColumnId: number) {
   const [card] = sourceCol.cards.splice(cardIndex, 1)
   targetCol.cards.push(card)
 }
+
+function onCardDroppedOnCard(
+  targetColumnId: number,
+  targetCardId: number,
+  position: 'before' | 'after',
+) {
+  if (!dragState.value) return
+  const { cardId, sourceColumnId } = dragState.value
+  dragState.value = null
+
+  const sourceCol = columns.value.find((c) => c.id === sourceColumnId)
+  const targetCol = columns.value.find((c) => c.id === targetColumnId)
+  if (!sourceCol || !targetCol) return
+
+  const sourceIndex = sourceCol.cards.findIndex((c) => c.id === cardId)
+  if (sourceIndex === -1) return
+
+  const [card] = sourceCol.cards.splice(sourceIndex, 1)
+
+  const targetIndex = targetCol.cards.findIndex((c) => c.id === targetCardId)
+  if (targetIndex === -1) {
+    targetCol.cards.push(card)
+    return
+  }
+
+  const insertAt = position === 'before' ? targetIndex : targetIndex + 1
+  targetCol.cards.splice(insertAt, 0, card)
+}
 </script>
 
 <template>
@@ -108,6 +136,7 @@ function onColumnDrop(targetColumnId: number) {
       @delete="deleteColumn(column.id)"
       @card-drag-start="onCardDragStart(column.id, $event)"
       @card-dropped="onColumnDrop(column.id)"
+      @card-dropped-on-card="onCardDroppedOnCard(column.id, $event[0], $event[1])"
     />
     <button class="add-column-btn" @click="addColumn">+ Add Column</button>
   </div>

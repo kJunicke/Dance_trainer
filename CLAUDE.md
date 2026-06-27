@@ -37,3 +37,5 @@ Build software to document dance training progress. This is a rebuild of an earl
 # Supabase
 - Github is connected to Supabase.
 
+# Github
+- is connected to remote repo Dance_trainer
