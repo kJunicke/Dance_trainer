@@ -85,13 +85,12 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   async function renameColumn(columnId: number, name: string) {
-    const { error: err } = await supabase
-      .from('columns')
-      .update({ name })
-      .eq('id', columnId)
-    if (err) { error.value = err.message; return }
     const col = columns.value.find((c) => c.id === columnId)
-    if (col) col.name = name
+    if (!col) return
+    const oldName = col.name
+    col.name = name
+    const { error: err } = await supabase.from('columns').update({ name }).eq('id', columnId)
+    if (err) { error.value = err.message; col.name = oldName }
   }
 
   async function deleteColumn(columnId: number) {
@@ -114,10 +113,12 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   async function renameCard(cardId: number, name: string) {
-    const { error: err } = await supabase.from('cards').update({ name }).eq('id', cardId)
-    if (err) { error.value = err.message; return }
     const card = cards.value.find((c) => c.id === cardId)
-    if (card) card.name = name
+    if (!card) return
+    const oldName = card.name
+    card.name = name
+    const { error: err } = await supabase.from('cards').update({ name }).eq('id', cardId)
+    if (err) { error.value = err.message; card.name = oldName }
   }
 
   async function deleteCard(cardId: number) {

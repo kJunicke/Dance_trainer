@@ -50,12 +50,12 @@ function onCardDroppedOnCard(
       :cards="store.cardsByColumn(column.id)"
       @rename="store.renameColumn(column.id, $event)"
       @add-card="store.addCard(column.id)"
-      @rename-card="store.renameCard($event[0], $event[1])"
+      @rename-card="(id, name) => store.renameCard(id, name)"
       @delete-card="store.deleteCard($event)"
       @delete="store.deleteColumn(column.id)"
       @card-drag-start="onCardDragStart(column.id, $event)"
       @card-dropped="onColumnDrop(column.id)"
-      @card-dropped-on-card="onCardDroppedOnCard(column.id, $event[0], $event[1])"
+      @card-dropped-on-card="(cardId, pos) => onCardDroppedOnCard(column.id, cardId, pos)"
     />
     <button class="add-column-btn" @click="store.addColumn()">+ Add Column</button>
   </div>

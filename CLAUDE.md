@@ -31,12 +31,18 @@ Build software to document dance training progress. This is a rebuild of an earl
 - Supabase backend
 - Vue frontend
 
+# Vue Patterns
+- **Multi-argument events**: `$event` in inline template handlers is only the first argument. Use arrow functions for events that emit multiple args: `@rename-card="(id, name) => store.renameCard(id, name)"`
+- **Optimistic updates**: In store actions, update local state first, then persist to DB, and revert on error. Never wait for the DB round-trip before updating the UI.
+
 # Docs
 - All Documentations lives in the [Logseq](Dance_trainer_logseq) folder
 - Use Loqgseq markdown formating
 
 # Supabase
 - Github is connected to Supabase. Migrations will get pushed to Supabase automatically when they are pushed to main. Use this as the main way to apply migrations
+- **Every migration that creates tables must also GRANT access to `anon` and `authenticated` roles.** Tables created via raw SQL (not the Supabase UI) don't get auto-grants — the Data API will show "API Disabled" and return 401 until grants are added. See [Supabase.md](Dance_trainer_logseq/pages/Supabase.md) for the grant template.
+- Credentials live in `Dance_trainer_vue/.env.local` (gitignored). Variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`
 
 
 # Github
