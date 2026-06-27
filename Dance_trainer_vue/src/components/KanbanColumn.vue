@@ -1,0 +1,181 @@
+<script setup lang="ts">
+import { ref, nextTick } from 'vue'
+import TaskCard from './TaskCard.vue'
+
+const props = defineProps<{
+  title: string
+  cards: { id: number; title: string; description?: string }[]
+}>()
+
+const emit = defineEmits<{
+  rename: [newTitle: string]
+  'rename-card': [cardId: number, newTitle: string]
+  'delete-card': [cardId: number]
+  'add-card': []
+  delete: []
+  'card-drag-start': [cardId: number]
+  'card-dropped': []
+}>()
+
+const isEditing = ref(false)
+const editValue = ref('')
+const inputEl = ref<HTMLInputElement | null>(null)
+const dragOverCount = ref(0)
+
+async function startEdit() {
+  editValue.value = props.title
+  isEditing.value = true
+  await nextTick()
+  inputEl.value?.select()
+}
+
+function confirmEdit() {
+  const trimmed = editValue.value.trim()
+  if (trimmed && trimmed !== props.title) emit('rename', trimmed)
+  isEditing.value = false
+}
+
+function cancelEdit() {
+  isEditing.value = false
+}
+</script>
+
+<template>
+  <div
+    class="kanban-column"
+    :class="{ 'drag-over': dragOverCount > 0 }"
+    @dragover.prevent
+    @dragenter="dragOverCount++"
+    @dragleave="dragOverCount--"
+    @drop.prevent="dragOverCount = 0; emit('card-dropped')"
+  >
+    <div class="column-header">
+      <input
+        v-if="isEditing"
+        ref="inputEl"
+        v-model="editValue"
+        class="column-title-input"
+        @blur="confirmEdit"
+        @keydown.enter="confirmEdit"
+        @keydown.esc="cancelEdit"
+      />
+      <h2 v-else class="column-title" @click="startEdit">{{ title }}</h2>
+      <button class="delete-btn" @click="emit('delete')">×</button>
+    </div>
+    <div class="card-list">
+      <TaskCard
+        v-for="card in cards"
+        :key="card.id"
+        :id="card.id"
+        :title="card.title"
+        :description="card.description"
+        @rename="emit('rename-card', card.id, $event)"
+        @delete="emit('delete-card', card.id)"
+        @drag-start="emit('card-drag-start', $event)"
+      />
+    </div>
+    <button class="add-card-btn" @click="emit('add-card')">+ Add Card</button>
+  </div>
+</template>
+
+<style scoped>
+.kanban-column {
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 260px;
+  width: 260px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.kanban-column.drag-over {
+  background: #dce8f5;
+  outline: 2px dashed #6aabdf;
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.column-title {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #444;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.column-title:hover {
+  background: #e0e0e0;
+}
+
+.column-title-input {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #444;
+  border: 2px solid #888;
+  border-radius: 4px;
+  padding: 2px 4px;
+  background: #fff;
+  outline: none;
+}
+
+.delete-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #aaa;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.delete-btn:hover {
+  background: #e0e0e0;
+  color: #c00;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-card-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 6px;
+  border: 2px dashed #bbb;
+  border-radius: 6px;
+  background: transparent;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.add-card-btn:hover {
+  border-color: #999;
+  color: #555;
+}
+</style>
