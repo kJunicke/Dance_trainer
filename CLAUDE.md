@@ -33,9 +33,12 @@ Build software to document dance training progress. This is a rebuild of an earl
 
 # Docs
 - All Documentations lives in the [Logseq](Dance_trainer_logseq) folder
+- Use Loqgseq markdown formating
 
 # Supabase
 - Github is connected to Supabase.
 
 # Github
 - is connected to remote repo Dance_trainer
+
+- 

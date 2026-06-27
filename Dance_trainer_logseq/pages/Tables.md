@@ -1,0 +1,19 @@
+- Cards
+	- values
+		- id
+		- column_id
+		- name
+		- description
+		- position
+		-
+- Columns
+	- values
+		- id
+		- board_id
+		- name
+		- position
+-
+- Board
+	- values
+		- id
+		- name
