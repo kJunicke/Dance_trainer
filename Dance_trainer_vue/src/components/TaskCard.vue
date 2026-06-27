@@ -3,8 +3,8 @@ import { ref, nextTick } from 'vue'
 
 const props = defineProps<{
   id: number
-  title: string
-  description?: string
+  name: string
+  description?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -19,7 +19,7 @@ const inputEl = ref<HTMLInputElement | null>(null)
 const isDragging = ref(false)
 
 async function startEdit() {
-  editValue.value = props.title
+  editValue.value = props.name
   isEditing.value = true
   await nextTick()
   inputEl.value?.select()
@@ -27,7 +27,7 @@ async function startEdit() {
 
 function confirmEdit() {
   const trimmed = editValue.value.trim()
-  if (trimmed && trimmed !== props.title) emit('rename', trimmed)
+  if (trimmed && trimmed !== props.name) emit('rename', trimmed)
   isEditing.value = false
 }
 
@@ -54,7 +54,7 @@ function cancelEdit() {
         @keydown.enter="confirmEdit"
         @keydown.esc="cancelEdit"
       />
-      <p v-else class="task-title" @click="startEdit">{{ title }}</p>
+      <p v-else class="task-title" @click="startEdit">{{ name }}</p>
       <button class="delete-btn" @click="emit('delete')">×</button>
     </div>
     <p v-if="description" class="task-description">{{ description }}</p>

@@ -3,8 +3,8 @@ import { ref, nextTick } from 'vue'
 import TaskCard from './TaskCard.vue'
 
 const props = defineProps<{
-  title: string
-  cards: { id: number; title: string; description?: string }[]
+  name: string
+  cards: { id: number; name: string; description?: string | null }[]
 }>()
 
 const emit = defineEmits<{
@@ -25,7 +25,7 @@ const dragOverCount = ref(0)
 const dropIndicator = ref<{ cardId: number; position: 'before' | 'after' } | null>(null)
 
 async function startEdit() {
-  editValue.value = props.title
+  editValue.value = props.name
   isEditing.value = true
   await nextTick()
   inputEl.value?.select()
@@ -33,7 +33,7 @@ async function startEdit() {
 
 function confirmEdit() {
   const trimmed = editValue.value.trim()
-  if (trimmed && trimmed !== props.title) emit('rename', trimmed)
+  if (trimmed && trimmed !== props.name) emit('rename', trimmed)
   isEditing.value = false
 }
 
@@ -85,7 +85,7 @@ function onColumnDrop() {
         @keydown.enter="confirmEdit"
         @keydown.esc="cancelEdit"
       />
-      <h2 v-else class="column-title" @click="startEdit">{{ title }}</h2>
+      <h2 v-else class="column-title" @click="startEdit">{{ name }}</h2>
       <button class="delete-btn" @click="emit('delete')">×</button>
     </div>
     <div class="card-list">
@@ -96,7 +96,7 @@ function onColumnDrop() {
         />
         <TaskCard
           :id="card.id"
-          :title="card.title"
+          :name="card.name"
           :description="card.description"
           @rename="emit('rename-card', card.id, $event)"
           @delete="emit('delete-card', card.id)"

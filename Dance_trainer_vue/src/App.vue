@@ -1,74 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import KanbanColumn from './components/KanbanColumn.vue'
+import { useBoardStore } from './stores/boardStore'
 
-const columns = ref([
-  {
-    id: 1,
-    title: 'Backlog',
-    cards: [
-      { id: 1, title: 'Salsa basic step', description: 'On1 and On2 timing' },
-      { id: 2, title: 'Body isolation drill' },
-      { id: 3, title: 'Footwork combo A', description: 'From workshop June 2024' },
-    ],
-  },
-  {
-    id: 2,
-    title: 'Practising',
-    cards: [
-      { id: 4, title: 'Cross body lead', description: 'Focus on frame' },
-      { id: 5, title: 'Cuban motion', description: 'Integrate into basic step' },
-    ],
-  },
-  {
-    id: 3,
-    title: 'Polishing',
-    cards: [
-      { id: 6, title: 'Right turn', description: 'Spot turn consistency' },
-    ],
-  },
-  {
-    id: 4,
-    title: 'Done',
-    cards: [
-      { id: 7, title: 'Cumbia basic' },
-      { id: 8, title: 'Side step variations' },
-    ],
-  },
-])
-
-let nextColumnId = 5
-let nextCardId = 9
-
-function addColumn() {
-  columns.value.push({ id: nextColumnId++, title: 'New Column', cards: [] })
-}
-
-function renameColumn(id: number, newTitle: string) {
-  const col = columns.value.find((c) => c.id === id)
-  if (col) col.title = newTitle
-}
-
-function addCard(columnId: number) {
-  const col = columns.value.find((c) => c.id === columnId)
-  if (col) col.cards.push({ id: nextCardId++, title: 'New Card' })
-}
-
-function renameCard(columnId: number, cardId: number, newTitle: string) {
-  const col = columns.value.find((c) => c.id === columnId)
-  if (!col) return
-  const card = col.cards.find((c) => c.id === cardId)
-  if (card) card.title = newTitle
-}
-
-function deleteColumn(columnId: number) {
-  columns.value = columns.value.filter((c) => c.id !== columnId)
-}
-
-function deleteCard(columnId: number, cardId: number) {
-  const col = columns.value.find((c) => c.id === columnId)
-  if (col) col.cards = col.cards.filter((c) => c.id !== cardId)
-}
+const store = useBoardStore()
+onMounted(() => store.loadBoard())
 
 const dragState = ref<{ cardId: number; sourceColumnId: number } | null>(null)
 
@@ -78,19 +14,10 @@ function onCardDragStart(columnId: number, cardId: number) {
 
 function onColumnDrop(targetColumnId: number) {
   if (!dragState.value) return
-  const { cardId, sourceColumnId } = dragState.value
+  const { cardId } = dragState.value
   dragState.value = null
-  if (sourceColumnId === targetColumnId) return
-
-  const sourceCol = columns.value.find((c) => c.id === sourceColumnId)
-  const targetCol = columns.value.find((c) => c.id === targetColumnId)
-  if (!sourceCol || !targetCol) return
-
-  const cardIndex = sourceCol.cards.findIndex((c) => c.id === cardId)
-  if (cardIndex === -1) return
-
-  const [card] = sourceCol.cards.splice(cardIndex, 1)
-  targetCol.cards.push(card)
+  const position = store.cardsByColumn(targetColumnId).length
+  store.moveCard(cardId, targetColumnId, position)
 }
 
 function onCardDroppedOnCard(
@@ -99,46 +26,38 @@ function onCardDroppedOnCard(
   position: 'before' | 'after',
 ) {
   if (!dragState.value) return
-  const { cardId, sourceColumnId } = dragState.value
+  const { cardId } = dragState.value
   dragState.value = null
-
-  const sourceCol = columns.value.find((c) => c.id === sourceColumnId)
-  const targetCol = columns.value.find((c) => c.id === targetColumnId)
-  if (!sourceCol || !targetCol) return
-
-  const sourceIndex = sourceCol.cards.findIndex((c) => c.id === cardId)
-  if (sourceIndex === -1) return
-
-  const [card] = sourceCol.cards.splice(sourceIndex, 1)
-
-  const targetIndex = targetCol.cards.findIndex((c) => c.id === targetCardId)
+  const columnCards = store.cardsByColumn(targetColumnId)
+  const targetIndex = columnCards.findIndex((c) => c.id === targetCardId)
   if (targetIndex === -1) {
-    targetCol.cards.push(card)
+    store.moveCard(cardId, targetColumnId, columnCards.length)
     return
   }
-
   const insertAt = position === 'before' ? targetIndex : targetIndex + 1
-  targetCol.cards.splice(insertAt, 0, card)
+  store.moveCard(cardId, targetColumnId, insertAt)
 }
 </script>
 
 <template>
-  <div class="board">
+  <div v-if="store.loading" class="status">Loading…</div>
+  <div v-else-if="store.error" class="status error">{{ store.error }}</div>
+  <div v-else class="board">
     <KanbanColumn
-      v-for="column in columns"
+      v-for="column in store.columns"
       :key="column.id"
-      :title="column.title"
-      :cards="column.cards"
-      @rename="renameColumn(column.id, $event)"
-      @add-card="addCard(column.id)"
-      @rename-card="renameCard(column.id, $event[0], $event[1])"
-      @delete-card="deleteCard(column.id, $event)"
-      @delete="deleteColumn(column.id)"
+      :name="column.name"
+      :cards="store.cardsByColumn(column.id)"
+      @rename="store.renameColumn(column.id, $event)"
+      @add-card="store.addCard(column.id)"
+      @rename-card="store.renameCard($event[0], $event[1])"
+      @delete-card="store.deleteCard($event)"
+      @delete="store.deleteColumn(column.id)"
       @card-drag-start="onCardDragStart(column.id, $event)"
       @card-dropped="onColumnDrop(column.id)"
       @card-dropped-on-card="onCardDroppedOnCard(column.id, $event[0], $event[1])"
     />
-    <button class="add-column-btn" @click="addColumn">+ Add Column</button>
+    <button class="add-column-btn" @click="store.addColumn()">+ Add Column</button>
   </div>
 </template>
 
@@ -157,6 +76,16 @@ body {
 </style>
 
 <style scoped>
+.status {
+  padding: 24px;
+  font-size: 14px;
+  color: #666;
+}
+
+.status.error {
+  color: #c00;
+}
+
 .board {
   display: flex;
   gap: 16px;
