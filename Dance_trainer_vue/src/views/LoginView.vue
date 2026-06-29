@@ -14,11 +14,15 @@ const submitting = ref(false)
 const info = ref<string | null>(null)
 
 // Dev-only quick-login buttons. Sign these two accounts up once via the form.
+// The array is behind import.meta.env.DEV so the credentials are dead-code
+// eliminated from the production bundle (not just hidden by the v-if).
 const isDev = import.meta.env.DEV
-const testUsers = [
-  { label: 'Test User 1', email: 'test1@example.com', password: 'testpass123' },
-  { label: 'Test User 2', email: 'test2@example.com', password: 'testpass123' },
-]
+const testUsers = import.meta.env.DEV
+  ? [
+      { label: 'Test User 1', email: 'test1@example.com', password: 'testpass123' },
+      { label: 'Test User 2', email: 'test2@example.com', password: 'testpass123' },
+    ]
+  : []
 
 async function loginAs(user: { email: string; password: string }) {
   const ok = await auth.signIn(user.email, user.password)
