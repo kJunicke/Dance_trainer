@@ -42,5 +42,6 @@
 -
 -
 - RLS:
-	- Read + Write for all users
-	- TODO change after auth is introduced
+	- Locked to the authenticated user, scoped to `board_members` (you can only touch boards you're a member of)
+	- `boards.created_by` added to track the creator (and fix INSERT...RETURNING visibility)
+	- See [[Supabase]] for the policy/helper-function details
