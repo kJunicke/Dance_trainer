@@ -1,11 +1,11 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import BoardsView from '@/views/BoardsView.vue'
 import BoardView from '@/views/BoardView.vue'
 import LoginView from '@/views/LoginView.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'boards', component: BoardsView, meta: { requiresAuth: true } },
     { path: '/board/:id', name: 'board', component: BoardView, meta: { requiresAuth: true } },
