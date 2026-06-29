@@ -2,9 +2,6 @@
 	- Pushing to main applies new migrations automatically
 	- [[Tables]]
 - Credentials in `Dance_trainer_vue/.env.local` (gitignored, never commit)
-	- `VITE_SUPABASE_URL`
-	- `VITE_SUPABASE_PUBLISHABLE_KEY` (Supabase now uses publishable keys, not anon keys)
--
 - ## Migrations
 	- Every migration that creates tables must include explicit GRANTs
 	- Tables created via raw SQL do **not** get auto-grants — Supabase UI-created tables do
@@ -19,5 +16,5 @@
 - ## RLS
 	- All tables have RLS enabled
 	- Currently open policies (`using (true)`) — [[Tables]]
-	- TODO: lock down to `auth.uid()` when auth is introduced
+	- TODO lock down to `auth.uid()` when auth is introduced
 	- Note: RLS policies control which **rows** a role can access; GRANTs control whether the role can touch the **table** at all — both layers are required

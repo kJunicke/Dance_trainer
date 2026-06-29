@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
+import { useAuthStore } from './authStore'
 
 export interface Board {
   id: number
@@ -23,6 +24,7 @@ export interface Card {
 }
 
 export const useBoardStore = defineStore('board', () => {
+  const boards = ref<Board[]>([])
   const board = ref<Board | null>(null)
   const columns = ref<Column[]>([])
   const cards = ref<Card[]>([])
@@ -35,14 +37,53 @@ export const useBoardStore = defineStore('board', () => {
       .sort((a, b) => a.position - b.position),
   )
 
-  async function loadBoard() {
+  async function loadBoards() {
+    const auth = useAuthStore()
+    if (!auth.user) return
+    loading.value = true
+    error.value = null
+    const { data, error: err } = await supabase
+      .from('boards')
+      .select('id, name, board_members!inner(user_id)')
+      .eq('board_members.user_id', auth.user.id)
+      .order('id')
+    if (err) error.value = err.message
+    else boards.value = (data ?? []).map((b) => ({ id: b.id, name: b.name }))
+    loading.value = false
+  }
+
+  async function createBoard(name: string) {
+    const auth = useAuthStore()
+    if (!auth.user) return
+    const { data, error: boardErr } = await supabase
+      .from('boards')
+      .insert({ name })
+      .select()
+      .single()
+    if (boardErr) { error.value = boardErr.message; return }
+
+    const { error: memberErr } = await supabase
+      .from('board_members')
+      .insert({ board_id: data.id, user_id: auth.user.id })
+    if (memberErr) { error.value = memberErr.message; return }
+
+    boards.value.push(data)
+  }
+
+  async function deleteBoard(id: number) {
+    const { error: err } = await supabase.from('boards').delete().eq('id', id)
+    if (err) { error.value = err.message; return }
+    boards.value = boards.value.filter((b) => b.id !== id)
+  }
+
+  async function loadBoard(id: number) {
     loading.value = true
     error.value = null
     try {
       const { data: boardData, error: boardErr } = await supabase
         .from('boards')
         .select('*')
-        .limit(1)
+        .eq('id', id)
         .single()
       if (boardErr) throw boardErr
       board.value = boardData
@@ -160,8 +201,9 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   return {
-    board, columns, cards, loading, error,
+    boards, board, columns, cards, loading, error,
     cardsByColumn,
+    loadBoards, createBoard, deleteBoard,
     loadBoard,
     addColumn, renameColumn, deleteColumn,
     addCard, renameCard, deleteCard,
