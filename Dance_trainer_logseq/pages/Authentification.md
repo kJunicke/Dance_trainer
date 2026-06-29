@@ -1,0 +1,8 @@
+- auth table supabase
+	- Values:
+		- UDI
+		- Display name
+		- Email
+		- ... unimportant
+-
+-

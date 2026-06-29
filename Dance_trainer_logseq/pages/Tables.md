@@ -1,22 +1,45 @@
-- Cards
-	- values
-		- id
-		- column_id
-		- name
-		- description
-		- position
-		-
-- Columns
-	- values
-		- id
-		- board_id
-		- name
-		- position
+# Profiles
+	- auth table
+		- is not exposed to the Data API -> not dirrectly accessable
+		- Values:
+			- UDI
+			- Display name
+			- Email
+			- ... unimportant
+	-
+	- Profiles
+		- copies relevant info from auth table
+		- values
+			- id
+			- Display name
+			- Email
+- # Boards and Cards
+	- Cards
+		- values
+			- id
+			- column_id
+			- name
+			- description
+			- position
+			-
+	- Columns
+		- values
+			- id
+			- board_id
+			- name
+			- position
+	-
+	- Board
+		- values
+			- id
+			- name
 -
-- Board
-	- values
-		- id
-		- name
+- # Ownership
+	- board_members
+		- values
+			- user_id
+			- board_id
+-
 -
 - RLS:
 	- Read + Write for all users
