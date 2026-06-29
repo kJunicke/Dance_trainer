@@ -9,6 +9,7 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const newName = ref('')
+const joinCode = ref('')
 
 onMounted(() => store.loadBoards())
 
@@ -30,6 +31,14 @@ function deleteBoard(id: number, name: string) {
   if (!window.confirm(`Delete "${name}"? This also deletes all its columns and cards.`)) return
   store.deleteBoard(id)
 }
+
+async function joinBoard() {
+  const id = await store.joinBoard(joinCode.value.trim())
+  if (id) {
+    joinCode.value = ''
+    router.push({ name: 'board', params: { id } })
+  }
+}
 </script>
 
 <template>
@@ -44,6 +53,11 @@ function deleteBoard(id: number, name: string) {
     <form class="create" @submit.prevent="createBoard">
       <input v-model="newName" type="text" placeholder="New board name" />
       <button type="submit">Create</button>
+    </form>
+
+    <form class="create join" @submit.prevent="joinBoard">
+      <input v-model="joinCode" type="text" placeholder="Paste an invite code to join" />
+      <button type="submit">Join</button>
     </form>
 
     <p v-if="store.loading" class="status">Loading…</p>
@@ -122,6 +136,10 @@ h1 {
   color: #fff;
   font-size: 14px;
   cursor: pointer;
+}
+
+.join button {
+  background: #5a9e7a;
 }
 
 .status {

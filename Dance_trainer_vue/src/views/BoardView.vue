@@ -17,6 +17,14 @@ async function signOut() {
   router.push({ name: 'login' })
 }
 
+const copied = ref(false)
+async function copyCode() {
+  if (!store.board) return
+  await navigator.clipboard.writeText(store.board.invite_code)
+  copied.value = true
+  setTimeout(() => { copied.value = false }, 1500)
+}
+
 const dragState = ref<{ cardId: number; sourceColumnId: number } | null>(null)
 
 function onCardDragStart(columnId: number, cardId: number) {
@@ -53,6 +61,10 @@ function onCardDroppedOnCard(
 <template>
   <header class="topbar">
     <button class="back-btn" @click="router.push({ name: 'boards' })">← Boards</button>
+    <span v-if="store.board" class="invite">
+      Invite code: <code>{{ store.board.invite_code }}</code>
+      <button class="copy-btn" @click="copyCode">{{ copied ? 'Copied!' : 'Copy' }}</button>
+    </span>
     <span class="user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</span>
     <button class="signout-btn" @click="signOut">Sign out</button>
   </header>
@@ -98,6 +110,36 @@ function onCardDroppedOnCard(
 }
 
 .back-btn:hover {
+  background: #b3bdc8;
+}
+
+.invite {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+}
+
+.invite code {
+  font-family: monospace;
+  font-size: 12px;
+  background: #dde4ea;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.copy-btn {
+  padding: 4px 8px;
+  border: 1px solid #888;
+  border-radius: 6px;
+  background: transparent;
+  color: #333;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
   background: #b3bdc8;
 }
 

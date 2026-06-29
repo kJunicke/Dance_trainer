@@ -6,6 +6,7 @@ import { useAuthStore } from './authStore'
 export interface Board {
   id: number
   name: string
+  invite_code: string
 }
 
 export interface Column {
@@ -44,12 +45,20 @@ export const useBoardStore = defineStore('board', () => {
     error.value = null
     const { data, error: err } = await supabase
       .from('boards')
-      .select('id, name, board_members!inner(user_id)')
+      .select('id, name, invite_code, board_members!inner(user_id)')
       .eq('board_members.user_id', auth.user.id)
       .order('id')
     if (err) error.value = err.message
-    else boards.value = (data ?? []).map((b) => ({ id: b.id, name: b.name }))
+    else boards.value = (data ?? []).map((b) => ({ id: b.id, name: b.name, invite_code: b.invite_code }))
     loading.value = false
+  }
+
+  async function joinBoard(code: string) {
+    error.value = null
+    const { data, error: err } = await supabase.rpc('join_board', { _invite_code: code })
+    if (err) { error.value = err.message; return null }
+    await loadBoards()
+    return data as number
   }
 
   async function createBoard(name: string) {
@@ -203,7 +212,7 @@ export const useBoardStore = defineStore('board', () => {
   return {
     boards, board, columns, cards, loading, error,
     cardsByColumn,
-    loadBoards, createBoard, deleteBoard,
+    loadBoards, createBoard, deleteBoard, joinBoard,
     loadBoard,
     addColumn, renameColumn, deleteColumn,
     addCard, renameCard, deleteCard,

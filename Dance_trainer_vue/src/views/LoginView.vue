@@ -13,6 +13,18 @@ const displayName = ref('')
 const submitting = ref(false)
 const info = ref<string | null>(null)
 
+// Dev-only quick-login buttons. Sign these two accounts up once via the form.
+const isDev = import.meta.env.DEV
+const testUsers = [
+  { label: 'Test User 1', email: 'test1@example.com', password: 'testpass123' },
+  { label: 'Test User 2', email: 'test2@example.com', password: 'testpass123' },
+]
+
+async function loginAs(user: { email: string; password: string }) {
+  const ok = await auth.signIn(user.email, user.password)
+  if (ok) router.push({ name: 'boards' })
+}
+
 function toggleMode() {
   // Fields stay bound to the same refs, so typed values persist across the toggle.
   mode.value = mode.value === 'login' ? 'signup' : 'login'
@@ -77,6 +89,19 @@ async function onSubmit() {
       <button class="toggle" type="button" @click="toggleMode">
         {{ mode === 'login' ? 'Need an account? Sign up' : 'Have an account? Log in' }}
       </button>
+
+      <div v-if="isDev" class="dev">
+        <span class="dev-label">dev quick login</span>
+        <button
+          v-for="u in testUsers"
+          :key="u.email"
+          class="dev-btn"
+          type="button"
+          @click="loginAs(u)"
+        >
+          {{ u.label }}
+        </button>
+      </div>
     </form>
   </div>
 </template>
@@ -160,6 +185,35 @@ input:focus {
   border: none;
   background: transparent;
   color: #6b8cae;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dev {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed #ccc;
+}
+
+.dev-label {
+  width: 100%;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #999;
+}
+
+.dev-btn {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #b3a16b;
+  border-radius: 8px;
+  background: #f3eecf;
+  color: #6b5e2e;
   font-size: 13px;
   cursor: pointer;
 }
