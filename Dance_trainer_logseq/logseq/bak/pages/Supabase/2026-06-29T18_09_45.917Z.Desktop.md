@@ -1,0 +1,3 @@
+- github integration configured
+	- Pushing to main applies new migrations
+- [[Tables]]
