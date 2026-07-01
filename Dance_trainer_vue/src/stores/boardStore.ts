@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from './authStore'
+import { parseTrelloExport, buildTrelloExport } from '@/lib/trelloFormat'
 
 export interface Board {
   id: number
@@ -86,21 +87,27 @@ export const useBoardStore = defineStore('board', () => {
     return data as number
   }
 
-  async function createBoard(name: string) {
-    const auth = useAuthStore()
-    if (!auth.user) return
+  async function insertBoardWithMembership(name: string, userId: string) {
     const { data, error: boardErr } = await supabase
       .from('boards')
       .insert({ name })
       .select()
       .single()
-    if (boardErr) { error.value = boardErr.message; return }
+    if (boardErr) return { data: null, error: boardErr }
 
     const { error: memberErr } = await supabase
       .from('board_members')
-      .insert({ board_id: data.id, user_id: auth.user.id })
-    if (memberErr) { error.value = memberErr.message; return }
+      .insert({ board_id: data.id, user_id: userId })
+    if (memberErr) return { data: null, error: memberErr }
 
+    return { data, error: null }
+  }
+
+  async function createBoard(name: string) {
+    const auth = useAuthStore()
+    if (!auth.user) return
+    const { data, error: err } = await insertBoardWithMembership(name, auth.user.id)
+    if (err) { error.value = err.message; return }
     boards.value.push(data)
   }
 
@@ -108,6 +115,87 @@ export const useBoardStore = defineStore('board', () => {
     const { error: err } = await supabase.from('boards').delete().eq('id', id)
     if (err) { error.value = err.message; return }
     boards.value = boards.value.filter((b) => b.id !== id)
+  }
+
+  async function importTrelloBoard(file: File): Promise<number | null> {
+    const auth = useAuthStore()
+    if (!auth.user) return null
+    loading.value = true
+    error.value = null
+    try {
+      const parsed = parseTrelloExport(JSON.parse(await file.text()))
+
+      const { data: boardData, error: boardErr } = await insertBoardWithMembership(parsed.boardName, auth.user.id)
+      if (boardErr) throw boardErr
+
+      const columnIdByTrelloId = new Map<string, number>()
+      const labelIdByTrelloId = new Map<string, number>()
+
+      const [columnsResult, labelsResult] = await Promise.all([
+        parsed.columns.length > 0
+          ? supabase
+              .from('columns')
+              .insert(parsed.columns.map((c) => ({ board_id: boardData.id, name: c.name, position: c.position })))
+              .select()
+          : { data: [] as Column[], error: null },
+        parsed.labels.length > 0
+          ? supabase
+              .from('labels')
+              .insert(parsed.labels.map((l) => ({ board_id: boardData.id, name: l.name, color: l.color })))
+              .select()
+          : { data: [] as Label[], error: null },
+      ])
+      if (columnsResult.error) throw columnsResult.error
+      if (labelsResult.error) throw labelsResult.error
+      parsed.columns.forEach((c, i) => columnIdByTrelloId.set(c.trelloId, columnsResult.data![i].id))
+      parsed.labels.forEach((l, i) => labelIdByTrelloId.set(l.trelloId, labelsResult.data![i].id))
+
+      const cardIdByTrelloId = new Map<string, number>()
+      if (parsed.cards.length > 0) {
+        const { data: cardRows, error: cardErr } = await supabase
+          .from('cards')
+          .insert(parsed.cards.map((c) => ({
+            column_id: columnIdByTrelloId.get(c.trelloColumnId)!,
+            name: c.name,
+            description: c.description,
+            due_date: c.dueDate,
+            position: c.position,
+          })))
+          .select()
+        if (cardErr) throw cardErr
+        parsed.cards.forEach((c, i) => cardIdByTrelloId.set(c.trelloId, cardRows[i].id))
+      }
+
+      if (parsed.cardLabels.length > 0) {
+        const { error: clErr } = await supabase.from('card_labels').insert(
+          parsed.cardLabels.map((cl) => ({
+            card_id: cardIdByTrelloId.get(cl.trelloCardId)!,
+            label_id: labelIdByTrelloId.get(cl.trelloLabelId)!,
+          })),
+        )
+        if (clErr) throw clErr
+      }
+
+      boards.value.push({ id: boardData.id, name: boardData.name, invite_code: boardData.invite_code })
+      return boardData.id as number
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : 'Failed to import board'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function exportBoard() {
+    if (!board.value) return
+    const data = buildTrelloExport(board.value, columns.value, cards.value, labels.value, cardLabels.value)
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${board.value.name}.json`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   async function loadBoard(id: number) {
@@ -205,31 +293,29 @@ export const useBoardStore = defineStore('board', () => {
     cards.value.push(data)
   }
 
-  async function renameCard(cardId: number, name: string) {
+  async function updateCardField<K extends 'name' | 'description' | 'due_date'>(
+    cardId: number,
+    field: K,
+    value: Card[K],
+  ) {
     const card = cards.value.find((c) => c.id === cardId)
     if (!card) return
-    const oldName = card.name
-    card.name = name
-    const { error: err } = await supabase.from('cards').update({ name }).eq('id', cardId)
-    if (err) { error.value = err.message; card.name = oldName }
+    const old = card[field]
+    card[field] = value
+    const { error: err } = await supabase.from('cards').update({ [field]: value }).eq('id', cardId)
+    if (err) { error.value = err.message; card[field] = old }
   }
 
-  async function updateCardDescription(cardId: number, description: string) {
-    const card = cards.value.find((c) => c.id === cardId)
-    if (!card) return
-    const old = card.description
-    card.description = description
-    const { error: err } = await supabase.from('cards').update({ description }).eq('id', cardId)
-    if (err) { error.value = err.message; card.description = old }
+  function renameCard(cardId: number, name: string) {
+    return updateCardField(cardId, 'name', name)
   }
 
-  async function updateCardDueDate(cardId: number, dueDate: string | null) {
-    const card = cards.value.find((c) => c.id === cardId)
-    if (!card) return
-    const old = card.due_date
-    card.due_date = dueDate
-    const { error: err } = await supabase.from('cards').update({ due_date: dueDate }).eq('id', cardId)
-    if (err) { error.value = err.message; card.due_date = old }
+  function updateCardDescription(cardId: number, description: string) {
+    return updateCardField(cardId, 'description', description)
+  }
+
+  function updateCardDueDate(cardId: number, dueDate: string | null) {
+    return updateCardField(cardId, 'due_date', dueDate)
   }
 
   async function createLabel(boardId: number, name: string, color: string) {
@@ -326,6 +412,7 @@ export const useBoardStore = defineStore('board', () => {
     boards, board, columns, cards, labels, cardLabels, loading, error,
     cardsByColumn, labelsForCard,
     loadBoards, createBoard, deleteBoard, joinBoard,
+    importTrelloBoard, exportBoard,
     loadBoard,
     addColumn, renameColumn, deleteColumn,
     addCard, renameCard, deleteCard,

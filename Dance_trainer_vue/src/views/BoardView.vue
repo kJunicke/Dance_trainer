@@ -67,6 +67,7 @@ const openCardId = ref<number | null>(null)
     <span v-if="store.board" class="invite">
       Invite code: <code>{{ store.board.invite_code }}</code>
       <button class="copy-btn" @click="copyCode">{{ copied ? 'Copied!' : 'Copy' }}</button>
+      <button class="copy-btn" @click="store.exportBoard()">Export</button>
     </span>
     <span class="user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</span>
     <button class="signout-btn" @click="signOut">Sign out</button>
@@ -102,21 +103,22 @@ const openCardId = ref<number | null>(null)
   align-items: center;
   gap: 12px;
   padding: 12px 24px;
-  background: var(--color-aubergine);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .back-btn {
   padding: 6px 12px;
-  border: 1px solid var(--color-brass);
+  border: 1px solid var(--color-ember);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink);
   font-size: 13px;
   cursor: pointer;
 }
 
 .back-btn:hover {
-  background: var(--color-aubergine-light);
+  background: var(--color-surface-light);
 }
 
 .invite {
@@ -124,60 +126,61 @@ const openCardId = ref<number | null>(null)
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink-dim);
 }
 
 .invite code {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--color-ink);
-  background: var(--color-brass-light);
+  color: var(--color-ember-light);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .copy-btn {
   padding: 4px 8px;
-  border: 1px solid var(--color-brass);
+  border: 1px solid var(--color-ember);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink);
   font-size: 12px;
   cursor: pointer;
 }
 
 .copy-btn:hover {
-  background: var(--color-aubergine-light);
+  background: var(--color-surface-light);
 }
 
 .user {
   margin-left: auto;
   font-size: 14px;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink-dim);
 }
 
 .signout-btn {
   padding: 6px 12px;
-  border: 1px solid var(--color-brass);
+  border: 1px solid var(--color-ember);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink);
   font-size: 13px;
   cursor: pointer;
 }
 
 .signout-btn:hover {
-  background: var(--color-aubergine-light);
+  background: var(--color-surface-light);
 }
 
 .status {
   padding: 24px;
   font-size: 14px;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink-dim);
 }
 
 .status.error {
-  color: var(--color-rose-light);
+  color: var(--color-overdue);
 }
 
 .board {
@@ -186,7 +189,7 @@ const openCardId = ref<number | null>(null)
   padding: 24px;
   overflow-x: auto;
   align-items: flex-start;
-  background: var(--color-aubergine);
+  background: var(--color-bg);
   min-height: calc(100vh - 49px);
 }
 
@@ -194,17 +197,18 @@ const openCardId = ref<number | null>(null)
   flex-shrink: 0;
   align-self: flex-start;
   padding: 10px 16px;
-  border: 2px dashed var(--color-brass);
+  border: 2px dashed var(--color-ember);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink-dim);
   font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .add-column-btn:hover {
-  border-color: var(--color-brass-light);
-  background: var(--color-aubergine-light);
+  border-color: var(--color-ember-light);
+  color: var(--color-ink);
+  background: var(--color-surface);
 }
 </style>

@@ -41,7 +41,7 @@
 			- id
 			- board_id
 			- name
-			- color (`check` constraint — must be one of the fixed palette in `Dance_trainer_vue/src/lib/labelColors.ts`: green, yellow, red, purple, blue, sky)
+			- color (`check` constraint — must be one of the fixed palette in `Dance_trainer_vue/src/lib/labelColors.ts`: rose, brass, sage, denim, plum, ochre — renamed from the original green/yellow/red/purple/blue/sky when the aubergine/brass design system landed, migration `20260702000000_fix_label_colors`)
 	- Card Labels
 		- join table, cards <-> labels (many-to-many)
 		- values
@@ -60,3 +60,9 @@
 	- Locked to the authenticated user, scoped to `board_members` (you can only touch boards you're a member of)
 	- `boards.created_by` added to track the creator (and fix INSERT...RETURNING visibility)
 	- See [[Supabase]] for the policy/helper-function details
+
+- # Trello import/export
+	- `src/lib/trelloFormat.ts` maps between a Trello JSON board export and this schema; `boardStore.importTrelloBoard()` / `exportBoard()` drive it
+	- Import creates a brand-new board (+ membership row) from the file, mapping Trello lists -> columns, cards, labels, and card-label links; closed/archived lists and cards are skipped
+	- Trello has more label colors than the app's fixed palette, so `mapColor()` maps each Trello color to the nearest app color (unmapped/unknown colors fall back to brass); already-mapped color names pass through unchanged so round-tripping an app-exported file is lossless
+	- Export produces a Trello-shaped JSON file (lists/cards/labels) so a board can be downloaded and re-imported, or opened in Trello

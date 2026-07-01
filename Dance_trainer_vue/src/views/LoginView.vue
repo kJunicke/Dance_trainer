@@ -126,17 +126,17 @@ async function onSubmit() {
   width: 100%;
   max-width: 360px;
   padding: 24px;
-  background: var(--color-parquet);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-modal);
 }
 
 h1 {
   font-family: var(--font-display);
-  font-style: italic;
-  font-variation-settings: 'WONK' 1;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 26px;
+  letter-spacing: -0.01em;
   color: var(--color-ink);
 }
 
@@ -145,21 +145,21 @@ label {
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
-  color: var(--color-ink);
+  color: var(--color-ink-dim);
 }
 
 input {
   padding: 10px 12px;
-  border: 1px solid var(--color-brass-light);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-parquet-light);
+  background: var(--color-bg);
   color: var(--color-ink);
   font-size: 16px;
 }
 
 input:focus {
   outline: none;
-  border-color: var(--color-brass);
+  border-color: var(--color-ember);
 }
 
 .msg {
@@ -168,26 +168,26 @@ input:focus {
 }
 
 .msg.error {
-  color: var(--color-rose);
+  color: var(--color-overdue);
 }
 
 .msg.info {
-  color: var(--color-sage);
+  color: var(--color-good);
 }
 
 .submit {
   padding: 12px;
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--color-brass);
-  color: var(--color-text-on-brass);
+  background: var(--color-ember);
+  color: var(--color-text-on-ember);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .submit:hover:not(:disabled) {
-  background: var(--color-brass-light);
+  background: var(--color-ember-light);
 }
 
 .submit:disabled {
@@ -199,7 +199,7 @@ input:focus {
   padding: 4px;
   border: none;
   background: transparent;
-  color: var(--color-aubergine);
+  color: var(--color-ink-dim);
   font-size: 13px;
   text-decoration: underline;
   cursor: pointer;
@@ -212,7 +212,7 @@ input:focus {
   gap: 8px;
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px dashed var(--color-brass-light);
+  border-top: 1px dashed var(--color-border);
 }
 
 .dev-label {
@@ -221,17 +221,16 @@ input:focus {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-ink);
-  opacity: 0.6;
+  color: var(--color-ink-dim);
 }
 
 .dev-btn {
   flex: 1;
   padding: 8px;
-  border: 1px solid var(--color-sage);
+  border: 1px solid var(--color-good);
   border-radius: var(--radius-sm);
-  background: var(--color-parquet-light);
-  color: var(--color-sage);
+  background: transparent;
+  color: var(--color-good);
   font-size: 13px;
   cursor: pointer;
 }

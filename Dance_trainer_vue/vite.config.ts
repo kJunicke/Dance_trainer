@@ -30,8 +30,8 @@ export default defineConfig(({ command }) => {
           start_url: `${base}#/`,
           scope: base,
           display: 'standalone',
-          background_color: '#3b1f33',
-          theme_color: '#3b1f33',
+          background_color: '#151311',
+          theme_color: '#151311',
           icons: [
             { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
             { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },

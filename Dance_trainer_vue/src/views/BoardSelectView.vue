@@ -10,6 +10,8 @@ const router = useRouter()
 
 const newName = ref('')
 const joinCode = ref('')
+const importing = ref(false)
+const importInput = ref<HTMLInputElement | null>(null)
 
 onMounted(() => store.loadBoards())
 
@@ -39,6 +41,16 @@ async function joinBoard() {
     router.push({ name: 'board', params: { id } })
   }
 }
+
+async function onImportFile(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  importing.value = true
+  const id = await store.importTrelloBoard(file)
+  importing.value = false
+  if (importInput.value) importInput.value.value = ''
+  if (id) router.push({ name: 'board', params: { id } })
+}
 </script>
 
 <template>
@@ -60,6 +72,19 @@ async function joinBoard() {
       <button type="submit">Join</button>
     </form>
 
+    <div class="create">
+      <button type="button" :disabled="importing" @click="importInput?.click()">
+        {{ importing ? 'Importing…' : 'Import from Trello JSON' }}
+      </button>
+      <input
+        ref="importInput"
+        type="file"
+        accept="application/json"
+        class="file-input"
+        @change="onImportFile"
+      />
+    </div>
+
     <p v-if="store.loading" class="status">Loading…</p>
     <p v-else-if="store.error" class="status error">{{ store.error }}</p>
     <p v-else-if="store.boards.length === 0" class="status">No boards yet — create one above.</p>
@@ -80,26 +105,27 @@ async function joinBoard() {
   justify-content: flex-end;
   gap: 12px;
   padding: 12px 24px;
-  background: var(--color-aubergine);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .user {
   font-size: 14px;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink-dim);
 }
 
 .signout-btn {
   padding: 6px 12px;
-  border: 1px solid var(--color-brass);
+  border: 1px solid var(--color-ember);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink);
   font-size: 13px;
   cursor: pointer;
 }
 
 .signout-btn:hover {
-  background: var(--color-aubergine-light);
+  background: var(--color-surface-light);
 }
 
 .boards {
@@ -110,11 +136,10 @@ async function joinBoard() {
 
 h1 {
   font-family: var(--font-display);
-  font-style: italic;
-  font-variation-settings: 'WONK' 1;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 26px;
-  color: var(--color-text-on-aubergine);
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
   margin-bottom: 16px;
 }
 
@@ -127,9 +152,9 @@ h1 {
 .create input {
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid var(--color-brass-light);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-parquet-light);
+  background: var(--color-surface);
   color: var(--color-ink);
   font-size: 15px;
 }
@@ -138,33 +163,41 @@ h1 {
   padding: 10px 16px;
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--color-brass);
-  color: var(--color-text-on-brass);
+  background: var(--color-ember);
+  color: var(--color-text-on-ember);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .create button:hover {
-  background: var(--color-brass-light);
+  background: var(--color-ember-light);
 }
 
 .join button {
-  background: var(--color-sage);
-  color: var(--color-text-on-aubergine);
+  background: var(--color-good);
+  color: var(--color-text-on-ember);
 }
 
 .join button:hover {
-  background: #7fa07c;
+  background: var(--color-good-light);
+}
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
 }
 
 .status {
   font-size: 14px;
-  color: var(--color-text-on-aubergine);
+  color: var(--color-ink-dim);
 }
 
 .status.error {
-  color: var(--color-rose-light);
+  color: var(--color-overdue);
 }
 
 .list {
@@ -178,7 +211,8 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--color-parquet);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -195,21 +229,21 @@ h1 {
 }
 
 .name:hover {
-  background: var(--color-parquet-light);
+  background: var(--color-surface-light);
 }
 
 .delete {
   margin-right: 8px;
   padding: 8px 12px;
-  border: 1px solid var(--color-rose);
+  border: 1px solid var(--color-overdue);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-rose);
+  color: var(--color-overdue);
   font-size: 13px;
   cursor: pointer;
 }
 
 .delete:hover {
-  background: #f7e6e8;
+  background: color-mix(in srgb, var(--color-overdue) 12%, transparent);
 }
 </style>

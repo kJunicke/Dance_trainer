@@ -15,7 +15,7 @@ import { RouterView } from 'vue-router'
 
 body {
   font-family: var(--font-body);
-  background: var(--color-aubergine);
+  background: var(--color-bg);
   color: var(--color-ink);
   min-height: 100vh;
 }
@@ -28,7 +28,7 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-brass);
+  outline: 2px solid var(--color-ember);
   outline-offset: 2px;
 }
 </style>

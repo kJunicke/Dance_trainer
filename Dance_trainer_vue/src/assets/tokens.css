@@ -1,26 +1,27 @@
 :root {
-  --color-ink: #211a22;
-  --color-aubergine: #3b1f33;
-  --color-aubergine-light: #4f2a45;
-  --color-parquet: #ede1cb;
-  --color-parquet-light: #f5ecd9;
-  --color-brass: #c68b3d;
-  --color-brass-light: #d9ab6a;
-  --color-rose: #c1495a;
-  --color-rose-light: #d97684;
-  --color-sage: #6e8b6b;
+  --color-bg: #151311;
+  --color-surface: #1e1a17;
+  --color-surface-light: #292420;
+  --color-border: #3a332c;
+  --color-ink: #f4efe9;
+  --color-ink-dim: #b5aea5;
 
-  --color-text-on-parquet: var(--color-ink);
-  --color-text-on-aubergine: #f5ecd9;
-  --color-text-on-brass: var(--color-ink);
+  --color-ember: #f2760c;
+  --color-ember-light: #ff9640;
+  --color-good: #4fa876;
+  --color-good-light: #64c08e;
+  --color-due: #e0b23d;
+  --color-overdue: #d14b4b;
 
-  --font-display: 'Fraunces', serif;
+  --color-text-on-ember: #1a1108;
+
+  --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Work Sans', sans-serif;
   --font-mono: 'Space Mono', monospace;
 
-  --radius-sm: 6px;
-  --radius-lg: 10px;
+  --radius-sm: 4px;
+  --radius-lg: 8px;
 
-  --shadow-card: 0 1px 3px rgba(59, 31, 51, 0.2);
-  --shadow-modal: 0 8px 28px rgba(33, 26, 34, 0.35);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 8px 28px rgba(0, 0, 0, 0.6);
 }

@@ -117,7 +117,7 @@ function onKeydown(event: KeyboardEvent) {
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(33, 26, 34, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -128,7 +128,8 @@ function onKeydown(event: KeyboardEvent) {
 
 .modal {
   position: relative;
-  background: var(--color-parquet);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-modal);
   padding: 24px;
@@ -157,10 +158,9 @@ function onKeydown(event: KeyboardEvent) {
 .title {
   margin: 0 32px 20px 0;
   font-family: var(--font-display);
-  font-style: italic;
-  font-variation-settings: 'WONK' 1;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 22px;
+  letter-spacing: -0.01em;
   color: var(--color-ink);
 }
 
@@ -175,17 +175,18 @@ function onKeydown(event: KeyboardEvent) {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-aubergine);
+  color: var(--color-ember-light);
   margin-bottom: 6px;
 }
 
 input[type='date'] {
   padding: 8px 10px;
-  border: 1px solid var(--color-brass-light);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-parquet-light);
+  background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-mono);
+  color-scheme: dark;
 }
 
 .label-list {
@@ -218,15 +219,17 @@ input[type='date'] {
 .new-label input {
   flex: 1;
   padding: 8px 10px;
-  border: 1px solid var(--color-brass-light);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-parquet-light);
+  background: var(--color-bg);
+  color: var(--color-ink);
 }
 
 .new-label select {
-  border: 1px solid var(--color-brass-light);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-parquet-light);
+  background: var(--color-bg);
+  color: var(--color-ink);
   padding: 8px;
 }
 
@@ -234,8 +237,8 @@ input[type='date'] {
   padding: 8px 14px;
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--color-brass);
-  color: var(--color-text-on-brass);
+  background: var(--color-ember);
+  color: var(--color-text-on-ember);
   font-weight: 600;
   cursor: pointer;
 }
@@ -246,9 +249,9 @@ textarea {
   padding: 8px;
   box-sizing: border-box;
   resize: vertical;
-  border: 1px solid var(--color-brass-light);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-parquet-light);
+  background: var(--color-bg);
   color: var(--color-ink);
 }
 
@@ -260,10 +263,10 @@ textarea {
 
 .desc-actions button {
   padding: 6px 14px;
-  border: 1px solid var(--color-brass);
+  border: 1px solid var(--color-ember);
   border-radius: var(--radius-sm);
-  background: var(--color-brass);
-  color: var(--color-text-on-brass);
+  background: var(--color-ember);
+  color: var(--color-text-on-ember);
   font-weight: 600;
   cursor: pointer;
 }
@@ -281,12 +284,11 @@ textarea {
 }
 
 .desc-preview:hover {
-  background: var(--color-parquet-light);
+  background: var(--color-surface-light);
 }
 
 .desc-preview :deep(.placeholder) {
-  color: var(--color-ink);
-  opacity: 0.5;
+  color: var(--color-ink-dim);
   margin: 0;
 }
 

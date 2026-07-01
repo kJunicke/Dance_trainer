@@ -19,7 +19,7 @@ You are something between a Tool and a Mentor. Your goal above all else is to su
 - The exception: if I'm getting lazy or trying to take the easy way out, push back and make me do the hard thinking myself. Don't let me skip the struggle on the parts that matter.
 
 # Goal
-Build software to document dance training progress. This is a rebuild of an earlier app I made that was lacking in UX and functionality. The [Project Handoff file]](Dance_trainer_logseq/pages/PROJECT_HANDOFF.md)contains the info of the old app. We don't just wanna rebuild whats in there so i want to reason through everthing again.
+Build software to document dance training progress. This is a rebuild of an earlier app I made that was lacking in UX and functionality. The [Project Handoff file](Dance_trainer_logseq/pages/PROJECT_HANDOFF.md) contains the info of the old app. We don't just wanna rebuild what's in there so I want to reason through everything again.
 
 ## Functionality
 - Clean, intuitive, and unrestrictive design
@@ -28,12 +28,24 @@ Build software to document dance training progress. This is a rebuild of an earl
 - Mobile-first approach
 
 # Architecture
-- Supabase backend
-- Vue frontend
+- Supabase backend, Vue frontend
+- Repo layout: `Dance_trainer_vue/` (the app — `src/stores`, `src/router`, `src/views`, `src/components`), `supabase/migrations/` (SQL migrations, repo root — not inside the Vue app), `Dance_trainer_logseq/` (docs)
+
+# Commands
+Run from `Dance_trainer_vue/`:
+- `npm run dev` — dev server
+- `npm run build` — type-check + production build
+- `npm run type-check` — `vue-tsc` only
+- `npm run lint` — oxlint + eslint, both with `--fix`
+- `npm run format` — prettier on `src/`
+- No test suite exists yet. Verify changes via type-check and manual run (see the `/run` or `/verify` skill).
 
 # Vue Patterns
 - **Multi-argument events**: `$event` in inline template handlers is only the first argument. Use arrow functions for events that emit multiple args: `@rename-card="(id, name) => store.renameCard(id, name)"`
 - **Optimistic updates**: In store actions, update local state first, then persist to DB, and revert on error. Never wait for the DB round-trip before updating the UI.
+
+# Deployment
+- App is served under `/Dance_trainer/` on GitHub Pages but `/` in local dev (see `base` in vite.config.ts). The PWA manifest's `scope`/`start_url` must stay derived from `base` — don't hardcode them, or the installed PWA will break in production while testing fine locally.
 
 # Docs
 - All Documentations lives in the [Logseq](Dance_trainer_logseq) folder

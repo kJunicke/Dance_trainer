@@ -68,6 +68,9 @@ function cancelEdit() {
     @dragend="onDragEnd"
     @click="onCardClick"
   >
+    <span class="meter" aria-hidden="true">
+      <i></i><i></i><i></i><i></i>
+    </span>
     <div v-if="labels?.length" class="label-row">
       <span
         v-for="label in labels"
@@ -98,35 +101,45 @@ function cancelEdit() {
 <style scoped>
 .task-card {
   position: relative;
-  background: var(--color-parquet-light);
+  background: var(--color-surface-light);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: 10px 12px 10px 20px;
+  padding: 10px 12px;
   box-shadow: var(--shadow-card);
   cursor: grab;
 }
 
-/* Signature: a punched notch + ribbon thread, echoing a ballroom dance card. */
-.task-card::before {
-  content: '';
+/* Signature: a level meter, reading as musicality + practice progress. */
+.meter {
   position: absolute;
   top: 10px;
-  left: 8px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--color-aubergine);
-  box-shadow: 0 1px 0 0 var(--color-aubergine);
+  right: 10px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
 }
 
-.task-card::after {
-  content: '';
-  position: absolute;
-  top: 12.5px;
-  left: 10.5px;
-  width: 1px;
-  height: calc(100% - 22px);
-  background: var(--color-brass);
-  opacity: 0.5;
+.meter i {
+  display: block;
+  width: 3px;
+  background: var(--color-ember);
+  opacity: 0.85;
+  border-radius: 1px;
+}
+
+.meter i:nth-child(1) {
+  height: 40%;
+}
+.meter i:nth-child(2) {
+  height: 70%;
+}
+.meter i:nth-child(3) {
+  height: 100%;
+}
+.meter i:nth-child(4) {
+  height: 55%;
+  opacity: 0.4;
 }
 
 .task-card.dragging {
@@ -137,6 +150,7 @@ function cancelEdit() {
   display: flex;
   align-items: center;
   gap: 4px;
+  padding-right: 22px;
 }
 
 .task-title {
@@ -151,7 +165,7 @@ function cancelEdit() {
 }
 
 .task-title:hover {
-  background: var(--color-parquet);
+  background: var(--color-surface);
 }
 
 .task-title-input {
@@ -159,11 +173,12 @@ function cancelEdit() {
   margin: 0;
   font-size: 14px;
   font-weight: 500;
-  border: 2px solid var(--color-brass);
+  border: 2px solid var(--color-ember);
   border-radius: 3px;
   padding: 1px 3px;
   outline: none;
-  background: #fff;
+  background: var(--color-bg);
+  color: var(--color-ink);
 }
 
 .delete-btn {
@@ -185,16 +200,15 @@ function cancelEdit() {
 }
 
 .delete-btn:hover {
-  background: var(--color-parquet);
-  color: var(--color-rose);
+  background: var(--color-surface);
+  color: var(--color-overdue);
   opacity: 1;
 }
 
 .task-description {
   margin: 6px 0 0;
   font-size: 12px;
-  color: var(--color-ink);
-  opacity: 0.75;
+  color: var(--color-ink-dim);
   overflow: hidden;
   max-height: 4.5em;
 }
@@ -214,6 +228,7 @@ function cancelEdit() {
   flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 6px;
+  padding-right: 22px;
 }
 
 .label-chip {
@@ -228,9 +243,8 @@ function cancelEdit() {
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--color-rose);
-  background: var(--color-rose-light);
-  background: color-mix(in srgb, var(--color-rose) 15%, var(--color-parquet-light));
+  color: var(--color-due);
+  background: color-mix(in srgb, var(--color-due) 15%, var(--color-surface-light));
   border-radius: 4px;
   padding: 2px 6px;
 }
