@@ -80,26 +80,26 @@ async function joinBoard() {
   justify-content: flex-end;
   gap: 12px;
   padding: 12px 24px;
-  background: #c3ccd6;
+  background: var(--color-aubergine);
 }
 
 .user {
   font-size: 14px;
-  color: #333;
+  color: var(--color-text-on-aubergine);
 }
 
 .signout-btn {
   padding: 6px 12px;
-  border: 1px solid #888;
-  border-radius: 6px;
+  border: 1px solid var(--color-brass);
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #333;
+  color: var(--color-text-on-aubergine);
   font-size: 13px;
   cursor: pointer;
 }
 
 .signout-btn:hover {
-  background: #b3bdc8;
+  background: var(--color-aubergine-light);
 }
 
 .boards {
@@ -109,8 +109,12 @@ async function joinBoard() {
 }
 
 h1 {
-  font-size: 20px;
-  color: #333;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-variation-settings: 'WONK' 1;
+  font-weight: 600;
+  font-size: 26px;
+  color: var(--color-text-on-aubergine);
   margin-bottom: 16px;
 }
 
@@ -123,32 +127,44 @@ h1 {
 .create input {
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  border: 1px solid var(--color-brass-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-parquet-light);
+  color: var(--color-ink);
   font-size: 15px;
 }
 
 .create button {
   padding: 10px 16px;
   border: none;
-  border-radius: 8px;
-  background: #6b8cae;
-  color: #fff;
+  border-radius: var(--radius-sm);
+  background: var(--color-brass);
+  color: var(--color-text-on-brass);
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
 }
 
+.create button:hover {
+  background: var(--color-brass-light);
+}
+
 .join button {
-  background: #5a9e7a;
+  background: var(--color-sage);
+  color: var(--color-text-on-aubergine);
+}
+
+.join button:hover {
+  background: #7fa07c;
 }
 
 .status {
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-on-aubergine);
 }
 
 .status.error {
-  color: #c00;
+  color: var(--color-rose-light);
 }
 
 .list {
@@ -162,8 +178,8 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
-  border-radius: 8px;
+  background: var(--color-parquet);
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
@@ -174,26 +190,26 @@ h1 {
   border: none;
   background: transparent;
   font-size: 16px;
-  color: #333;
+  color: var(--color-ink);
   cursor: pointer;
 }
 
 .name:hover {
-  background: #eef2f6;
+  background: var(--color-parquet-light);
 }
 
 .delete {
   margin-right: 8px;
   padding: 8px 12px;
-  border: 1px solid #d99;
-  border-radius: 6px;
+  border: 1px solid var(--color-rose);
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #c00;
+  color: var(--color-rose);
   font-size: 13px;
   cursor: pointer;
 }
 
 .delete:hover {
-  background: #fbeaea;
+  background: #f7e6e8;
 }
 </style>

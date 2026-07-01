@@ -1,0 +1,26 @@
+:root {
+  --color-ink: #211a22;
+  --color-aubergine: #3b1f33;
+  --color-aubergine-light: #4f2a45;
+  --color-parquet: #ede1cb;
+  --color-parquet-light: #f5ecd9;
+  --color-brass: #c68b3d;
+  --color-brass-light: #d9ab6a;
+  --color-rose: #c1495a;
+  --color-rose-light: #d97684;
+  --color-sage: #6e8b6b;
+
+  --color-text-on-parquet: var(--color-ink);
+  --color-text-on-aubergine: #f5ecd9;
+  --color-text-on-brass: var(--color-ink);
+
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Work Sans', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius-lg: 10px;
+
+  --shadow-card: 0 1px 3px rgba(59, 31, 51, 0.2);
+  --shadow-modal: 0 8px 28px rgba(33, 26, 34, 0.35);
+}

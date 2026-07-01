@@ -126,14 +126,18 @@ async function onSubmit() {
   width: 100%;
   max-width: 360px;
   padding: 24px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  background: var(--color-parquet);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
 }
 
 h1 {
-  font-size: 20px;
-  color: #333;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-variation-settings: 'WONK' 1;
+  font-weight: 600;
+  font-size: 26px;
+  color: var(--color-ink);
 }
 
 label {
@@ -141,19 +145,21 @@ label {
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
-  color: #555;
+  color: var(--color-ink);
 }
 
 input {
   padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  border: 1px solid var(--color-brass-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-parquet-light);
+  color: var(--color-ink);
   font-size: 16px;
 }
 
 input:focus {
   outline: none;
-  border-color: #6b8cae;
+  border-color: var(--color-brass);
 }
 
 .msg {
@@ -162,21 +168,26 @@ input:focus {
 }
 
 .msg.error {
-  color: #c00;
+  color: var(--color-rose);
 }
 
 .msg.info {
-  color: #2a6;
+  color: var(--color-sage);
 }
 
 .submit {
   padding: 12px;
   border: none;
-  border-radius: 8px;
-  background: #6b8cae;
-  color: #fff;
+  border-radius: var(--radius-sm);
+  background: var(--color-brass);
+  color: var(--color-text-on-brass);
   font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--color-brass-light);
 }
 
 .submit:disabled {
@@ -188,8 +199,9 @@ input:focus {
   padding: 4px;
   border: none;
   background: transparent;
-  color: #6b8cae;
+  color: var(--color-aubergine);
   font-size: 13px;
+  text-decoration: underline;
   cursor: pointer;
 }
 
@@ -200,24 +212,26 @@ input:focus {
   gap: 8px;
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px dashed #ccc;
+  border-top: 1px dashed var(--color-brass-light);
 }
 
 .dev-label {
   width: 100%;
+  font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #999;
+  color: var(--color-ink);
+  opacity: 0.6;
 }
 
 .dev-btn {
   flex: 1;
   padding: 8px;
-  border: 1px solid #b3a16b;
-  border-radius: 8px;
-  background: #f3eecf;
-  color: #6b5e2e;
+  border: 1px solid var(--color-sage);
+  border-radius: var(--radius-sm);
+  background: var(--color-parquet-light);
+  color: var(--color-sage);
   font-size: 13px;
   cursor: pointer;
 }

@@ -97,11 +97,36 @@ function cancelEdit() {
 
 <style scoped>
 .task-card {
-  background: #fff;
-  border-radius: 6px;
-  padding: 10px 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  position: relative;
+  background: var(--color-parquet-light);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px 10px 20px;
+  box-shadow: var(--shadow-card);
   cursor: grab;
+}
+
+/* Signature: a punched notch + ribbon thread, echoing a ballroom dance card. */
+.task-card::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-aubergine);
+  box-shadow: 0 1px 0 0 var(--color-aubergine);
+}
+
+.task-card::after {
+  content: '';
+  position: absolute;
+  top: 12.5px;
+  left: 10.5px;
+  width: 1px;
+  height: calc(100% - 22px);
+  background: var(--color-brass);
+  opacity: 0.5;
 }
 
 .task-card.dragging {
@@ -119,13 +144,14 @@ function cancelEdit() {
   margin: 0;
   font-size: 14px;
   font-weight: 500;
+  color: var(--color-ink);
   border-radius: 3px;
   padding: 1px 3px;
   cursor: pointer;
 }
 
 .task-title:hover {
-  background: #f0f0f0;
+  background: var(--color-parquet);
 }
 
 .task-title-input {
@@ -133,7 +159,7 @@ function cancelEdit() {
   margin: 0;
   font-size: 14px;
   font-weight: 500;
-  border: 2px solid #888;
+  border: 2px solid var(--color-brass);
   border-radius: 3px;
   padding: 1px 3px;
   outline: none;
@@ -147,7 +173,8 @@ function cancelEdit() {
   border: none;
   border-radius: 3px;
   background: transparent;
-  color: #ccc;
+  color: var(--color-ink);
+  opacity: 0.35;
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
@@ -158,14 +185,16 @@ function cancelEdit() {
 }
 
 .delete-btn:hover {
-  background: #fee;
-  color: #c00;
+  background: var(--color-parquet);
+  color: var(--color-rose);
+  opacity: 1;
 }
 
 .task-description {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #666;
+  color: var(--color-ink);
+  opacity: 0.75;
   overflow: hidden;
   max-height: 4.5em;
 }
@@ -197,9 +226,11 @@ function cancelEdit() {
 .due-badge {
   margin: 6px 0 0;
   display: inline-block;
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: #444;
-  background: #eee;
+  color: var(--color-rose);
+  background: var(--color-rose-light);
+  background: color-mix(in srgb, var(--color-rose) 15%, var(--color-parquet-light));
   border-radius: 4px;
   padding: 2px 6px;
 }

@@ -126,8 +126,8 @@ function onColumnDrop() {
 
 <style scoped>
 .kanban-column {
-  background: #f0f0f0;
-  border-radius: 8px;
+  background: var(--color-parquet);
+  border-radius: var(--radius-sm);
   padding: 12px;
   min-width: 260px;
   width: 260px;
@@ -136,46 +136,50 @@ function onColumnDrop() {
 }
 
 .kanban-column.drag-over {
-  background: #dce8f5;
-  outline: 2px dashed #6aabdf;
+  background: var(--color-brass-light);
+  outline: 2px dashed var(--color-brass);
 }
 
 .column-header {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--color-brass);
 }
 
 .column-title {
   flex: 1;
   margin: 0;
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-variation-settings: 'WONK' 1;
+  font-size: 16px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #444;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
   cursor: pointer;
   border-radius: 4px;
   padding: 2px 4px;
 }
 
 .column-title:hover {
-  background: #e0e0e0;
+  background: var(--color-parquet-light);
 }
 
 .column-title-input {
   flex: 1;
   margin: 0;
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #444;
-  border: 2px solid #888;
+  color: var(--color-ink);
+  border: 2px solid var(--color-brass);
   border-radius: 4px;
   padding: 2px 4px;
-  background: #fff;
+  background: var(--color-parquet-light);
   outline: none;
 }
 
@@ -186,7 +190,8 @@ function onColumnDrop() {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: #aaa;
+  color: var(--color-ink);
+  opacity: 0.4;
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -197,8 +202,9 @@ function onColumnDrop() {
 }
 
 .delete-btn:hover {
-  background: #e0e0e0;
-  color: #c00;
+  background: var(--color-parquet-light);
+  color: var(--color-rose);
+  opacity: 1;
 }
 
 .card-list {
@@ -210,7 +216,7 @@ function onColumnDrop() {
 .drop-line {
   height: 3px;
   border-radius: 2px;
-  background: #6aabdf;
+  background: var(--color-brass);
   margin: -4px 0;
 }
 
@@ -218,17 +224,18 @@ function onColumnDrop() {
   margin-top: 8px;
   width: 100%;
   padding: 6px;
-  border: 2px dashed #bbb;
-  border-radius: 6px;
+  border: 2px dashed var(--color-brass-light);
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #888;
+  color: var(--color-ink);
+  opacity: 0.6;
   font-size: 13px;
   cursor: pointer;
   text-align: left;
 }
 
 .add-card-btn:hover {
-  border-color: #999;
-  color: #555;
+  border-color: var(--color-brass);
+  opacity: 1;
 }
 </style>

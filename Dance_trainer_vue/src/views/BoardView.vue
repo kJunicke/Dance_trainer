@@ -102,21 +102,21 @@ const openCardId = ref<number | null>(null)
   align-items: center;
   gap: 12px;
   padding: 12px 24px;
-  background: #c3ccd6;
+  background: var(--color-aubergine);
 }
 
 .back-btn {
   padding: 6px 12px;
-  border: 1px solid #888;
-  border-radius: 6px;
+  border: 1px solid var(--color-brass);
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #333;
+  color: var(--color-text-on-aubergine);
   font-size: 13px;
   cursor: pointer;
 }
 
 .back-btn:hover {
-  background: #b3bdc8;
+  background: var(--color-aubergine-light);
 }
 
 .invite {
@@ -124,59 +124,60 @@ const openCardId = ref<number | null>(null)
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #555;
+  color: var(--color-text-on-aubergine);
 }
 
 .invite code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
-  background: #dde4ea;
+  color: var(--color-ink);
+  background: var(--color-brass-light);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .copy-btn {
   padding: 4px 8px;
-  border: 1px solid #888;
-  border-radius: 6px;
+  border: 1px solid var(--color-brass);
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #333;
+  color: var(--color-text-on-aubergine);
   font-size: 12px;
   cursor: pointer;
 }
 
 .copy-btn:hover {
-  background: #b3bdc8;
+  background: var(--color-aubergine-light);
 }
 
 .user {
   margin-left: auto;
   font-size: 14px;
-  color: #333;
+  color: var(--color-text-on-aubergine);
 }
 
 .signout-btn {
   padding: 6px 12px;
-  border: 1px solid #888;
-  border-radius: 6px;
+  border: 1px solid var(--color-brass);
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #333;
+  color: var(--color-text-on-aubergine);
   font-size: 13px;
   cursor: pointer;
 }
 
 .signout-btn:hover {
-  background: #b3bdc8;
+  background: var(--color-aubergine-light);
 }
 
 .status {
   padding: 24px;
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-on-aubergine);
 }
 
 .status.error {
-  color: #c00;
+  color: var(--color-rose-light);
 }
 
 .board {
@@ -185,23 +186,25 @@ const openCardId = ref<number | null>(null)
   padding: 24px;
   overflow-x: auto;
   align-items: flex-start;
+  background: var(--color-aubergine);
+  min-height: calc(100vh - 49px);
 }
 
 .add-column-btn {
   flex-shrink: 0;
   align-self: flex-start;
   padding: 10px 16px;
-  border: 2px dashed #aaa;
-  border-radius: 8px;
+  border: 2px dashed var(--color-brass);
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #666;
+  color: var(--color-text-on-aubergine);
   font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .add-column-btn:hover {
-  border-color: #888;
-  color: #333;
+  border-color: var(--color-brass-light);
+  background: var(--color-aubergine-light);
 }
 </style>

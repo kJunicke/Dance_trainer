@@ -42,7 +42,7 @@ function onDueDateChange(event: Event) {
 }
 
 const newLabelName = ref('')
-const newLabelColor = ref<string>(Object.keys(LABEL_COLORS)[0] ?? 'green')
+const newLabelColor = ref<string>(Object.keys(LABEL_COLORS)[0] ?? 'rose')
 
 function addLabel() {
   if (!boardId.value) return
@@ -117,7 +117,7 @@ function onKeydown(event: KeyboardEvent) {
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(33, 26, 34, 0.6);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -128,8 +128,9 @@ function onKeydown(event: KeyboardEvent) {
 
 .modal {
   position: relative;
-  background: #fff;
-  border-radius: 8px;
+  background: var(--color-parquet);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
   padding: 24px;
   width: 100%;
   max-width: 560px;
@@ -145,12 +146,22 @@ function onKeydown(event: KeyboardEvent) {
   background: transparent;
   font-size: 20px;
   cursor: pointer;
-  color: #888;
+  color: var(--color-ink);
+  opacity: 0.5;
+}
+
+.close-btn:hover {
+  opacity: 1;
 }
 
 .title {
   margin: 0 32px 20px 0;
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-variation-settings: 'WONK' 1;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--color-ink);
 }
 
 .field {
@@ -159,12 +170,22 @@ function onKeydown(event: KeyboardEvent) {
 
 .field-label {
   display: block;
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #666;
+  color: var(--color-aubergine);
   margin-bottom: 6px;
+}
+
+input[type='date'] {
+  padding: 8px 10px;
+  border: 1px solid var(--color-brass-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-parquet-light);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
 }
 
 .label-list {
@@ -186,7 +207,7 @@ function onKeydown(event: KeyboardEvent) {
 
 .label-chip.active {
   opacity: 1;
-  border-color: #333;
+  border-color: var(--color-ink);
 }
 
 .new-label {
@@ -196,6 +217,27 @@ function onKeydown(event: KeyboardEvent) {
 
 .new-label input {
   flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--color-brass-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-parquet-light);
+}
+
+.new-label select {
+  border: 1px solid var(--color-brass-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-parquet-light);
+  padding: 8px;
+}
+
+.new-label button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-brass);
+  color: var(--color-text-on-brass);
+  font-weight: 600;
+  cursor: pointer;
 }
 
 textarea {
@@ -204,6 +246,10 @@ textarea {
   padding: 8px;
   box-sizing: border-box;
   resize: vertical;
+  border: 1px solid var(--color-brass-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-parquet-light);
+  color: var(--color-ink);
 }
 
 .desc-actions {
@@ -212,19 +258,35 @@ textarea {
   gap: 8px;
 }
 
+.desc-actions button {
+  padding: 6px 14px;
+  border: 1px solid var(--color-brass);
+  border-radius: var(--radius-sm);
+  background: var(--color-brass);
+  color: var(--color-text-on-brass);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.desc-actions button:last-child {
+  background: transparent;
+  color: var(--color-ink);
+}
+
 .desc-preview {
   min-height: 40px;
   padding: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
 .desc-preview:hover {
-  background: #f5f5f5;
+  background: var(--color-parquet-light);
 }
 
 .desc-preview :deep(.placeholder) {
-  color: #999;
+  color: var(--color-ink);
+  opacity: 0.5;
   margin: 0;
 }
 
