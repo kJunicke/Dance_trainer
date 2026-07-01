@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import KanbanColumn from '../components/KanbanColumn.vue'
+import CardModal from '../components/CardModal.vue'
 import { useBoardStore } from '../stores/boardStore'
 import { useAuthStore } from '../stores/authStore'
 
@@ -56,6 +57,8 @@ function onCardDroppedOnCard(
   const insertAt = position === 'before' ? targetIndex : targetIndex + 1
   store.moveCard(cardId, targetColumnId, insertAt)
 }
+
+const openCardId = ref<number | null>(null)
 </script>
 
 <template>
@@ -76,7 +79,7 @@ function onCardDroppedOnCard(
       v-for="column in store.columns"
       :key="column.id"
       :name="column.name"
-      :cards="store.cardsByColumn(column.id)"
+      :cards="store.cardsByColumn(column.id).map((c) => ({ ...c, labels: store.labelsForCard(c.id) }))"
       @rename="store.renameColumn(column.id, $event)"
       @add-card="store.addCard(column.id)"
       @rename-card="(id, name) => store.renameCard(id, name)"
@@ -85,9 +88,12 @@ function onCardDroppedOnCard(
       @card-drag-start="onCardDragStart(column.id, $event)"
       @card-dropped="onColumnDrop(column.id)"
       @card-dropped-on-card="(cardId, pos) => onCardDroppedOnCard(column.id, cardId, pos)"
+      @open-card="openCardId = $event"
     />
     <button class="add-column-btn" @click="store.addColumn()">+ Add Column</button>
   </div>
+
+  <CardModal v-if="openCardId !== null" :card-id="openCardId" @close="openCardId = null" />
 </template>
 
 <style scoped>

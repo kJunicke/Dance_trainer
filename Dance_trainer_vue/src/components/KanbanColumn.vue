@@ -4,7 +4,13 @@ import TaskCard from './TaskCard.vue'
 
 const props = defineProps<{
   name: string
-  cards: { id: number; name: string; description?: string | null }[]
+  cards: {
+    id: number
+    name: string
+    description?: string | null
+    due_date?: string | null
+    labels?: { id: number; name: string; color: string }[]
+  }[]
 }>()
 
 const emit = defineEmits<{
@@ -16,6 +22,7 @@ const emit = defineEmits<{
   'card-drag-start': [cardId: number]
   'card-dropped': []
   'card-dropped-on-card': [targetCardId: number, position: 'before' | 'after']
+  'open-card': [cardId: number]
 }>()
 
 const isEditing = ref(false)
@@ -98,8 +105,11 @@ function onColumnDrop() {
           :id="card.id"
           :name="card.name"
           :description="card.description"
+          :due-date="card.due_date"
+          :labels="card.labels"
           @rename="emit('rename-card', card.id, $event)"
           @delete="emit('delete-card', card.id)"
+          @open="emit('open-card', card.id)"
           @drag-start="emit('card-drag-start', $event)"
           @dragover.prevent="onCardDragOver($event, card.id)"
           @drop.prevent.stop="onCardDrop(card.id)"
