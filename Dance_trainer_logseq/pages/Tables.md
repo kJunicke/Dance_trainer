@@ -19,8 +19,9 @@
 			- id
 			- column_id
 			- name
-			- description
+			- description (markdown, rendered client-side via `marked` + `DOMPurify`)
 			- position
+			- due_date (nullable `date`)
 			-
 	- Columns
 		- values
@@ -33,6 +34,20 @@
 		- values
 			- id
 			- name
+-
+- # Labels
+	- Labels
+		- values
+			- id
+			- board_id
+			- name
+			- color (`check` constraint — must be one of the fixed palette in `Dance_trainer_vue/src/lib/labelColors.ts`: green, yellow, red, purple, blue, sky)
+	- Card Labels
+		- join table, cards <-> labels (many-to-many)
+		- values
+			- card_id
+			- label_id
+		- RLS also checks that `label.board_id` matches the card's board — otherwise a user who's a member of two boards could attach a label from one board to a card on another. See [[Supabase]]
 -
 - # Ownership
 	- board_members
