@@ -93,7 +93,7 @@ function onColumnDrop() {
         @keydown.esc="cancelEdit"
       />
       <h2 v-else class="column-title" @click="startEdit">{{ name }}</h2>
-      <button class="delete-btn" @click="emit('delete')">×</button>
+      <button class="delete-btn" title="Delete column" @click="emit('delete')">×</button>
     </div>
     <div class="card-list">
       <template v-for="card in cards" :key="card.id">
@@ -120,7 +120,7 @@ function onColumnDrop() {
         />
       </template>
     </div>
-    <button class="add-card-btn" @click="emit('add-card')">+ Add Card</button>
+    <button class="add-card-btn" title="Add a card to this column" @click="emit('add-card')">+ Add Card</button>
   </div>
 </template>
 

@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBoardStore } from '../stores/boardStore'
 import { useAuthStore } from '../stores/authStore'
+import LoadingSpinner from '../components/LoadingSpinner.vue'
 
 const store = useBoardStore()
 const auth = useAuthStore()
@@ -10,6 +11,8 @@ const router = useRouter()
 
 const newName = ref('')
 const joinCode = ref('')
+const creating = ref(false)
+const joining = ref(false)
 const importing = ref(false)
 const importInput = ref<HTMLInputElement | null>(null)
 
@@ -25,7 +28,9 @@ function openBoard(id: number) {
 }
 
 async function createBoard() {
+  creating.value = true
   await store.createBoard(newName.value.trim() || 'New Board')
+  creating.value = false
   newName.value = ''
 }
 
@@ -35,7 +40,9 @@ function deleteBoard(id: number, name: string) {
 }
 
 async function joinBoard() {
+  joining.value = true
   const id = await store.joinBoard(joinCode.value.trim())
+  joining.value = false
   if (id) {
     joinCode.value = ''
     router.push({ name: 'board', params: { id } })
@@ -63,18 +70,30 @@ async function onImportFile(event: Event) {
     <h1>Your boards</h1>
 
     <form class="create" @submit.prevent="createBoard">
-      <input v-model="newName" type="text" placeholder="New board name" />
-      <button type="submit">Create</button>
+      <input v-model="newName" type="text" placeholder="New board name" :disabled="creating" />
+      <button type="submit" :disabled="creating">
+        <LoadingSpinner v-if="creating" :size="14" />
+        <span v-else>Create</span>
+      </button>
     </form>
 
     <form class="create join" @submit.prevent="joinBoard">
-      <input v-model="joinCode" type="text" placeholder="Paste an invite code to join" />
-      <button type="submit">Join</button>
+      <input v-model="joinCode" type="text" placeholder="Paste an invite code to join" :disabled="joining" />
+      <button type="submit" :disabled="joining">
+        <LoadingSpinner v-if="joining" :size="14" />
+        <span v-else>Join</span>
+      </button>
     </form>
 
     <div class="create">
-      <button type="button" :disabled="importing" @click="importInput?.click()">
-        {{ importing ? 'Importing…' : 'Import from Trello JSON' }}
+      <button
+        type="button"
+        title="Import a Trello board export (.json) as a new board"
+        :disabled="importing"
+        @click="importInput?.click()"
+      >
+        <LoadingSpinner v-if="importing" :size="14" />
+        <span v-else>Import from Trello JSON</span>
       </button>
       <input
         ref="importInput"
@@ -85,14 +104,14 @@ async function onImportFile(event: Event) {
       />
     </div>
 
-    <p v-if="store.loading" class="status">Loading…</p>
+    <p v-if="store.loading" class="status"><LoadingSpinner :size="14" /> Loading…</p>
     <p v-else-if="store.error" class="status error">{{ store.error }}</p>
     <p v-else-if="store.boards.length === 0" class="status">No boards yet — create one above.</p>
 
     <ul v-else class="list">
       <li v-for="b in store.boards" :key="b.id">
-        <button class="name" @click="openBoard(b.id)">{{ b.name }}</button>
-        <button class="delete" @click="deleteBoard(b.id, b.name)">Delete</button>
+        <button class="name" title="Open this board" @click="openBoard(b.id)">{{ b.name }}</button>
+        <button class="delete" title="Delete this board and all its columns and cards" @click="deleteBoard(b.id, b.name)">Delete</button>
       </li>
     </ul>
   </main>
@@ -160,6 +179,10 @@ h1 {
 }
 
 .create button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
   padding: 10px 16px;
   border: none;
   border-radius: var(--radius-sm);
@@ -170,8 +193,13 @@ h1 {
   cursor: pointer;
 }
 
-.create button:hover {
+.create button:hover:not(:disabled) {
   background: var(--color-ember-light);
+}
+
+.create button:disabled {
+  cursor: default;
+  opacity: 0.8;
 }
 
 .join button {
@@ -192,6 +220,9 @@ h1 {
 }
 
 .status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
   color: var(--color-ink-dim);
 }

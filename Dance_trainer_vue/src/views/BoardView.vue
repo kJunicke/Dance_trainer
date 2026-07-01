@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import KanbanColumn from '../components/KanbanColumn.vue'
 import CardModal from '../components/CardModal.vue'
+import LoadingSpinner from '../components/LoadingSpinner.vue'
 import { useBoardStore } from '../stores/boardStore'
 import { useAuthStore } from '../stores/authStore'
 
@@ -63,17 +64,25 @@ const openCardId = ref<number | null>(null)
 
 <template>
   <header class="topbar">
-    <button class="back-btn" @click="router.push({ name: 'boards' })">← Boards</button>
+    <button class="back-btn" title="Back to your boards" @click="router.push({ name: 'boards' })">← Boards</button>
     <span v-if="store.board" class="invite">
-      Invite code: <code>{{ store.board.invite_code }}</code>
-      <button class="copy-btn" @click="copyCode">{{ copied ? 'Copied!' : 'Copy' }}</button>
-      <button class="copy-btn" @click="store.exportBoard()">Export</button>
+      Invite code: <code :title="store.board.invite_code">{{ store.board.invite_code }}</code>
+      <button
+        class="copy-btn"
+        title="Copy invite code to clipboard"
+        @click="copyCode"
+      >{{ copied ? 'Copied!' : 'Copy' }}</button>
+      <button
+        class="copy-btn"
+        title="Download this board as a Trello-compatible JSON file"
+        @click="store.exportBoard()"
+      >Export</button>
     </span>
     <span class="user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</span>
     <button class="signout-btn" @click="signOut">Sign out</button>
   </header>
 
-  <div v-if="store.loading" class="status">Loading…</div>
+  <div v-if="store.loading" class="status"><LoadingSpinner :size="16" /> Loading…</div>
   <div v-else-if="store.error" class="status error">{{ store.error }}</div>
   <div v-else class="board">
     <KanbanColumn
@@ -91,7 +100,7 @@ const openCardId = ref<number | null>(null)
       @card-dropped-on-card="(cardId, pos) => onCardDroppedOnCard(column.id, cardId, pos)"
       @open-card="openCardId = $event"
     />
-    <button class="add-column-btn" @click="store.addColumn()">+ Add Column</button>
+    <button class="add-column-btn" title="Add a new column to this board" @click="store.addColumn()">+ Add Column</button>
   </div>
 
   <CardModal v-if="openCardId !== null" :card-id="openCardId" @close="openCardId = null" />
@@ -174,6 +183,9 @@ const openCardId = ref<number | null>(null)
 }
 
 .status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 24px;
   font-size: 14px;
   color: var(--color-ink-dim);

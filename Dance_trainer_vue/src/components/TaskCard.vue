@@ -91,7 +91,7 @@ function cancelEdit() {
         @keydown.esc="cancelEdit"
       />
       <p v-else class="task-title" @click.stop="startEdit">{{ name }}</p>
-      <button class="delete-btn" @click.stop="emit('delete')">×</button>
+      <button class="delete-btn" title="Delete card" @click.stop="emit('delete')">×</button>
     </div>
     <div v-if="description" class="task-description" v-html="descriptionHtml" />
     <p v-if="dueDate" class="due-badge">{{ dueDate }}</p>
@@ -101,6 +101,7 @@ function cancelEdit() {
 <style scoped>
 .task-card {
   position: relative;
+  min-height: 56px;
   background: var(--color-surface-light);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);

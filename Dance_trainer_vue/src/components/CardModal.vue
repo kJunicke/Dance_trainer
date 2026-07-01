@@ -64,7 +64,7 @@ function onKeydown(event: KeyboardEvent) {
 <template>
   <div class="backdrop" @click="onBackdropClick" @keydown="onKeydown" tabindex="-1">
     <div v-if="card" class="modal">
-      <button class="close-btn" @click="emit('close')">×</button>
+      <button class="close-btn" title="Close" @click="emit('close')">×</button>
       <h2 class="title">{{ card.name }}</h2>
 
       <section class="field">
@@ -81,6 +81,7 @@ function onKeydown(event: KeyboardEvent) {
             class="label-chip"
             :class="{ active: cardLabelIds.has(label.id) }"
             :style="{ background: LABEL_COLORS[label.color] ?? '#ccc' }"
+            :title="cardLabelIds.has(label.id) ? 'Remove label from card' : 'Add label to card'"
             @click="store.toggleCardLabel(props.cardId, label.id)"
           >
             {{ label.name }}

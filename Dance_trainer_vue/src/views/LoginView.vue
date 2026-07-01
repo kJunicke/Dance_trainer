@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
+import LoadingSpinner from '../components/LoadingSpinner.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -25,7 +26,9 @@ const testUsers = import.meta.env.DEV
   : []
 
 async function loginAs(user: { email: string; password: string }) {
+  submitting.value = true
   const ok = await auth.signIn(user.email, user.password)
+  submitting.value = false
   if (ok) router.push({ name: 'boards' })
 }
 
@@ -87,7 +90,8 @@ async function onSubmit() {
       <p v-else-if="info" class="msg info">{{ info }}</p>
 
       <button class="submit" type="submit" :disabled="submitting">
-        {{ submitting ? '…' : mode === 'login' ? 'Log in' : 'Sign up' }}
+        <LoadingSpinner v-if="submitting" :size="14" />
+        <span v-else>{{ mode === 'login' ? 'Log in' : 'Sign up' }}</span>
       </button>
 
       <button class="toggle" type="button" @click="toggleMode">
@@ -101,9 +105,11 @@ async function onSubmit() {
           :key="u.email"
           class="dev-btn"
           type="button"
+          :disabled="submitting"
           @click="loginAs(u)"
         >
-          {{ u.label }}
+          <LoadingSpinner v-if="submitting" :size="12" />
+          <span v-else>{{ u.label }}</span>
         </button>
       </div>
     </form>
@@ -176,6 +182,9 @@ input:focus {
 }
 
 .submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 12px;
   border: none;
   border-radius: var(--radius-sm);
@@ -225,6 +234,9 @@ input:focus {
 }
 
 .dev-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   padding: 8px;
   border: 1px solid var(--color-good);
@@ -233,5 +245,10 @@ input:focus {
   color: var(--color-good);
   font-size: 13px;
   cursor: pointer;
+}
+
+.dev-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 </style>
