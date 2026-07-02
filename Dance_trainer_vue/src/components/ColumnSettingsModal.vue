@@ -56,6 +56,10 @@ function onOffsetChange(event: Event) {
   })
 }
 
+function onQuickTargetToggle(event: Event) {
+  store.setColumnQuickTarget(props.columnId, (event.target as HTMLInputElement).checked)
+}
+
 const columnIndex = computed(() =>
   store.columns.findIndex((c) => c.id === props.columnId),
 )
@@ -121,6 +125,19 @@ onMounted(() => backdropEl.value?.focus())
           <span>days from today (0 = due same day)</span>
         </label>
         <p v-if="column.is_due_column" class="hint">A due column can't set due dates itself.</p>
+      </section>
+
+      <section class="field">
+        <label class="field-label">Quick move</label>
+        <label class="setting-row">
+          <input
+            type="checkbox"
+            :checked="column.is_quick_target"
+            @change="onQuickTargetToggle"
+          />
+          <span>Show a one-tap button in cards to move them here</span>
+        </label>
+        <p class="hint">Buttons appear in the card editor for every column marked this way.</p>
       </section>
 
       <section class="field">
@@ -213,7 +230,7 @@ onMounted(() => backdropEl.value?.focus())
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-ember-light);
+  color: var(--color-ember);
   margin-bottom: 6px;
 }
 

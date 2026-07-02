@@ -99,27 +99,49 @@ function columnIdAtPoint(x: number, y: number): number | null {
 function onCardDragMove(x: number, y: number) {
   touchPoint.value = { x, y }
   touchOverColumnId.value = columnIdAtPoint(x, y)
+  startAutoScroll(x)
+}
+
+// Edge auto-scroll, shared by touch drag and native (mouse) drag so a card can
+// reach off-screen columns. Speed ramps from 0 at the edge of the trigger band
+// up to a max right at the screen edge — a constant crawl felt unresponsive.
+// The loop retains the last pointer x, so it keeps scrolling even while the
+// finger/cursor sits still at the edge (native dragover stops firing when idle).
+const EDGE = 72 // px band from each side that triggers scrolling
+const MAX_SCROLL_SPEED = 26 // px per frame at the very edge
+let autoScrollX: number | null = null
+
+function edgeVelocity(clientX: number, rect: DOMRect): number {
+  if (clientX < rect.left + EDGE) {
+    const depth = Math.min(1, (rect.left + EDGE - clientX) / EDGE)
+    return -MAX_SCROLL_SPEED * depth
+  }
+  if (clientX > rect.right - EDGE) {
+    const depth = Math.min(1, (clientX - (rect.right - EDGE)) / EDGE)
+    return MAX_SCROLL_SPEED * depth
+  }
+  return 0
+}
+
+function startAutoScroll(x: number) {
+  autoScrollX = x
   if (!autoScrollRaf) autoScrollLoop()
 }
 
-// Keep the board scrolling while the finger rests near an edge, so cards can
-// be dragged to columns that are off-screen (the common case on a phone).
 function autoScrollLoop() {
   autoScrollRaf = requestAnimationFrame(() => {
     const el = boardEl.value
-    const p = touchPoint.value
-    if (!el || !p || !dragState.value) {
+    if (!el || autoScrollX === null || !dragState.value) {
       autoScrollRaf = 0
       return
     }
-    const EDGE = 56
-    const SPEED = 10
-    const rect = el.getBoundingClientRect()
-    if (p.x < rect.left + EDGE) el.scrollLeft -= SPEED
-    else if (p.x > rect.right - EDGE) el.scrollLeft += SPEED
-    // Scrolling moves columns under a stationary finger, so re-resolve the
-    // highlighted drop target here, not just on finger movement.
-    touchOverColumnId.value = columnIdAtPoint(p.x, p.y)
+    const v = edgeVelocity(autoScrollX, el.getBoundingClientRect())
+    if (v !== 0) {
+      el.scrollLeft += v
+      // Scrolling moves columns under a stationary finger, so re-resolve the
+      // touch highlight here, not just on finger movement.
+      if (touchPoint.value) touchOverColumnId.value = columnIdAtPoint(touchPoint.value.x, touchPoint.value.y)
+    }
     autoScrollLoop()
   })
 }
@@ -127,8 +149,21 @@ function autoScrollLoop() {
 function stopAutoScroll() {
   if (autoScrollRaf) cancelAnimationFrame(autoScrollRaf)
   autoScrollRaf = 0
+  autoScrollX = null
   touchPoint.value = null
   touchOverColumnId.value = null
+}
+
+// Native (mouse) drag: dragover bubbles up from columns/cards, giving us the
+// cursor x for edge scrolling; dragend fires even on a cancelled drop, so it's
+// the reliable place to stop scrolling and clear drag state.
+function onBoardDragOver(e: DragEvent) {
+  if (dragState.value) startAutoScroll(e.clientX)
+}
+
+function onBoardDragEnd() {
+  stopAutoScroll()
+  dragState.value = null
 }
 
 function onCardDragEndTouch(x: number, y: number) {
@@ -244,6 +279,8 @@ function onBoardPointerUp(e: PointerEvent) {
       @pointermove="onBoardPointerMove"
       @pointerup="onBoardPointerUp"
       @pointercancel="onBoardPointerUp"
+      @dragover="onBoardDragOver"
+      @dragend="onBoardDragEnd"
     >
       <KanbanColumn
         v-for="column in store.columns"
@@ -339,7 +376,7 @@ function onBoardPointerUp(e: PointerEvent) {
 .invite-row code {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--color-ember-light);
+  color: var(--color-ink);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   padding: 2px 6px;

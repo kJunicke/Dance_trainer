@@ -18,6 +18,7 @@ export interface Column {
   position: number
   due_offset_days: number | null
   is_due_column: boolean
+  is_quick_target: boolean
 }
 
 export interface Card {
@@ -66,6 +67,11 @@ export const useBoardStore = defineStore('board', () => {
   })
 
   const labelsForCard = computed(() => (cardId: number) => labelsByCardId.value.get(cardId) ?? [])
+
+  // Columns offered as one-tap "quick move" targets in the card modal.
+  const quickTargetColumns = computed(() =>
+    columns.value.filter((c) => c.is_quick_target).sort((a, b) => a.position - b.position),
+  )
 
   // Flagged due column, else the leftmost column collects due cards.
   const dueColumn = computed<Column | null>(() => {
@@ -326,6 +332,18 @@ export const useBoardStore = defineStore('board', () => {
     }
   }
 
+  async function setColumnQuickTarget(columnId: number, value: boolean) {
+    const col = columns.value.find((c) => c.id === columnId)
+    if (!col) return
+    const prev = col.is_quick_target
+    col.is_quick_target = value
+    const { error: err } = await supabase
+      .from('columns')
+      .update({ is_quick_target: value })
+      .eq('id', columnId)
+    if (err) { error.value = err.message; col.is_quick_target = prev }
+  }
+
   async function deleteColumn(columnId: number) {
     const { error: err } = await supabase.from('columns').delete().eq('id', columnId)
     if (err) { error.value = err.message; return }
@@ -538,11 +556,11 @@ export const useBoardStore = defineStore('board', () => {
 
   return {
     boards, board, columns, cards, labels, cardLabels, loading, error,
-    cardsByColumn, labelsForCard, dueColumn,
+    cardsByColumn, labelsForCard, dueColumn, quickTargetColumns,
     loadBoards, createBoard, deleteBoard, joinBoard,
     importTrelloBoard, exportBoard,
     loadBoard,
-    addColumn, renameColumn, updateColumnSettings, deleteColumn, moveColumn,
+    addColumn, renameColumn, updateColumnSettings, setColumnQuickTarget, deleteColumn, moveColumn,
     addCard, renameCard, deleteCard,
     updateCardDescription, updateCardDueDate,
     createLabel, deleteLabel, toggleCardLabel,

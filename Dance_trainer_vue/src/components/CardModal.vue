@@ -71,6 +71,16 @@ function onColumnChange(event: Event) {
   store.moveCard(props.cardId, columnId, store.cardsByColumn(columnId).length)
 }
 
+// Quick-move targets, minus the column the card is already in.
+const quickTargets = computed(() =>
+  store.quickTargetColumns.filter((c) => c.id !== card.value?.column_id),
+)
+
+function quickMove(columnId: number) {
+  store.moveCard(props.cardId, columnId, store.cardsByColumn(columnId).length)
+  emit('close')
+}
+
 function deleteCard() {
   if (!card.value) return
   if (!window.confirm(`Delete "${card.value.name}"?`)) return
@@ -132,6 +142,21 @@ onMounted(() => backdropEl.value?.focus())
           <input type="date" :value="card.due_date ?? ''" @change="onDueDateChange" />
         </section>
       </div>
+
+      <section v-if="quickTargets.length" class="field">
+        <label class="field-label">Quick move</label>
+        <div class="quick-move-list">
+          <button
+            v-for="col in quickTargets"
+            :key="col.id"
+            class="quick-move-btn"
+            :title="`Move this card to ${col.name}`"
+            @click="quickMove(col.id)"
+          >
+            → {{ col.name }}
+          </button>
+        </div>
+      </section>
 
       <section class="field">
         <label class="field-label">Labels</label>
@@ -283,8 +308,29 @@ onMounted(() => backdropEl.value?.focus())
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-ember-light);
+  color: var(--color-ember);
   margin-bottom: 6px;
+}
+
+.quick-move-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick-move-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--color-ember);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.quick-move-btn:hover {
+  background: var(--color-surface-light);
+  border-color: var(--color-ember-light);
 }
 
 input[type='date'] {
@@ -294,7 +340,7 @@ input[type='date'] {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-mono);
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 .label-list {
