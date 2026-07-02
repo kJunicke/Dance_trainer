@@ -23,6 +23,7 @@ const emit = defineEmits<{
   'card-dropped': []
   'card-dropped-on-card': [targetCardId: number, position: 'before' | 'after']
   'open-card': [cardId: number]
+  'open-settings': []
 }>()
 
 const isEditing = ref(false)
@@ -93,6 +94,7 @@ function onColumnDrop() {
         @keydown.esc="cancelEdit"
       />
       <h2 v-else class="column-title" @click="startEdit">{{ name }}</h2>
+      <button class="settings-btn" title="Column settings" @click="emit('open-settings')">⚙</button>
       <button class="delete-btn" title="Delete column" @click="emit('delete')">×</button>
     </div>
     <div class="card-list">
@@ -126,6 +128,9 @@ function onColumnDrop() {
 
 <style scoped>
 .kanban-column {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -134,6 +139,7 @@ function onColumnDrop() {
   width: 260px;
   flex-shrink: 0;
   transition: background 0.15s;
+  cursor: default;
 }
 
 .kanban-column.drag-over {
@@ -142,6 +148,7 @@ function onColumnDrop() {
 }
 
 .column-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -208,10 +215,41 @@ function onColumnDrop() {
   opacity: 1;
 }
 
+.settings-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-ink);
+  opacity: 0.4;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.settings-btn:hover {
+  background: var(--color-surface-light);
+  opacity: 1;
+}
+
 .card-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.card-list > * {
+  flex-shrink: 0;
 }
 
 .drop-line {
@@ -222,6 +260,7 @@ function onColumnDrop() {
 }
 
 .add-card-btn {
+  flex-shrink: 0;
   margin-top: 8px;
   width: 100%;
   padding: 6px;

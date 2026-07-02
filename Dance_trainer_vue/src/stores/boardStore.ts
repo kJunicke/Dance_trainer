@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from './authStore'
 import { parseTrelloExport, buildTrelloExport } from '@/lib/trelloFormat'
+import { localToday, addDays, isDue } from '@/lib/dates'
 
 export interface Board {
   id: number
@@ -15,6 +16,8 @@ export interface Column {
   board_id: number
   name: string
   position: number
+  due_offset_days: number | null
+  is_due_column: boolean
 }
 
 export interface Card {
@@ -63,6 +66,15 @@ export const useBoardStore = defineStore('board', () => {
   })
 
   const labelsForCard = computed(() => (cardId: number) => labelsByCardId.value.get(cardId) ?? [])
+
+  // Flagged due column, else the leftmost column collects due cards.
+  const dueColumn = computed<Column | null>(() => {
+    if (columns.value.length === 0) return null
+    return (
+      columns.value.find((c) => c.is_due_column) ??
+      columns.value.reduce((a, b) => (b.position < a.position ? b : a))
+    )
+  })
 
   async function loadBoards() {
     const auth = useAuthStore()
@@ -274,6 +286,46 @@ export const useBoardStore = defineStore('board', () => {
     if (err) { error.value = err.message; col.name = oldName }
   }
 
+  async function updateColumnSettings(
+    columnId: number,
+    settings: { due_offset_days: number | null; is_due_column: boolean },
+  ) {
+    const col = columns.value.find((c) => c.id === columnId)
+    if (!col) return
+    // A due column has no on-enter rule (also a DB check constraint).
+    const next = settings.is_due_column ? { ...settings, due_offset_days: null } : { ...settings }
+    const prev = { due_offset_days: col.due_offset_days, is_due_column: col.is_due_column }
+    const prevDue = next.is_due_column
+      ? columns.value.find((c) => c.is_due_column && c.id !== columnId)
+      : undefined
+
+    if (prevDue) prevDue.is_due_column = false
+    Object.assign(col, next)
+
+    // Unset the old due column first — a partial unique index forbids two at once.
+    if (prevDue) {
+      const { error: err } = await supabase
+        .from('columns')
+        .update({ is_due_column: false })
+        .eq('id', prevDue.id)
+      if (err) {
+        error.value = err.message
+        prevDue.is_due_column = true
+        Object.assign(col, prev)
+        return
+      }
+    }
+    const { error: err } = await supabase.from('columns').update(next).eq('id', columnId)
+    if (err) {
+      error.value = err.message
+      Object.assign(col, prev)
+      if (prevDue) {
+        prevDue.is_due_column = true
+        await supabase.from('columns').update({ is_due_column: true }).eq('id', prevDue.id)
+      }
+    }
+  }
+
   async function deleteColumn(columnId: number) {
     const { error: err } = await supabase.from('columns').delete().eq('id', columnId)
     if (err) { error.value = err.message; return }
@@ -380,10 +432,22 @@ export const useBoardStore = defineStore('board', () => {
     cardId: number,
     targetColumnId: number,
     targetPosition: number,
+    applyEnterRule = true,
   ) {
     const card = cards.value.find((c) => c.id === cardId)
     if (!card) return
     const oldColumnId = card.column_id
+
+    // Entering a column with an on-enter rule stamps the due date (overwrites).
+    // Same-column reorders and sweep moves never fire the rule.
+    let ruleFired = false
+    if (applyEnterRule && oldColumnId !== targetColumnId) {
+      const target = columns.value.find((c) => c.id === targetColumnId)
+      if (target && target.due_offset_days !== null) {
+        card.due_date = addDays(localToday(), target.due_offset_days)
+        ruleFired = true
+      }
+    }
 
     // Remove card from source, insert at target
     card.column_id = targetColumnId
@@ -401,6 +465,38 @@ export const useBoardStore = defineStore('board', () => {
     const affectedColumnIds = new Set([oldColumnId, targetColumnId])
     const allAffected = cards.value.filter((c) => affectedColumnIds.has(c.column_id))
     for (const c of allAffected) {
+      const payload =
+        c.id === cardId && ruleFired
+          ? { column_id: c.column_id, position: c.position, due_date: c.due_date }
+          : { column_id: c.column_id, position: c.position }
+      await supabase.from('cards').update(payload).eq('id', c.id)
+    }
+  }
+
+  // Move every card whose due date has arrived into the due column.
+  // Keeps due dates untouched and never applies on-enter rules; idempotent.
+  async function sweepDueCards() {
+    const target = dueColumn.value
+    if (!target || loading.value) return
+    const today = localToday()
+    const swept = cards.value
+      .filter((c) => c.column_id !== target.id && isDue(c.due_date, today))
+      .sort((a, b) => a.due_date!.localeCompare(b.due_date!))
+    if (swept.length === 0) return
+
+    const affectedColumnIds = new Set<number>([target.id])
+    for (const c of swept) affectedColumnIds.add(c.column_id)
+
+    // Swept cards land on top of the due column, most overdue first.
+    const existing = cardsByColumn.value(target.id)
+    swept.forEach((c) => { c.column_id = target.id })
+    ;[...swept, ...existing].forEach((c, i) => { c.position = i })
+    for (const colId of affectedColumnIds) {
+      if (colId !== target.id) cardsByColumn.value(colId).forEach((c, i) => { c.position = i })
+    }
+
+    const allAffected = cards.value.filter((c) => affectedColumnIds.has(c.column_id))
+    for (const c of allAffected) {
       await supabase
         .from('cards')
         .update({ column_id: c.column_id, position: c.position })
@@ -410,14 +506,14 @@ export const useBoardStore = defineStore('board', () => {
 
   return {
     boards, board, columns, cards, labels, cardLabels, loading, error,
-    cardsByColumn, labelsForCard,
+    cardsByColumn, labelsForCard, dueColumn,
     loadBoards, createBoard, deleteBoard, joinBoard,
     importTrelloBoard, exportBoard,
     loadBoard,
-    addColumn, renameColumn, deleteColumn,
+    addColumn, renameColumn, updateColumnSettings, deleteColumn,
     addCard, renameCard, deleteCard,
     updateCardDescription, updateCardDueDate,
     createLabel, deleteLabel, toggleCardLabel,
-    moveCard,
+    moveCard, sweepDueCards,
   }
 })

@@ -2,6 +2,7 @@
 import { ref, nextTick, computed } from 'vue'
 import { renderMarkdown } from '@/lib/markdown'
 import { LABEL_COLORS } from '@/lib/labelColors'
+import { isDue } from '@/lib/dates'
 
 const props = defineProps<{
   id: number
@@ -21,6 +22,8 @@ const emit = defineEmits<{
 const descriptionHtml = computed(() =>
   props.description ? renderMarkdown(props.description) : '',
 )
+
+const overdue = computed(() => isDue(props.dueDate))
 
 const isEditing = ref(false)
 const editValue = ref('')
@@ -94,7 +97,7 @@ function cancelEdit() {
       <button class="delete-btn" title="Delete card" @click.stop="emit('delete')">×</button>
     </div>
     <div v-if="description" class="task-description" v-html="descriptionHtml" />
-    <p v-if="dueDate" class="due-badge">{{ dueDate }}</p>
+    <p v-if="dueDate" class="due-badge" :class="{ overdue }">{{ dueDate }}</p>
   </div>
 </template>
 
@@ -248,5 +251,10 @@ function cancelEdit() {
   background: color-mix(in srgb, var(--color-due) 15%, var(--color-surface-light));
   border-radius: 4px;
   padding: 2px 6px;
+}
+
+.due-badge.overdue {
+  color: var(--color-overdue);
+  background: color-mix(in srgb, var(--color-overdue) 15%, var(--color-surface-light));
 }
 </style>
