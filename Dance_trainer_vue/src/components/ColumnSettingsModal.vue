@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
+import { useBackButtonClose } from '@/lib/useBackButtonClose'
 
 const props = defineProps<{
   columnId: number
@@ -11,6 +12,8 @@ const emit = defineEmits<{
 }>()
 
 const store = useBoardStore()
+
+useBackButtonClose(() => emit('close'))
 
 const column = computed(() => store.columns.find((c) => c.id === props.columnId) ?? null)
 

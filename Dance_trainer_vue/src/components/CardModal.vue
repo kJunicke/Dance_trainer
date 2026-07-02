@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
 import { renderMarkdown } from '@/lib/markdown'
 import { LABEL_COLORS } from '@/lib/labelColors'
+import { useBackButtonClose } from '@/lib/useBackButtonClose'
 
 const props = defineProps<{
   cardId: number
@@ -13,6 +14,8 @@ const emit = defineEmits<{
 }>()
 
 const store = useBoardStore()
+
+useBackButtonClose(() => emit('close'))
 
 const card = computed(() => store.cards.find((c) => c.id === props.cardId) ?? null)
 const boardId = computed(() => store.board?.id ?? null)
