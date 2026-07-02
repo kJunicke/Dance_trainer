@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
 
 const props = defineProps<{
@@ -53,6 +53,19 @@ function onOffsetChange(event: Event) {
   })
 }
 
+const columnIndex = computed(() =>
+  store.columns.findIndex((c) => c.id === props.columnId),
+)
+
+function deleteColumn() {
+  if (!column.value) return
+  const count = store.cardsByColumn(props.columnId).length
+  const suffix = count > 0 ? ` and its ${count} card${count === 1 ? '' : 's'}` : ''
+  if (!window.confirm(`Delete "${column.value.name}"${suffix}?`)) return
+  store.deleteColumn(props.columnId)
+  emit('close')
+}
+
 function onBackdropClick(event: MouseEvent) {
   if (event.target === event.currentTarget) emit('close')
 }
@@ -60,10 +73,15 @@ function onBackdropClick(event: MouseEvent) {
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') emit('close')
 }
+
+// Escape only reaches the backdrop's keydown handler if something inside the
+// modal has focus.
+const backdropEl = ref<HTMLElement | null>(null)
+onMounted(() => backdropEl.value?.focus())
 </script>
 
 <template>
-  <div class="backdrop" @click="onBackdropClick" @keydown="onKeydown" tabindex="-1">
+  <div ref="backdropEl" class="backdrop" @click="onBackdropClick" @keydown="onKeydown" tabindex="-1">
     <div v-if="column" class="modal">
       <button class="close-btn" title="Close" @click="emit('close')">×</button>
       <h2 class="title">{{ column.name }}</h2>
@@ -101,6 +119,27 @@ function onKeydown(event: KeyboardEvent) {
         </label>
         <p v-if="column.is_due_column" class="hint">A due column can't set due dates itself.</p>
       </section>
+
+      <section class="field">
+        <label class="field-label">Position</label>
+        <div class="position-row">
+          <button
+            class="move-btn"
+            title="Move column left"
+            :disabled="columnIndex <= 0"
+            @click="store.moveColumn(props.columnId, -1)"
+          >←</button>
+          <span class="position-label">{{ columnIndex + 1 }} of {{ store.columns.length }}</span>
+          <button
+            class="move-btn"
+            title="Move column right"
+            :disabled="columnIndex === store.columns.length - 1"
+            @click="store.moveColumn(props.columnId, 1)"
+          >→</button>
+        </div>
+      </section>
+
+      <button class="delete-column-btn" @click="deleteColumn">Delete column</button>
     </div>
   </div>
 </template>
@@ -215,5 +254,52 @@ function onKeydown(event: KeyboardEvent) {
   margin: 6px 0 0;
   font-size: 12px;
   color: var(--color-ink-dim);
+}
+
+.position-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.move-btn {
+  width: 40px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.move-btn:hover:not(:disabled) {
+  border-color: var(--color-ember);
+  background: var(--color-surface-light);
+}
+
+.move-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.position-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-ink-dim);
+}
+
+.delete-column-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--color-overdue);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-overdue);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.delete-column-btn:hover {
+  background: color-mix(in srgb, var(--color-overdue) 12%, transparent);
 }
 </style>

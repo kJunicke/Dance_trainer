@@ -1,8 +1,8 @@
 :root {
   --color-bg: #151311;
   --color-surface: #1e1a17;
-  --color-surface-light: #292420;
-  --color-border: #3a332c;
+  --color-surface-light: #332b23;
+  --color-border: #4a4038;
   --color-ink: #f4efe9;
   --color-ink-dim: #b5aea5;
 
@@ -22,6 +22,6 @@
   --radius-sm: 4px;
   --radius-lg: 8px;
 
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.5);
   --shadow-modal: 0 8px 28px rgba(0, 0, 0, 0.6);
 }

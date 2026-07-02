@@ -333,16 +333,48 @@ export const useBoardStore = defineStore('board', () => {
     cards.value = cards.value.filter((c) => c.column_id !== columnId)
   }
 
-  async function addCard(columnId: number) {
+  /** Move a column one step left (-1) or right (+1). */
+  async function moveColumn(columnId: number, delta: -1 | 1) {
+    const sorted = [...columns.value].sort((a, b) => a.position - b.position)
+    const index = sorted.findIndex((c) => c.id === columnId)
+    const neighbor = sorted[index + delta]
+    if (index === -1 || !neighbor) return
+    const col = sorted[index]!
+
+    const prev = { colPos: col.position, neighborPos: neighbor.position }
+    ;[col.position, neighbor.position] = [neighbor.position, col.position]
+    columns.value.sort((a, b) => a.position - b.position)
+
+    const results = await Promise.all([
+      supabase.from('columns').update({ position: col.position }).eq('id', col.id),
+      supabase.from('columns').update({ position: neighbor.position }).eq('id', neighbor.id),
+    ])
+    const err = results.find((r) => r.error)?.error
+    if (err) {
+      error.value = err.message
+      col.position = prev.colPos
+      neighbor.position = prev.neighborPos
+      columns.value.sort((a, b) => a.position - b.position)
+    }
+  }
+
+  async function addCard(columnId: number, name = 'New Card') {
     const columnCards = cardsByColumn.value(columnId)
     const position = columnCards.length
+    const tempId = -Date.now()
+    cards.value.push({ id: tempId, column_id: columnId, name, description: null, position, due_date: null })
     const { data, error: err } = await supabase
       .from('cards')
-      .insert({ column_id: columnId, name: 'New Card', position, description: null })
+      .insert({ column_id: columnId, name, position, description: null })
       .select()
       .single()
-    if (err) { error.value = err.message; return }
-    cards.value.push(data)
+    if (err) {
+      error.value = err.message
+      cards.value = cards.value.filter((c) => c.id !== tempId)
+      return
+    }
+    const idx = cards.value.findIndex((c) => c.id === tempId)
+    if (idx !== -1) cards.value[idx] = data
   }
 
   async function updateCardField<K extends 'name' | 'description' | 'due_date'>(
@@ -510,7 +542,7 @@ export const useBoardStore = defineStore('board', () => {
     loadBoards, createBoard, deleteBoard, joinBoard,
     importTrelloBoard, exportBoard,
     loadBoard,
-    addColumn, renameColumn, updateColumnSettings, deleteColumn,
+    addColumn, renameColumn, updateColumnSettings, deleteColumn, moveColumn,
     addCard, renameCard, deleteCard,
     updateCardDescription, updateCardDueDate,
     createLabel, deleteLabel, toggleCardLabel,

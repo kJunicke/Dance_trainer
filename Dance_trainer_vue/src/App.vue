@@ -31,4 +31,13 @@ select {
   outline: 2px solid var(--color-ember);
   outline-offset: 2px;
 }
+
+/* iOS Safari zooms the page when a focused input's font is under 16px. */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
 </style>

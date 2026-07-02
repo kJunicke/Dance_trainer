@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
 import { renderMarkdown } from '@/lib/markdown'
 import { LABEL_COLORS } from '@/lib/labelColors'
@@ -22,11 +22,15 @@ const cardLabelIds = computed(
 
 const descriptionDraft = ref('')
 const editingDescription = ref(false)
+const titleDraft = ref('')
+const editingTitle = ref(false)
+const titleInputEl = ref<HTMLInputElement | null>(null)
 watch(
   card,
   (c) => {
     if (!c) { emit('close'); return }
     descriptionDraft.value = c.description ?? ''
+    if (!editingTitle.value) titleDraft.value = c.name
   },
   { immediate: true },
 )
@@ -36,9 +40,40 @@ function saveDescription() {
   editingDescription.value = false
 }
 
+async function startEditTitle() {
+  titleDraft.value = card.value?.name ?? ''
+  editingTitle.value = true
+  await nextTick()
+  titleInputEl.value?.select()
+}
+
+function saveTitle() {
+  const trimmed = titleDraft.value.trim()
+  if (trimmed && card.value && trimmed !== card.value.name) store.renameCard(props.cardId, trimmed)
+  editingTitle.value = false
+}
+
+function cancelEditTitle() {
+  editingTitle.value = false
+}
+
 function onDueDateChange(event: Event) {
   const value = (event.target as HTMLInputElement).value
   store.updateCardDueDate(props.cardId, value || null)
+}
+
+function onColumnChange(event: Event) {
+  const columnId = Number((event.target as HTMLSelectElement).value)
+  if (!card.value || columnId === card.value.column_id) return
+  store.moveCard(props.cardId, columnId, store.cardsByColumn(columnId).length)
+}
+
+function deleteCard() {
+  if (!card.value) return
+  if (!window.confirm(`Delete "${card.value.name}"?`)) return
+  store.deleteCard(props.cardId)
+  // The card watcher also closes the modal, but only after the DB round-trip.
+  emit('close')
 }
 
 const newLabelName = ref('')
@@ -59,18 +94,41 @@ function onBackdropClick(event: MouseEvent) {
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') emit('close')
 }
+
+// Escape only reaches the backdrop's keydown handler if something inside the
+// modal has focus.
+const backdropEl = ref<HTMLElement | null>(null)
+onMounted(() => backdropEl.value?.focus())
 </script>
 
 <template>
-  <div class="backdrop" @click="onBackdropClick" @keydown="onKeydown" tabindex="-1">
+  <div ref="backdropEl" class="backdrop" @click="onBackdropClick" @keydown="onKeydown" tabindex="-1">
     <div v-if="card" class="modal">
       <button class="close-btn" title="Close" @click="emit('close')">×</button>
-      <h2 class="title">{{ card.name }}</h2>
+      <input
+        v-if="editingTitle"
+        ref="titleInputEl"
+        v-model="titleDraft"
+        class="title-input"
+        @blur="saveTitle"
+        @keydown.enter="saveTitle"
+        @keydown.esc="cancelEditTitle"
+      />
+      <h2 v-else class="title" @click="startEditTitle">{{ card.name }}</h2>
 
-      <section class="field">
-        <label class="field-label">Due date</label>
-        <input type="date" :value="card.due_date ?? ''" @change="onDueDateChange" />
-      </section>
+      <div class="field-row">
+        <section class="field">
+          <label class="field-label">Column</label>
+          <select class="column-select" :value="card.column_id" @change="onColumnChange">
+            <option v-for="col in store.columns" :key="col.id" :value="col.id">{{ col.name }}</option>
+          </select>
+        </section>
+
+        <section class="field">
+          <label class="field-label">Due date</label>
+          <input type="date" :value="card.due_date ?? ''" @change="onDueDateChange" />
+        </section>
+      </div>
 
       <section class="field">
         <label class="field-label">Labels</label>
@@ -110,6 +168,8 @@ function onKeydown(event: KeyboardEvent) {
           <div v-else v-html="renderMarkdown(card.description)" />
         </div>
       </section>
+
+      <button class="delete-card-btn" @click="deleteCard">Delete card</button>
     </div>
   </div>
 </template>
@@ -163,10 +223,54 @@ function onKeydown(event: KeyboardEvent) {
   font-size: 22px;
   letter-spacing: -0.01em;
   color: var(--color-ink);
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.title:hover {
+  background: var(--color-surface-light);
+}
+
+.title-input {
+  display: block;
+  width: 100%;
+  margin: 0 32px 20px 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+  border: 2px solid var(--color-ember);
+  border-radius: 4px;
+  padding: 2px 4px;
+  background: var(--color-bg);
+  outline: none;
+  box-sizing: border-box;
 }
 
 .field {
   margin-bottom: 20px;
+}
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.field-row .field {
+  min-width: 0;
+}
+
+.column-select {
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 14px;
 }
 
 .field-label {
@@ -301,5 +405,51 @@ textarea {
 .desc-preview :deep(ol) {
   margin: 0 0 8px;
   padding-left: 20px;
+}
+
+.delete-card-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--color-overdue);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-overdue);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.delete-card-btn:hover {
+  background: color-mix(in srgb, var(--color-overdue) 12%, transparent);
+}
+
+/* On a phone the modal becomes a full-screen sheet. */
+@media (max-width: 640px) {
+  .backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modal {
+    max-width: none;
+    min-height: 100dvh;
+    border: none;
+    border-radius: 0;
+    padding: 20px 16px;
+  }
+
+  .close-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+  }
+
+  .label-chip {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  /* Under 16px, iOS Safari zooms the page when the field gets focus. */
+  .column-select {
+    font-size: 16px;
+  }
 }
 </style>

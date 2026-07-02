@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 # Goal
-Build software to document dance training progress. This is a rebuild of an earlier app I made that was lacking in UX and functionality. The [Project Handoff file](Dance_trainer_logseq/pages/PROJECT_HANDOFF.md) contains the info of the old app. We don't just wanna rebuild what's in there so I want to reason through everything again.
+Powerful Skill tracker for dance training, that documents progress for individual skills and keeps track of what skills need to be practiced when using spaced recognition.
 
 ## Functionality
 - Clean, intuitive, and unrestrictive design
@@ -45,3 +45,6 @@ Run from `Dance_trainer_vue/`:
 - is connected to remote repo Dance_trainer
 - always commit everything that has changed even if you didn't make the changes. Look at the diff and include them in your commit message
 - 
+
+# Testing
+- I've installed a phone simulator browser extension. Please use it to test mobile functionality

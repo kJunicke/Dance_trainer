@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { renderMarkdown } from '@/lib/markdown'
 import { LABEL_COLORS } from '@/lib/labelColors'
 import { isDue } from '@/lib/dates'
@@ -13,10 +13,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  rename: [newTitle: string]
-  delete: []
   open: []
   'drag-start': [cardId: number]
+  'drag-move': [x: number, y: number]
+  'drag-end': [x: number, y: number]
 }>()
 
 const descriptionHtml = computed(() =>
@@ -25,9 +25,6 @@ const descriptionHtml = computed(() =>
 
 const overdue = computed(() => isDue(props.dueDate))
 
-const isEditing = ref(false)
-const editValue = ref('')
-const inputEl = ref<HTMLInputElement | null>(null)
 const isDragging = ref(false)
 const suppressNextClick = ref(false)
 
@@ -44,36 +41,93 @@ function onCardClick() {
   emit('open')
 }
 
-async function startEdit() {
-  editValue.value = props.name
-  isEditing.value = true
-  await nextTick()
-  inputEl.value?.select()
+// Touch has no native HTML5 drag support, so a tap always opens the modal
+// unless the finger is held in place long enough to start a drag.
+const LONG_PRESS_MS = 350
+const MOVE_CANCEL_PX = 10
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+let touchStart: { x: number; y: number; pointerId: number } | null = null
+let touchDragActive = false
+
+// preventDefault on pointermove does not stop native scrolling — only a
+// non-passive touchmove listener does. Registered while a drag is active;
+// the finger has been still for the long-press, so no scroll has started yet.
+function blockTouchScroll(e: TouchEvent) {
+  e.preventDefault()
 }
 
-function confirmEdit() {
-  const trimmed = editValue.value.trim()
-  if (trimmed && trimmed !== props.name) emit('rename', trimmed)
-  isEditing.value = false
+function clearLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
 }
 
-function cancelEdit() {
-  isEditing.value = false
+function endTouchDrag() {
+  touchDragActive = false
+  isDragging.value = false
+  document.removeEventListener('touchmove', blockTouchScroll)
 }
+
+function onPointerDown(e: PointerEvent) {
+  if (e.pointerType !== 'touch') return
+  touchStart = { x: e.clientX, y: e.clientY, pointerId: e.pointerId }
+  clearLongPress()
+  longPressTimer = setTimeout(() => {
+    longPressTimer = null
+    touchDragActive = true
+    isDragging.value = true
+    document.addEventListener('touchmove', blockTouchScroll, { passive: false })
+    navigator.vibrate?.(30)
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    emit('drag-start', props.id)
+    emit('drag-move', touchStart!.x, touchStart!.y)
+  }, LONG_PRESS_MS)
+}
+
+function onPointerMove(e: PointerEvent) {
+  if (e.pointerType !== 'touch' || !touchStart || e.pointerId !== touchStart.pointerId) return
+  if (touchDragActive) {
+    emit('drag-move', e.clientX, e.clientY)
+    return
+  }
+  const dx = e.clientX - touchStart.x
+  const dy = e.clientY - touchStart.y
+  if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) clearLongPress()
+}
+
+function onPointerUp(e: PointerEvent) {
+  if (e.pointerType !== 'touch' || !touchStart || e.pointerId !== touchStart.pointerId) return
+  clearLongPress()
+  if (touchDragActive) {
+    endTouchDrag()
+    emit('drag-end', e.clientX, e.clientY)
+    suppressNextClick.value = true
+    requestAnimationFrame(() => { suppressNextClick.value = false })
+  }
+  touchStart = null
+}
+
+onUnmounted(() => {
+  clearLongPress()
+  document.removeEventListener('touchmove', blockTouchScroll)
+})
 </script>
 
 <template>
   <div
     class="task-card"
     :class="{ dragging: isDragging }"
+    :data-card-id="id"
     draggable="true"
     @dragstart="isDragging = true; emit('drag-start', id)"
     @dragend="onDragEnd"
     @click="onCardClick"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerUp"
+    @pointercancel="onPointerUp"
   >
-    <span class="meter" aria-hidden="true">
-      <i></i><i></i><i></i><i></i>
-    </span>
     <div v-if="labels?.length" class="label-row">
       <span
         v-for="label in labels"
@@ -82,20 +136,7 @@ function cancelEdit() {
         :style="{ background: LABEL_COLORS[label.color] ?? '#ccc' }"
       >{{ label.name }}</span>
     </div>
-    <div class="card-header">
-      <input
-        v-if="isEditing"
-        ref="inputEl"
-        v-model="editValue"
-        class="task-title-input"
-        @click.stop
-        @blur="confirmEdit"
-        @keydown.enter="confirmEdit"
-        @keydown.esc="cancelEdit"
-      />
-      <p v-else class="task-title" @click.stop="startEdit">{{ name }}</p>
-      <button class="delete-btn" title="Delete card" @click.stop="emit('delete')">×</button>
-    </div>
+    <p class="task-title">{{ name }}</p>
     <div v-if="description" class="task-description" v-html="descriptionHtml" />
     <p v-if="dueDate" class="due-badge" :class="{ overdue }">{{ dueDate }}</p>
   </div>
@@ -104,109 +145,32 @@ function cancelEdit() {
 <style scoped>
 .task-card {
   position: relative;
-  min-height: 56px;
+  min-height: 44px;
   background: var(--color-surface-light);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   box-shadow: var(--shadow-card);
-  cursor: grab;
+  cursor: pointer;
+  /* pan-x/pan-y keep both board and column scrolling native from a card;
+     long-press drags block scrolling themselves via a touchmove listener. */
+  touch-action: pan-x pan-y;
 }
 
-/* Signature: a level meter, reading as musicality + practice progress. */
-.meter {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 12px;
-}
-
-.meter i {
-  display: block;
-  width: 3px;
-  background: var(--color-ember);
-  opacity: 0.85;
-  border-radius: 1px;
-}
-
-.meter i:nth-child(1) {
-  height: 40%;
-}
-.meter i:nth-child(2) {
-  height: 70%;
-}
-.meter i:nth-child(3) {
-  height: 100%;
-}
-.meter i:nth-child(4) {
-  height: 55%;
-  opacity: 0.4;
+.task-card:hover {
+  border-color: color-mix(in srgb, var(--color-ember) 45%, var(--color-border));
 }
 
 .task-card.dragging {
   opacity: 0.4;
 }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding-right: 22px;
-}
-
 .task-title {
-  flex: 1;
   margin: 0;
   font-size: 14px;
   font-weight: 500;
   color: var(--color-ink);
-  border-radius: 3px;
-  padding: 1px 3px;
-  cursor: pointer;
-}
-
-.task-title:hover {
-  background: var(--color-surface);
-}
-
-.task-title-input {
-  flex: 1;
-  margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-  border: 2px solid var(--color-ember);
-  border-radius: 3px;
-  padding: 1px 3px;
-  outline: none;
-  background: var(--color-bg);
-  color: var(--color-ink);
-}
-
-.delete-btn {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--color-ink);
-  opacity: 0.35;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.delete-btn:hover {
-  background: var(--color-surface);
-  color: var(--color-overdue);
-  opacity: 1;
+  overflow-wrap: anywhere;
 }
 
 .task-description {
@@ -232,7 +196,6 @@ function cancelEdit() {
   flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 6px;
-  padding-right: 22px;
 }
 
 .label-chip {
