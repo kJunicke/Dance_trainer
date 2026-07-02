@@ -2,7 +2,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { renderMarkdown } from '@/lib/markdown'
 import { LABEL_COLORS } from '@/lib/labelColors'
-import { isDue } from '@/lib/dates'
+import { dueStatus, dueLabel } from '@/lib/dates'
 
 const props = defineProps<{
   id: number
@@ -23,7 +23,8 @@ const descriptionHtml = computed(() =>
   props.description ? renderMarkdown(props.description) : '',
 )
 
-const overdue = computed(() => isDue(props.dueDate))
+const status = computed(() => dueStatus(props.dueDate))
+const dueText = computed(() => dueLabel(props.dueDate))
 
 const isDragging = ref(false)
 const suppressNextClick = ref(false)
@@ -117,7 +118,7 @@ onUnmounted(() => {
 <template>
   <div
     class="task-card"
-    :class="{ dragging: isDragging }"
+    :class="[{ dragging: isDragging }, status ? `status-${status}` : '']"
     :data-card-id="id"
     draggable="true"
     @dragstart="isDragging = true; emit('drag-start', id)"
@@ -138,7 +139,10 @@ onUnmounted(() => {
     </div>
     <p class="task-title">{{ name }}</p>
     <div v-if="description" class="task-description" v-html="descriptionHtml" />
-    <p v-if="dueDate" class="due-badge" :class="{ overdue }">{{ dueDate }}</p>
+    <div v-if="dueText" class="meta">
+      <span class="status-dot" />
+      <span class="due-text">{{ dueText }}</span>
+    </div>
   </div>
 </template>
 
@@ -157,6 +161,21 @@ onUnmounted(() => {
   touch-action: pan-x pan-y;
 }
 
+/* Traffic-light urgency rail on the left edge, drawn with an inset shadow so it
+   layers over the border without shifting the card's content. Only actionable
+   states (due today / overdue) and upcoming ones get a rail; undated cards stay plain. */
+.task-card.status-overdue {
+  box-shadow: inset 4px 0 0 var(--color-overdue), var(--shadow-card);
+}
+
+.task-card.status-due {
+  box-shadow: inset 4px 0 0 var(--color-due), var(--shadow-card);
+}
+
+.task-card.status-scheduled {
+  box-shadow: inset 4px 0 0 var(--color-good), var(--shadow-card);
+}
+
 .task-card:hover {
   border-color: color-mix(in srgb, var(--color-ember) 45%, var(--color-border));
 }
@@ -167,8 +186,10 @@ onUnmounted(() => {
 
 .task-title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 500;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--color-ink);
   overflow-wrap: anywhere;
 }
@@ -205,19 +226,44 @@ onUnmounted(() => {
   color: #fff;
 }
 
-.due-badge {
-  margin: 6px 0 0;
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-due);
-  background: color-mix(in srgb, var(--color-due) 15%, var(--color-surface-light));
-  border-radius: 4px;
-  padding: 2px 6px;
+/* Consistent bottom strip: a status dot + the compact relative due label, always
+   in the same spot so the eye learns where to check "when is this due." */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
 }
 
-.due-badge.overdue {
+.status-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-ink-dim);
+}
+
+.status-scheduled .status-dot {
+  background: var(--color-good);
+}
+
+.status-due .status-dot {
+  background: var(--color-due);
+}
+
+.status-overdue .status-dot {
+  background: var(--color-overdue);
+}
+
+.due-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-dim);
+}
+
+/* Overdue is the one thing that should shout — color the label, not just the dot. */
+.status-overdue .due-text {
   color: var(--color-overdue);
-  background: color-mix(in srgb, var(--color-overdue) 15%, var(--color-surface-light));
+  font-weight: 700;
 }
 </style>

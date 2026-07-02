@@ -1,19 +1,23 @@
 :root {
-  --color-bg: #151311;
-  --color-surface: #1e1a17;
-  --color-surface-light: #332b23;
-  --color-border: #4a4038;
-  --color-ink: #f4efe9;
-  --color-ink-dim: #b5aea5;
+  /* Warm-paper light scheme. Lightness climbs bg -> surface -> surface-light
+     so columns lift off the board and white cards pop off the columns. */
+  --color-bg: #e6e0d4; /* board — warm greige */
+  --color-surface: #f0ebe1; /* columns, topbar, inputs, modals, list rows */
+  --color-surface-light: #ffffff; /* cards, and hover highlight (lighten toward white) */
+  --color-border: #d8cfbf;
+  --color-ink: #2a2420; /* near-black, warm */
+  --color-ink-dim: #7c7367; /* muted secondary text */
 
-  --color-ember: #f2760c;
-  --color-ember-light: #ff9640;
-  --color-good: #4fa876;
-  --color-good-light: #64c08e;
-  --color-due: #e0b23d;
-  --color-overdue: #d14b4b;
+  /* Accent + status colors deepened from the dark theme so they hold contrast
+     against light surfaces (small colored text/edges need more saturation on white). */
+  --color-ember: #e06d0a;
+  --color-ember-light: #f2842a;
+  --color-good: #3e9b6e;
+  --color-good-light: #4fb07f;
+  --color-due: #c98a16;
+  --color-overdue: #cb4242;
 
-  --color-text-on-ember: #1a1108;
+  --color-text-on-ember: #1f1404; /* dark ink on the orange button — keeps the technical punch */
 
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Work Sans', sans-serif;
@@ -22,6 +26,8 @@
   --radius-sm: 4px;
   --radius-lg: 8px;
 
-  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.5);
-  --shadow-modal: 0 8px 28px rgba(0, 0, 0, 0.6);
+  /* Warm-tinted soft shadows — a light UI needs subtle elevation, not the
+     heavy black drops the dark theme used. */
+  --shadow-card: 0 1px 2px rgba(70, 55, 40, 0.1), 0 2px 5px rgba(70, 55, 40, 0.07);
+  --shadow-modal: 0 16px 40px rgba(50, 38, 25, 0.24);
 }
