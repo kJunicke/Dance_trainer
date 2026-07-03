@@ -18,6 +18,7 @@ export interface Column {
   position: number
   due_offset_days: number | null
   is_due_column: boolean
+  due_clear_on_enter: boolean
   is_quick_target: boolean
 }
 
@@ -294,13 +295,19 @@ export const useBoardStore = defineStore('board', () => {
 
   async function updateColumnSettings(
     columnId: number,
-    settings: { due_offset_days: number | null; is_due_column: boolean },
+    settings: { due_offset_days: number | null; is_due_column: boolean; due_clear_on_enter: boolean },
   ) {
     const col = columns.value.find((c) => c.id === columnId)
     if (!col) return
     // A due column has no on-enter rule (also a DB check constraint).
-    const next = settings.is_due_column ? { ...settings, due_offset_days: null } : { ...settings }
-    const prev = { due_offset_days: col.due_offset_days, is_due_column: col.is_due_column }
+    const next = settings.is_due_column
+      ? { ...settings, due_offset_days: null, due_clear_on_enter: false }
+      : { ...settings }
+    const prev = {
+      due_offset_days: col.due_offset_days,
+      is_due_column: col.is_due_column,
+      due_clear_on_enter: col.due_clear_on_enter,
+    }
     const prevDue = next.is_due_column
       ? columns.value.find((c) => c.is_due_column && c.id !== columnId)
       : undefined
@@ -495,6 +502,9 @@ export const useBoardStore = defineStore('board', () => {
       const target = columns.value.find((c) => c.id === targetColumnId)
       if (target && target.due_offset_days !== null) {
         card.due_date = addDays(localToday(), target.due_offset_days)
+        ruleFired = true
+      } else if (target?.due_clear_on_enter && card.due_date !== null) {
+        card.due_date = null
         ruleFired = true
       }
     }

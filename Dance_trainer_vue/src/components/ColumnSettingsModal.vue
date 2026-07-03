@@ -25,7 +25,18 @@ watch(
   { immediate: true },
 )
 
-const ruleEnabled = computed(() => column.value?.due_offset_days !== null)
+// The on-enter rule has three states: off, set-to-offset, or clear.
+const ruleEnabled = computed(
+  () => column.value != null && (column.value.due_offset_days !== null || column.value.due_clear_on_enter),
+)
+const ruleMode = computed<'set' | 'clear'>(() =>
+  column.value?.due_clear_on_enter ? 'clear' : 'set',
+)
+
+function applyRule(rule: { due_offset_days: number | null; due_clear_on_enter: boolean }) {
+  if (!column.value) return
+  store.updateColumnSettings(props.columnId, { is_due_column: column.value.is_due_column, ...rule })
+}
 
 function onDueColumnToggle(event: Event) {
   if (!column.value) return
@@ -33,27 +44,25 @@ function onDueColumnToggle(event: Event) {
   store.updateColumnSettings(props.columnId, {
     is_due_column: checked,
     due_offset_days: checked ? null : column.value.due_offset_days,
+    due_clear_on_enter: checked ? false : column.value.due_clear_on_enter,
   })
 }
 
 function onRuleToggle(event: Event) {
-  if (!column.value) return
   const checked = (event.target as HTMLInputElement).checked
-  store.updateColumnSettings(props.columnId, {
-    is_due_column: column.value.is_due_column,
-    due_offset_days: checked ? 0 : null,
-  })
+  applyRule(checked ? { due_offset_days: 0, due_clear_on_enter: false } : { due_offset_days: null, due_clear_on_enter: false })
+}
+
+function setRuleMode(mode: 'set' | 'clear') {
+  if (mode === 'clear') applyRule({ due_offset_days: null, due_clear_on_enter: true })
+  else applyRule({ due_offset_days: column.value?.due_offset_days ?? 0, due_clear_on_enter: false })
 }
 
 function onOffsetChange(event: Event) {
-  if (!column.value) return
   const raw = Number((event.target as HTMLInputElement).value)
   const days = Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : 0
   ;(event.target as HTMLInputElement).value = String(days)
-  store.updateColumnSettings(props.columnId, {
-    is_due_column: column.value.is_due_column,
-    due_offset_days: days,
-  })
+  applyRule({ due_offset_days: days, due_clear_on_enter: false })
 }
 
 function onQuickTargetToggle(event: Event) {
@@ -111,20 +120,42 @@ onMounted(() => backdropEl.value?.focus())
             :disabled="column.is_due_column"
             @change="onRuleToggle"
           />
-          <span>Set due date when a card is moved in</span>
+          <span>Change the due date when a card is moved in</span>
         </label>
-        <label v-if="ruleEnabled" class="setting-row offset-row">
-          <input
-            type="number"
-            min="0"
-            step="1"
-            :value="column.due_offset_days ?? 0"
-            :disabled="column.is_due_column"
-            @change="onOffsetChange"
-          />
-          <span>days from today (0 = due same day)</span>
-        </label>
-        <p v-if="column.is_due_column" class="hint">A due column can't set due dates itself.</p>
+        <template v-if="ruleEnabled">
+          <label class="setting-row sub-row">
+            <input
+              type="radio"
+              :name="`rule-mode-${column.id}`"
+              :checked="ruleMode === 'set'"
+              :disabled="column.is_due_column"
+              @change="setRuleMode('set')"
+            />
+            <span>Set it to a date from today</span>
+          </label>
+          <label v-if="ruleMode === 'set'" class="setting-row offset-row">
+            <input
+              type="number"
+              min="0"
+              step="1"
+              :value="column.due_offset_days ?? 0"
+              :disabled="column.is_due_column"
+              @change="onOffsetChange"
+            />
+            <span>days from today (0 = due same day)</span>
+          </label>
+          <label class="setting-row sub-row">
+            <input
+              type="radio"
+              :name="`rule-mode-${column.id}`"
+              :checked="ruleMode === 'clear'"
+              :disabled="column.is_due_column"
+              @change="setRuleMode('clear')"
+            />
+            <span>Remove the due date</span>
+          </label>
+        </template>
+        <p v-if="column.is_due_column" class="hint">A due column can't change due dates itself.</p>
       </section>
 
       <section class="field">
@@ -243,7 +274,8 @@ onMounted(() => backdropEl.value?.focus())
   cursor: pointer;
 }
 
-.setting-row input[type='checkbox'] {
+.setting-row input[type='checkbox'],
+.setting-row input[type='radio'] {
   accent-color: var(--color-ember);
   width: 16px;
   height: 16px;
@@ -255,8 +287,14 @@ onMounted(() => backdropEl.value?.focus())
   cursor: default;
 }
 
+.sub-row {
+  margin-top: 8px;
+  margin-left: 24px;
+}
+
 .offset-row {
   margin-top: 8px;
+  margin-left: 48px;
   color: var(--color-ink-dim);
 }
 
