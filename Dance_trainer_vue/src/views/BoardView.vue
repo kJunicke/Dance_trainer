@@ -300,22 +300,22 @@ function onBoardPointerUp(e: PointerEvent) {
     <div v-if="store.loading" class="status"><LoadingSpinner :size="16" /> Loading…</div>
     <div v-else-if="store.error" class="status error">{{ store.error }}</div>
     <div v-else class="board-area">
-      <transition name="quick-bar">
-        <div v-if="dragState && quickDropTargets.length" class="quick-drop-bar">
-          <div class="quick-drop-list">
-            <div
-              v-for="col in quickDropTargets"
-              :key="col.id"
-              class="quick-bucket"
-              :class="{ over: quickOverColumnId === col.id }"
-              :data-quick-column-id="col.id"
-              @dragover.prevent="quickOverColumnId = col.id"
-              @dragleave="quickOverColumnId = null"
-              @drop.prevent.stop="dropToQuick(col.id)"
-            >{{ col.name }}</div>
-          </div>
+      <!-- Kept mounted and toggled via class, not v-if: inserting a node during
+           dragstart cancels the browser's native drag. -->
+      <div class="quick-drop-bar" :class="{ active: !!dragState && quickDropTargets.length > 0 }">
+        <div class="quick-drop-list">
+          <div
+            v-for="col in quickDropTargets"
+            :key="col.id"
+            class="quick-bucket"
+            :class="{ over: quickOverColumnId === col.id }"
+            :data-quick-column-id="col.id"
+            @dragover.prevent="quickOverColumnId = col.id"
+            @dragleave="quickOverColumnId = null"
+            @drop.prevent.stop="dropToQuick(col.id)"
+          >{{ col.name }}</div>
         </div>
-      </transition>
+      </div>
       <div
       ref="boardEl"
       class="board"
@@ -589,6 +589,16 @@ function onBoardPointerUp(e: PointerEvent) {
   background: var(--color-surface);
   border-bottom: 2px solid var(--color-ember);
   box-shadow: var(--shadow-modal);
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.quick-drop-bar.active {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* Four buckets per row (25% each minus the 3 gaps between them); more wrap to
@@ -623,20 +633,8 @@ function onBoardPointerUp(e: PointerEvent) {
   border-style: solid;
 }
 
-.quick-bar-enter-active,
-.quick-bar-leave-active {
-  transition: transform 0.16s ease, opacity 0.16s ease;
-}
-
-.quick-bar-enter-from,
-.quick-bar-leave-to {
-  transform: translateY(-100%);
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .quick-bar-enter-active,
-  .quick-bar-leave-active {
+  .quick-drop-bar {
     transition: none;
   }
 }
