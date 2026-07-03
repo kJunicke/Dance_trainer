@@ -13,7 +13,7 @@ Powerful Skill tracker for dance training, that documents progress for individua
 
 # Architecture
 - Supabase backend, Vue frontend
-- Repo layout: `Dance_trainer_vue/` (the app — `src/stores`, `src/router`, `src/views`, `src/components`), `supabase/migrations/` (SQL migrations, repo root — not inside the Vue app), `Dance_trainer_logseq/` (docs)
+- Repo layout: `Dance_trainer_vue/` (the app — `src/stores`, `src/router`, `src/views`, `src/components`, `src/lib` for the Supabase client), `supabase/migrations/` (SQL migrations, repo root — not inside the Vue app), `Dance_trainer_logseq/` (docs)
 
 # Commands
 Run from `Dance_trainer_vue/`:
@@ -44,7 +44,6 @@ Run from `Dance_trainer_vue/`:
 # Github
 - is connected to remote repo Dance_trainer
 - always commit everything that has changed even if you didn't make the changes. Look at the diff and include them in your commit message
-- 
 
 # Testing
 - I've installed a phone simulator browser extension. Please use it to test mobile functionality
