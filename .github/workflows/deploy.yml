@@ -44,5 +44,30 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # The Pages deploy agent occasionally loses a race and fails a single
+      # attempt. Retry a few times with a back-off before giving up.
       - id: deployment
         uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Retry deployment (attempt 2)
+        if: steps.deployment.outcome == 'failure'
+        id: deployment_retry_2
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Wait before final retry
+        if: steps.deployment.outcome == 'failure' && steps.deployment_retry_2.outcome == 'failure'
+        run: sleep 30
+
+      - name: Retry deployment (attempt 3)
+        if: steps.deployment.outcome == 'failure' && steps.deployment_retry_2.outcome == 'failure'
+        id: deployment_retry_3
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+
+      - name: Report deploy failure
+        if: steps.deployment.outcome == 'failure' && steps.deployment_retry_2.outcome == 'failure' && steps.deployment_retry_3.outcome == 'failure'
+        run: |
+          echo "::error::GitHub Pages deployment failed after 3 attempts (likely the deploy-agent race condition)."
+          exit 1
