@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
+import { readFileSync } from 'node:fs'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
@@ -10,8 +11,18 @@ export default defineConfig(({ command }) => {
   // Served under /Dance_trainer/ on GitHub Pages; root path for local dev.
   const base = command === 'build' ? '/Dance_trainer/' : '/'
 
+  // Version shown in the UI so it's clear on-device when a new build has
+  // deployed. The semver comes from package.json; the short commit SHA
+  // (GITHUB_SHA in the Pages build, 'dev' locally) makes it change every deploy.
+  const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
+  const commit = (process.env.GITHUB_SHA ?? '').slice(0, 7)
+  const appVersion = `v${pkg.version} (${commit || 'dev'})`
+
   return {
     base,
+    define: {
+      __APP_VERSION__: JSON.stringify(appVersion),
+    },
     plugins: [
       vue(),
       vueDevTools(),

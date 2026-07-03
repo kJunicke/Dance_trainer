@@ -9,6 +9,8 @@ const store = useBoardStore()
 const auth = useAuthStore()
 const router = useRouter()
 
+const version = __APP_VERSION__
+
 const newName = ref('')
 const joinCode = ref('')
 const creating = ref(false)
@@ -62,6 +64,7 @@ async function onImportFile(event: Event) {
 
 <template>
   <header class="topbar">
+    <span class="version" title="App build version">{{ version }}</span>
     <span class="user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</span>
     <button class="signout-btn" @click="signOut">Sign out</button>
   </header>
@@ -126,6 +129,13 @@ async function onImportFile(event: Event) {
   padding: 12px 24px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
+}
+
+.version {
+  margin-right: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-ink-dim);
 }
 
 .user {
