@@ -71,16 +71,6 @@ function onColumnChange(event: Event) {
   store.moveCard(props.cardId, columnId, store.cardsByColumn(columnId).length)
 }
 
-// Quick-move targets, minus the column the card is already in.
-const quickTargets = computed(() =>
-  store.quickTargetColumns.filter((c) => c.id !== card.value?.column_id),
-)
-
-function quickMove(columnId: number) {
-  store.moveCard(props.cardId, columnId, store.cardsByColumn(columnId).length)
-  emit('close')
-}
-
 function deleteCard() {
   if (!card.value) return
   if (!window.confirm(`Delete "${card.value.name}"?`)) return
@@ -89,15 +79,61 @@ function deleteCard() {
   emit('close')
 }
 
-const newLabelName = ref('')
-const newLabelColor = ref<string>(Object.keys(LABEL_COLORS)[0] ?? 'rose')
+// --- Labels: show only the card's labels as chips; a "+" opens an adder that
+// filters existing labels as you type and can create a new one in a chosen color.
+const activeLabels = computed(() => store.labelsForCard(props.cardId))
 
-function addLabel() {
-  if (!boardId.value) return
-  const name = newLabelName.value.trim()
-  if (!name) return
-  store.createLabel(boardId.value, name, newLabelColor.value)
-  newLabelName.value = ''
+const addingLabel = ref(false)
+const labelQuery = ref('')
+const colorPickerOpen = ref(false)
+const newLabelColor = ref<string>(Object.keys(LABEL_COLORS)[0] ?? 'rose')
+const labelInputEl = ref<HTMLInputElement | null>(null)
+
+// Labels not yet on this card, filtered by the query.
+const addableLabels = computed(() => {
+  const q = labelQuery.value.trim().toLowerCase()
+  return store.labels.filter(
+    (l) => !cardLabelIds.value.has(l.id) && (!q || l.name.toLowerCase().includes(q)),
+  )
+})
+
+// Offer "create" only when the typed name doesn't already exist on the board.
+const canCreate = computed(() => {
+  const name = labelQuery.value.trim()
+  return !!name && !store.labels.some((l) => l.name.toLowerCase() === name.toLowerCase())
+})
+
+async function openAdder() {
+  addingLabel.value = true
+  await nextTick()
+  labelInputEl.value?.focus()
+}
+
+function addExisting(labelId: number) {
+  store.toggleCardLabel(props.cardId, labelId)
+  labelQuery.value = ''
+  labelInputEl.value?.focus()
+}
+
+function pickColor(name: string) {
+  newLabelColor.value = name
+  colorPickerOpen.value = false
+}
+
+// Enter / Create: reuse an exact-name match if one exists, otherwise make a new
+// label in the chosen color. Either way the label lands on this card.
+async function submitLabel() {
+  const name = labelQuery.value.trim()
+  if (!name || !boardId.value) return
+  const existing = store.labels.find((l) => l.name.toLowerCase() === name.toLowerCase())
+  if (existing) {
+    if (!cardLabelIds.value.has(existing.id)) store.toggleCardLabel(props.cardId, existing.id)
+  } else {
+    const created = await store.createLabel(boardId.value, name, newLabelColor.value)
+    if (created) store.toggleCardLabel(props.cardId, created.id)
+  }
+  labelQuery.value = ''
+  labelInputEl.value?.focus()
 }
 
 function onBackdropClick(event: MouseEvent) {
@@ -143,42 +179,72 @@ onMounted(() => backdropEl.value?.focus())
         </section>
       </div>
 
-      <section v-if="quickTargets.length" class="field">
-        <label class="field-label">Quick move</label>
-        <div class="quick-move-list">
-          <button
-            v-for="col in quickTargets"
-            :key="col.id"
-            class="quick-move-btn"
-            :title="`Move this card to ${col.name}`"
-            @click="quickMove(col.id)"
-          >
-            → {{ col.name }}
-          </button>
-        </div>
-      </section>
-
       <section class="field">
         <label class="field-label">Labels</label>
         <div class="label-list">
           <button
-            v-for="label in store.labels"
+            v-for="label in activeLabels"
             :key="label.id"
-            class="label-chip"
-            :class="{ active: cardLabelIds.has(label.id) }"
+            class="label-chip active"
             :style="{ background: LABEL_COLORS[label.color] ?? '#ccc' }"
-            :title="cardLabelIds.has(label.id) ? 'Remove label from card' : 'Add label to card'"
+            title="Remove label from card"
             @click="store.toggleCardLabel(props.cardId, label.id)"
           >
-            {{ label.name }}
+            {{ label.name }}<span class="chip-x">×</span>
           </button>
+          <button
+            class="add-label-btn"
+            :class="{ open: addingLabel }"
+            :title="addingLabel ? 'Close' : 'Add a label'"
+            @click="addingLabel ? (addingLabel = false) : openAdder()"
+          >+</button>
         </div>
-        <div class="new-label">
-          <select v-model="newLabelColor">
-            <option v-for="(hex, name) in LABEL_COLORS" :key="name" :value="name">{{ name }}</option>
-          </select>
-          <input v-model="newLabelName" placeholder="New label name" @keydown.enter="addLabel" />
-          <button @click="addLabel">Add</button>
+
+        <div v-if="addingLabel" class="label-adder">
+          <div class="adder-input-row">
+            <button
+              class="color-dot"
+              :style="{ background: LABEL_COLORS[newLabelColor] }"
+              title="Pick a color for a new label"
+              @click="colorPickerOpen = !colorPickerOpen"
+            />
+            <input
+              ref="labelInputEl"
+              v-model="labelQuery"
+              class="label-input"
+              placeholder="Find or name a label"
+              @keydown.enter="submitLabel"
+            />
+            <button class="create-btn" :disabled="!canCreate" @click="submitLabel">Create</button>
+          </div>
+
+          <div v-if="colorPickerOpen" class="color-swatches">
+            <button
+              v-for="(hex, name) in LABEL_COLORS"
+              :key="name"
+              class="swatch"
+              :class="{ selected: name === newLabelColor }"
+              :style="{ background: hex }"
+              :title="name"
+              @click="pickColor(name)"
+            />
+          </div>
+
+          <ul v-if="addableLabels.length" class="label-options">
+            <li
+              v-for="label in addableLabels"
+              :key="label.id"
+              class="label-option"
+              @click="addExisting(label.id)"
+            >
+              <span class="opt-dot" :style="{ background: LABEL_COLORS[label.color] ?? '#ccc' }" />
+              {{ label.name }}
+            </li>
+          </ul>
+          <p v-else-if="labelQuery.trim()" class="adder-empty">
+            No match — Create makes “{{ labelQuery.trim() }}”.
+          </p>
+          <p v-else class="adder-empty">Every label is already on this card.</p>
         </div>
       </section>
 
@@ -281,18 +347,24 @@ onMounted(() => backdropEl.value?.focus())
   margin-bottom: 20px;
 }
 
+/* Column + due date share a row and stay side by side, even on phones. */
 .field-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
+  gap: 12px;
 }
 
 .field-row .field {
+  flex: 1;
   min-width: 0;
 }
 
+.column-select,
+.field-row input[type='date'] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .column-select {
-  max-width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -312,27 +384,6 @@ onMounted(() => backdropEl.value?.focus())
   margin-bottom: 6px;
 }
 
-.quick-move-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.quick-move-btn {
-  padding: 8px 12px;
-  border: 1px solid var(--color-ember);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-ink);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.quick-move-btn:hover {
-  background: var(--color-surface-light);
-  border-color: var(--color-ember-light);
-}
-
 input[type='date'] {
   padding: 8px 10px;
   border: 1px solid var(--color-border);
@@ -346,55 +397,157 @@ input[type='date'] {
 .label-list {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin-bottom: 10px;
 }
 
 .label-chip {
-  border: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
   border-radius: 4px;
-  padding: 4px 10px;
+  padding: 4px 8px 4px 10px;
   font-size: 12px;
   color: #fff;
   cursor: pointer;
-  opacity: 0.55;
 }
 
-.label-chip.active {
+.chip-x {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.label-chip:hover .chip-x {
   opacity: 1;
-  border-color: var(--color-ink);
 }
 
-.new-label {
+.add-label-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px dashed var(--color-ember);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-ember);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.add-label-btn:hover,
+.add-label-btn.open {
+  background: var(--color-surface-light);
+}
+
+.label-adder {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.adder-input-row {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
 }
 
-.new-label input {
+.color-dot {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+}
+
+.label-input {
   flex: 1;
+  min-width: 0;
   padding: 8px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  background: var(--color-bg);
+  background: var(--color-surface-light);
   color: var(--color-ink);
+  font-size: 14px;
 }
 
-.new-label select {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  color: var(--color-ink);
-  padding: 8px;
-}
-
-.new-label button {
-  padding: 8px 14px;
+.create-btn {
+  flex-shrink: 0;
+  padding: 8px 12px;
   border: none;
   border-radius: var(--radius-sm);
   background: var(--color-ember);
   color: var(--color-text-on-ember);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.create-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch.selected {
+  border-color: var(--color-ink);
+}
+
+.label-options {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  max-height: 168px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.label-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.label-option:hover {
+  background: var(--color-surface-light);
+}
+
+.opt-dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.adder-empty {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--color-ink-dim);
 }
 
 textarea {

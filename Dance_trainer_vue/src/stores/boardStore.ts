@@ -427,7 +427,7 @@ export const useBoardStore = defineStore('board', () => {
     return updateCardField(cardId, 'due_date', dueDate)
   }
 
-  async function createLabel(boardId: number, name: string, color: string) {
+  async function createLabel(boardId: number, name: string, color: string): Promise<Label | null> {
     const tempId = -Date.now()
     labels.value.push({ id: tempId, board_id: boardId, name, color })
     const { data, error: err } = await supabase
@@ -438,10 +438,11 @@ export const useBoardStore = defineStore('board', () => {
     if (err) {
       error.value = err.message
       labels.value = labels.value.filter((l) => l.id !== tempId)
-      return
+      return null
     }
     const idx = labels.value.findIndex((l) => l.id === tempId)
     if (idx !== -1) labels.value[idx] = data
+    return data
   }
 
   async function deleteLabel(labelId: number) {

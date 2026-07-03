@@ -86,6 +86,28 @@ const touchPoint = ref<{ x: number; y: number } | null>(null)
 const touchOverColumnId = ref<number | null>(null)
 let autoScrollRaf = 0
 
+// --- Quick-move drop buckets: a bar of the board's quick-move columns shown at
+// the top while a card is dragged; dropping onto one moves the card there.
+// The card's own source column is left out (dropping a card back where it came
+// from isn't a "quick move").
+const quickOverColumnId = ref<number | null>(null)
+const quickDropTargets = computed(() =>
+  store.quickTargetColumns.filter((c) => c.id !== dragState.value?.sourceColumnId),
+)
+
+function quickColumnIdAtPoint(x: number, y: number): number | null {
+  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-quick-column-id]')
+  return el ? Number(el.dataset.quickColumnId) : null
+}
+
+function dropToQuick(columnId: number) {
+  if (!dragState.value) return
+  const { cardId } = dragState.value
+  dragState.value = null
+  quickOverColumnId.value = null
+  store.moveCard(cardId, columnId, store.cardsByColumn(columnId).length)
+}
+
 const draggingCardName = computed(() => {
   if (!dragState.value || !touchPoint.value) return null
   return store.cards.find((c) => c.id === dragState.value!.cardId)?.name ?? null
@@ -98,6 +120,8 @@ function columnIdAtPoint(x: number, y: number): number | null {
 
 function onCardDragMove(x: number, y: number) {
   touchPoint.value = { x, y }
+  // A bucket overlays the top strip, so a point over it isn't inside any column.
+  quickOverColumnId.value = quickColumnIdAtPoint(x, y)
   touchOverColumnId.value = columnIdAtPoint(x, y)
   startAutoScroll(x)
 }
@@ -152,6 +176,7 @@ function stopAutoScroll() {
   autoScrollX = null
   touchPoint.value = null
   touchOverColumnId.value = null
+  quickOverColumnId.value = null
 }
 
 // Native (mouse) drag: dragover bubbles up from columns/cards, giving us the
@@ -171,6 +196,11 @@ function onCardDragEndTouch(x: number, y: number) {
   if (!dragState.value) return
   const sourceCardId = dragState.value.cardId
   const el = document.elementFromPoint(x, y)
+  const quickEl = el?.closest<HTMLElement>('[data-quick-column-id]')
+  if (quickEl) {
+    dropToQuick(Number(quickEl.dataset.quickColumnId))
+    return
+  }
   const columnEl = el?.closest<HTMLElement>('.kanban-column')
   if (!columnEl) {
     dragState.value = null
@@ -269,8 +299,24 @@ function onBoardPointerUp(e: PointerEvent) {
 
     <div v-if="store.loading" class="status"><LoadingSpinner :size="16" /> Loading…</div>
     <div v-else-if="store.error" class="status error">{{ store.error }}</div>
-    <div
-      v-else
+    <div v-else class="board-area">
+      <transition name="quick-bar">
+        <div v-if="dragState && quickDropTargets.length" class="quick-drop-bar">
+          <div class="quick-drop-list">
+            <div
+              v-for="col in quickDropTargets"
+              :key="col.id"
+              class="quick-bucket"
+              :class="{ over: quickOverColumnId === col.id }"
+              :data-quick-column-id="col.id"
+              @dragover.prevent="quickOverColumnId = col.id"
+              @dragleave="quickOverColumnId = null"
+              @drop.prevent.stop="dropToQuick(col.id)"
+            >{{ col.name }}</div>
+          </div>
+        </div>
+      </transition>
+      <div
       ref="boardEl"
       class="board"
       :class="{ panning: isPanning, 'touch-dragging': touchPoint !== null }"
@@ -300,6 +346,7 @@ function onBoardPointerUp(e: PointerEvent) {
         @open-settings="settingsColumnId = column.id"
       />
       <button class="add-column-btn" title="Add a new column to this board" @click="store.addColumn()">+ Add Column</button>
+      </div>
     </div>
 
     <div
@@ -506,6 +553,13 @@ function onBoardPointerUp(e: PointerEvent) {
   color: var(--color-overdue);
 }
 
+.board-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
 .board {
   flex: 1;
   min-height: 0;
@@ -520,6 +574,71 @@ function onBoardPointerUp(e: PointerEvent) {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
   cursor: grab;
+}
+
+/* Quick-move drop buckets: a floating bar over the top of the board, shown only
+   while a card is being dragged. */
+.quick-drop-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  display: flex;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border-bottom: 2px solid var(--color-ember);
+  box-shadow: var(--shadow-modal);
+}
+
+/* Four buckets per row (25% each minus the 3 gaps between them); more wrap to
+   the next row rather than overflowing off-screen. */
+.quick-drop-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+
+.quick-bucket {
+  flex: 0 0 calc((100% - 24px) / 4);
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 12px 10px;
+  border: 2px dashed var(--color-ember);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-bucket.over {
+  background: var(--color-ember);
+  color: var(--color-text-on-ember);
+  border-style: solid;
+}
+
+.quick-bar-enter-active,
+.quick-bar-leave-active {
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.quick-bar-enter-from,
+.quick-bar-leave-to {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-bar-enter-active,
+  .quick-bar-leave-active {
+    transition: none;
+  }
 }
 
 .board.panning {

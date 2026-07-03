@@ -166,9 +166,9 @@ onMounted(() => backdropEl.value?.focus())
             :checked="column.is_quick_target"
             @change="onQuickTargetToggle"
           />
-          <span>Show a one-tap button in cards to move them here</span>
+          <span>Show this column as a drop target while dragging a card</span>
         </label>
-        <p class="hint">Buttons appear in the card editor for every column marked this way.</p>
+        <p class="hint">Marked columns appear as drop buckets at the top of the board during a drag.</p>
       </section>
 
       <section class="field">
