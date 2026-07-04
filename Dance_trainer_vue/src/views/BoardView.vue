@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import KanbanColumn from '../components/KanbanColumn.vue'
 import CardModal from '../components/CardModal.vue'
@@ -36,6 +36,44 @@ async function signOut() {
 }
 
 const menuOpen = ref(false)
+
+// --- Card search: an inline dropdown in the header that filters the current
+// board's cards by name and opens the existing CardModal on a match.
+const searchOpen = ref(false)
+const searchQuery = ref('')
+const searchInputEl = ref<HTMLInputElement | null>(null)
+
+const columnNameById = computed(() => new Map(store.columns.map((c) => [c.id, c.name])))
+function columnName(columnId: number): string {
+  return columnNameById.value.get(columnId) ?? ''
+}
+
+const searchResults = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return []
+  return store.cards.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 12)
+})
+
+async function openSearch() {
+  searchOpen.value = true
+  await nextTick()
+  searchInputEl.value?.focus()
+}
+
+function closeSearch() {
+  searchOpen.value = false
+  searchQuery.value = ''
+}
+
+function openSearchResult(cardId: number) {
+  openCardId.value = cardId
+  closeSearch()
+}
+
+function onSearchEnter() {
+  const top = searchResults.value[0]
+  if (top) openSearchResult(top.id)
+}
 
 const copied = ref(false)
 async function copyCode() {
@@ -358,6 +396,13 @@ function onBoardPointerUp(e: PointerEvent) {
       </button>
       <h1 class="board-name">{{ store.board?.name }}</h1>
 
+      <button class="search-btn" title="Search cards" @click="openSearch">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="8.5" cy="8.5" r="6" />
+          <line x1="13.2" y1="13.2" x2="18" y2="18" stroke-linecap="round" />
+        </svg>
+      </button>
+
       <span v-if="store.board" class="invite">
         <code :title="'Invite code — share it to let others join this board'">{{ store.board.invite_code }}</code>
         <button
@@ -405,6 +450,31 @@ function onBoardPointerUp(e: PointerEvent) {
       <div class="menu-row menu-user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</div>
       <button class="menu-row menu-action" @click="signOut">Sign out</button>
     </nav>
+
+    <div v-if="searchOpen" class="menu-backdrop" @click="closeSearch" />
+    <div v-if="searchOpen" class="search-panel">
+      <input
+        ref="searchInputEl"
+        v-model="searchQuery"
+        class="search-input"
+        placeholder="Search cards…"
+        @keydown.esc="closeSearch"
+        @keydown.enter="onSearchEnter"
+      />
+      <ul v-if="searchResults.length" class="search-results">
+        <li
+          v-for="card in searchResults"
+          :key="card.id"
+          class="search-result"
+          @click="openSearchResult(card.id)"
+        >
+          <span class="search-result-name">{{ card.name }}</span>
+          <span class="search-result-col">{{ columnName(card.column_id) }}</span>
+        </li>
+      </ul>
+      <p v-else-if="searchQuery.trim()" class="search-empty">No cards match.</p>
+      <p v-else class="search-empty">Type to search cards.</p>
+    </div>
 
     <div v-if="store.loading" class="status"><LoadingSpinner :size="16" /> Loading…</div>
     <div v-else-if="store.error" class="status error">{{ store.error }}</div>
@@ -653,6 +723,100 @@ function onBoardPointerUp(e: PointerEvent) {
   border-top: 1px solid var(--color-border);
 }
 
+.search-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.search-btn:hover {
+  background: var(--color-surface-light);
+  border-color: var(--color-ember);
+}
+
+.search-panel {
+  position: absolute;
+  top: 56px;
+  left: 12px;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  padding: 10px;
+}
+
+.search-input {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 14px;
+}
+
+.search-results {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.search-result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.search-result:hover {
+  background: var(--color-surface-light);
+}
+
+.search-result-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result-col {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-ink-dim);
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-empty {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--color-ink-dim);
+}
+
 @media (max-width: 760px) {
   .invite,
   .user,
@@ -668,6 +832,11 @@ function onBoardPointerUp(e: PointerEvent) {
   .back-btn {
     padding: 8px 12px;
     font-size: 15px;
+  }
+
+  /* Under 16px, iOS Safari zooms the page when the field gets focus. */
+  .search-input {
+    font-size: 16px;
   }
 }
 
