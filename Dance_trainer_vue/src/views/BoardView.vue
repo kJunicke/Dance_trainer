@@ -187,6 +187,10 @@ function onBoardDragOver(e: DragEvent) {
 }
 
 function onBoardDragEnd() {
+  // Touch drags are cleaned up on pointerup (onCardDragEndTouch), not dragend —
+  // guards against a stray native dragend (e.g. an aborted native touch DnD
+  // that TaskCard mostly prevents now) clearing state mid touch-drag.
+  if (touchPoint.value) return
   stopAutoScroll()
   dragState.value = null
 }

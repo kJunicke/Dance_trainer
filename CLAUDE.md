@@ -47,3 +47,6 @@ Run from `Dance_trainer_vue/`:
 
 # Testing
 - I've installed a phone simulator browser extension. Please use it to test mobile functionality
+
+# General guidelines
+- be brief

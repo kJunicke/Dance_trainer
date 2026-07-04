@@ -29,6 +29,14 @@ const dueText = computed(() => dueLabel(props.dueDate))
 const isDragging = ref(false)
 const suppressNextClick = ref(false)
 
+// Android Chrome also starts a native touch drag-and-drop on a long-press over
+// a draggable element — racing the custom long-press drag below. The native
+// drag can't actually proceed (blockTouchScroll + setPointerCapture disrupt
+// it), so the browser aborts it almost immediately with a dragend, which was
+// bubbling up and clearing the board's drag state mid-gesture. Disable native
+// drag for touch pointers so only the custom touch drag runs; mouse keeps it.
+const nativeDraggable = ref(true)
+
 function onDragEnd() {
   isDragging.value = false
   // Some browsers fire a synthetic click on the drag source right after
@@ -71,6 +79,7 @@ function endTouchDrag() {
 }
 
 function onPointerDown(e: PointerEvent) {
+  nativeDraggable.value = e.pointerType !== 'touch'
   if (e.pointerType !== 'touch') return
   touchStart = { x: e.clientX, y: e.clientY, pointerId: e.pointerId }
   clearLongPress()
@@ -120,7 +129,7 @@ onUnmounted(() => {
     class="task-card"
     :class="[{ dragging: isDragging }, status ? `status-${status}` : '']"
     :data-card-id="id"
-    draggable="true"
+    :draggable="nativeDraggable"
     @dragstart="isDragging = true; emit('drag-start', id)"
     @dragend="onDragEnd"
     @click="onCardClick"
