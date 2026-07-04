@@ -45,9 +45,11 @@ Run from `Dance_trainer_vue/`:
 - is connected to remote repo Dance_trainer
 - always commit everything that has changed even if you didn't make the changes. Look at the diff and include them in your commit message
 - update the version number rendered in the header of the board selection view with every push
+- Before every commit update all relevant docs in logseq
 
 # Testing
 - I've installed a phone simulator browser extension. I can open it up when you have browser access to let you test it on a proper screen
 
 # General guidelines
 - be brief and efficient
+- before any changes always check logseq for relevant context
