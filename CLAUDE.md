@@ -50,4 +50,4 @@ Run from `Dance_trainer_vue/`:
 - I've installed a phone simulator browser extension. I can open it up when you have browser access to let you test it on a proper screen
 
 # General guidelines
-- be brief
+- be brief and efficient
