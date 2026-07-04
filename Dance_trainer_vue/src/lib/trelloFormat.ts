@@ -56,15 +56,23 @@ interface TrelloExport {
   labels?: TrelloLabel[]
 }
 
+// Intermediate shape both this Trello parser and lib/boardFormat.ts's native
+// parser produce, consumed by boardStore's insertParsedContent. localId/
+// columnRef/cardRef/labelRef are per-file cross-reference ids (Trello's own
+// ids for a Trello export, our row ids as strings for a native export).
 export interface ParsedColumn {
-  trelloId: string
+  localId: string
   name: string
   position: number
+  isDueColumn: boolean
+  dueOffsetDays: number | null
+  dueClearOnEnter: boolean
+  isQuickTarget: boolean
 }
 
 export interface ParsedCard {
-  trelloId: string
-  trelloColumnId: string
+  localId: string
+  columnRef: string
   name: string
   description: string | null
   dueDate: string | null
@@ -72,14 +80,14 @@ export interface ParsedCard {
 }
 
 export interface ParsedLabel {
-  trelloId: string
+  localId: string
   name: string
   color: string
 }
 
 export interface ParsedCardLabel {
-  trelloCardId: string
-  trelloLabelId: string
+  cardRef: string
+  labelRef: string
 }
 
 export interface ParsedBoard {
@@ -88,6 +96,12 @@ export interface ParsedBoard {
   cards: ParsedCard[]
   labels: ParsedLabel[]
   cardLabels: ParsedCardLabel[]
+  // True when the source file itself carries column automation settings (our
+  // native export). Trello exports have no such concept, so their columns
+  // above are stamped with schema defaults — an importer overwriting an
+  // existing board can use this to decide whether to preserve the existing
+  // columns' settings instead of resetting them.
+  hasColumnSettings: boolean
 }
 
 export function parseTrelloExport(raw: unknown): ParsedBoard {
@@ -98,14 +112,22 @@ export function parseTrelloExport(raw: unknown): ParsedBoard {
 
   const openLists = data.lists.filter((l) => !l.closed).sort((a, b) => a.pos - b.pos)
   const openListIds = new Set(openLists.map((l) => l.id))
-  const columns: ParsedColumn[] = openLists.map((l, i) => ({ trelloId: l.id, name: l.name, position: i }))
+  const columns: ParsedColumn[] = openLists.map((l, i) => ({
+    localId: l.id,
+    name: l.name,
+    position: i,
+    isDueColumn: false,
+    dueOffsetDays: null,
+    dueClearOnEnter: false,
+    isQuickTarget: false,
+  }))
 
   const labels: ParsedLabel[] = (data.labels ?? []).map((l) => ({
-    trelloId: l.id,
+    localId: l.id,
     name: l.name || '',
     color: mapColor(l.color),
   }))
-  const labelIds = new Set(labels.map((l) => l.trelloId))
+  const labelIds = new Set(labels.map((l) => l.localId))
 
   const openCards = data.cards
     .filter((c) => !c.closed && openListIds.has(c.idList))
@@ -116,8 +138,8 @@ export function parseTrelloExport(raw: unknown): ParsedBoard {
     const position = nextPositionByList.get(c.idList) ?? 0
     nextPositionByList.set(c.idList, position + 1)
     return {
-      trelloId: c.id,
-      trelloColumnId: c.idList,
+      localId: c.id,
+      columnRef: c.idList,
       name: c.name,
       description: c.desc || null,
       dueDate: c.due ? c.due.slice(0, 10) : null,
@@ -128,43 +150,8 @@ export function parseTrelloExport(raw: unknown): ParsedBoard {
   const cardLabels: ParsedCardLabel[] = openCards.flatMap((c) =>
     (c.idLabels ?? [])
       .filter((id) => labelIds.has(id))
-      .map((id) => ({ trelloCardId: c.id, trelloLabelId: id })),
+      .map((id) => ({ cardRef: c.id, labelRef: id })),
   )
 
-  return { boardName: data.name || 'Imported board', columns, cards, labels, cardLabels }
-}
-
-export function buildTrelloExport(
-  board: { name: string },
-  columns: { id: number; name: string; position: number }[],
-  cards: {
-    id: number
-    column_id: number
-    name: string
-    description: string | null
-    due_date: string | null
-    position: number
-  }[],
-  labels: { id: number; name: string; color: string }[],
-  cardLabels: { card_id: number; label_id: number }[],
-) {
-  return {
-    name: board.name,
-    lists: [...columns]
-      .sort((a, b) => a.position - b.position)
-      .map((c) => ({ id: String(c.id), name: c.name, closed: false, pos: c.position })),
-    labels: labels.map((l) => ({ id: String(l.id), name: l.name, color: l.color })),
-    cards: [...cards]
-      .sort((a, b) => a.position - b.position)
-      .map((c) => ({
-        id: String(c.id),
-        idList: String(c.column_id),
-        name: c.name,
-        desc: c.description ?? '',
-        due: c.due_date ? `${c.due_date}T23:59:59.000Z` : null,
-        closed: false,
-        idLabels: cardLabels.filter((cl) => cl.card_id === c.id).map((cl) => String(cl.label_id)),
-        pos: c.position,
-      })),
-  }
+  return { boardName: data.name || 'Imported board', columns, cards, labels, cardLabels, hasColumnSettings: false }
 }

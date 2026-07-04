@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from './authStore'
-import { parseTrelloExport, buildTrelloExport, type ParsedBoard } from '@/lib/trelloFormat'
+import type { ParsedBoard } from '@/lib/trelloFormat'
+import { parseBoardFile, buildBoardExport } from '@/lib/boardFormat'
 import { localToday, addDays, isDue } from '@/lib/dates'
 
 export interface Board {
@@ -136,18 +137,26 @@ export const useBoardStore = defineStore('board', () => {
     boards.value = boards.value.filter((b) => b.id !== id)
   }
 
-  // Inserts a parsed Trello export's columns/cards/labels into an existing
+  // Inserts a parsed export's columns/cards/labels into an existing
   // (already-created, already-emptied-if-needed) board. Shared by a fresh
   // import and an overwrite-in-place import.
   async function insertParsedContent(boardId: number, parsed: ParsedBoard) {
-    const columnIdByTrelloId = new Map<string, number>()
-    const labelIdByTrelloId = new Map<string, number>()
+    const columnIdByLocalId = new Map<string, number>()
+    const labelIdByLocalId = new Map<string, number>()
 
     const [columnsResult, labelsResult] = await Promise.all([
       parsed.columns.length > 0
         ? supabase
             .from('columns')
-            .insert(parsed.columns.map((c) => ({ board_id: boardId, name: c.name, position: c.position })))
+            .insert(parsed.columns.map((c) => ({
+              board_id: boardId,
+              name: c.name,
+              position: c.position,
+              is_due_column: c.isDueColumn,
+              due_offset_days: c.dueOffsetDays,
+              due_clear_on_enter: c.dueClearOnEnter,
+              is_quick_target: c.isQuickTarget,
+            })))
             .select()
         : { data: [] as Column[], error: null },
       parsed.labels.length > 0
@@ -159,15 +168,15 @@ export const useBoardStore = defineStore('board', () => {
     ])
     if (columnsResult.error) throw columnsResult.error
     if (labelsResult.error) throw labelsResult.error
-    parsed.columns.forEach((c, i) => columnIdByTrelloId.set(c.trelloId, columnsResult.data![i].id))
-    parsed.labels.forEach((l, i) => labelIdByTrelloId.set(l.trelloId, labelsResult.data![i].id))
+    parsed.columns.forEach((c, i) => columnIdByLocalId.set(c.localId, columnsResult.data![i].id))
+    parsed.labels.forEach((l, i) => labelIdByLocalId.set(l.localId, labelsResult.data![i].id))
 
-    const cardIdByTrelloId = new Map<string, number>()
+    const cardIdByLocalId = new Map<string, number>()
     if (parsed.cards.length > 0) {
       const { data: cardRows, error: cardErr } = await supabase
         .from('cards')
         .insert(parsed.cards.map((c) => ({
-          column_id: columnIdByTrelloId.get(c.trelloColumnId)!,
+          column_id: columnIdByLocalId.get(c.columnRef)!,
           name: c.name,
           description: c.description,
           due_date: c.dueDate,
@@ -175,14 +184,14 @@ export const useBoardStore = defineStore('board', () => {
         })))
         .select()
       if (cardErr) throw cardErr
-      parsed.cards.forEach((c, i) => cardIdByTrelloId.set(c.trelloId, cardRows[i].id))
+      parsed.cards.forEach((c, i) => cardIdByLocalId.set(c.localId, cardRows[i].id))
     }
 
     if (parsed.cardLabels.length > 0) {
       const { error: clErr } = await supabase.from('card_labels').insert(
         parsed.cardLabels.map((cl) => ({
-          card_id: cardIdByTrelloId.get(cl.trelloCardId)!,
-          label_id: labelIdByTrelloId.get(cl.trelloLabelId)!,
+          card_id: cardIdByLocalId.get(cl.cardRef)!,
+          label_id: labelIdByLocalId.get(cl.labelRef)!,
         })),
       )
       if (clErr) throw clErr
@@ -195,7 +204,7 @@ export const useBoardStore = defineStore('board', () => {
     loading.value = true
     error.value = null
     try {
-      const parsed = parseTrelloExport(JSON.parse(await file.text()))
+      const parsed = parseBoardFile(JSON.parse(await file.text()))
 
       const { data: boardData, error: boardErr } = await insertBoardWithMembership(parsed.boardName, auth.user.id)
       if (boardErr) throw boardErr
@@ -212,14 +221,33 @@ export const useBoardStore = defineStore('board', () => {
     }
   }
 
-  // Replaces an existing board's columns/cards/labels with a Trello export's
+  // Replaces an existing board's columns/cards/labels with an export file's
   // content, in place — keeps the board's id/invite_code (and thus sharing)
-  // intact, for "update my board" rather than "start a new one".
+  // intact, for "update my board" rather than "start a new one". A Trello
+  // export has no column automation settings, so in that case the existing
+  // columns' settings are preserved by name match rather than reset to
+  // defaults; our own export already carries real settings, which are trusted
+  // as-is (a deliberate restore).
   async function importTrelloIntoBoard(boardId: number, file: File): Promise<boolean> {
     loading.value = true
     error.value = null
     try {
-      const parsed = parseTrelloExport(JSON.parse(await file.text()))
+      const parsed = parseBoardFile(JSON.parse(await file.text()))
+
+      if (!parsed.hasColumnSettings) {
+        const settingsByName = new Map(
+          columns.value.map((c) => [c.name, {
+            isDueColumn: c.is_due_column,
+            dueOffsetDays: c.due_offset_days,
+            dueClearOnEnter: c.due_clear_on_enter,
+            isQuickTarget: c.is_quick_target,
+          }]),
+        )
+        parsed.columns = parsed.columns.map((c) => {
+          const prev = settingsByName.get(c.name)
+          return prev ? { ...c, ...prev } : c
+        })
+      }
 
       // Deleting columns cascades to their cards (and those cards' card_labels);
       // deleting labels cascades any remaining card_labels.
@@ -241,7 +269,7 @@ export const useBoardStore = defineStore('board', () => {
 
   function exportBoard() {
     if (!board.value) return
-    const data = buildTrelloExport(board.value, columns.value, cards.value, labels.value, cardLabels.value)
+    const data = buildBoardExport(board.value, columns.value, cards.value, labels.value, cardLabels.value)
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

@@ -412,12 +412,12 @@ function onBoardPointerUp(e: PointerEvent) {
         >{{ copied ? 'Copied!' : 'Copy' }}</button>
         <button
           class="bar-btn"
-          title="Download this board as a Trello-compatible JSON file"
+          title="Download this board as a JSON file, for backup or to refresh it later via Import"
           @click="store.exportBoard()"
         >Export</button>
         <button
           class="bar-btn"
-          title="Replace this board's columns, cards, and labels with a Trello JSON file"
+          title="Replace this board's columns, cards, and labels with a JSON file — this app's own Export, or a Trello board export"
           :disabled="importing"
           @click="importInput?.click()"
         >{{ importing ? 'Importing…' : 'Import' }}</button>
@@ -442,10 +442,10 @@ function onBoardPointerUp(e: PointerEvent) {
         <button class="bar-btn" @click="copyCode">{{ copied ? 'Copied!' : 'Copy code' }}</button>
       </div>
       <button class="menu-row menu-action" @click="store.exportBoard(); menuOpen = false">
-        Export board (Trello JSON)
+        Export board (JSON)
       </button>
       <button class="menu-row menu-action" :disabled="importing" @click="importInput?.click()">
-        {{ importing ? 'Importing…' : 'Import board (Trello JSON)' }}
+        {{ importing ? 'Importing…' : 'Import board (JSON)' }}
       </button>
       <div class="menu-row menu-user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</div>
       <button class="menu-row menu-action" @click="signOut">Sign out</button>

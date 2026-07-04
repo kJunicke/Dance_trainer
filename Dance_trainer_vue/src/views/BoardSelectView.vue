@@ -91,12 +91,12 @@ async function onImportFile(event: Event) {
     <div class="create">
       <button
         type="button"
-        title="Import a Trello board export (.json) as a new board"
+        title="Import a board export (.json) as a new board — a Trello export or one made with this app's own Export"
         :disabled="importing"
         @click="importInput?.click()"
       >
         <LoadingSpinner v-if="importing" :size="14" />
-        <span v-else>Import from Trello JSON</span>
+        <span v-else>Import board (JSON)</span>
       </button>
       <input
         ref="importInput"
