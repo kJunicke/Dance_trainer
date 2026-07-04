@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onUnmounted } from 'vue'
 import TaskCard from './TaskCard.vue'
 
 const props = defineProps<{
@@ -13,6 +13,11 @@ const props = defineProps<{
     labels?: { id: number; name: string; color: string }[]
   }[]
   touchDragOver?: boolean
+  // True board-wide while a column (not a card) is being dragged, so this
+  // column doesn't show its card-drop highlight for column-reorder dragover.
+  columnDragActive?: boolean
+  // True only for the column currently being dragged, for a dimmed style.
+  isDragging?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -25,6 +30,9 @@ const emit = defineEmits<{
   'card-dropped-on-card': [targetCardId: number, position: 'before' | 'after']
   'open-card': [cardId: number]
   'open-settings': []
+  'column-drag-start': []
+  'column-drag-move': [x: number, y: number]
+  'column-drag-end': [x: number, y: number]
 }>()
 
 const isEditing = ref(false)
@@ -103,12 +111,77 @@ function onColumnDrop() {
   dragOverCount.value = 0
   emit('card-dropped')
 }
+
+// --- Column drag handle: same dual mouse/touch approach as TaskCard's card
+// drag (see TaskCard.vue). Native draggable is disabled for touch pointers —
+// otherwise a long-press on Android also starts a native touch DnD that races
+// the custom one below and aborts it almost immediately.
+const nativeColumnDraggable = ref(true)
+const HANDLE_LONG_PRESS_MS = 300
+const HANDLE_MOVE_CANCEL_PX = 10
+let handleLongPressTimer: ReturnType<typeof setTimeout> | null = null
+let handleTouchStart: { x: number; y: number; pointerId: number } | null = null
+let handleTouchDragActive = false
+
+function blockHandleTouchScroll(e: TouchEvent) {
+  e.preventDefault()
+}
+
+function clearHandleLongPress() {
+  if (handleLongPressTimer) {
+    clearTimeout(handleLongPressTimer)
+    handleLongPressTimer = null
+  }
+}
+
+function onHandlePointerDown(e: PointerEvent) {
+  nativeColumnDraggable.value = e.pointerType !== 'touch'
+  if (e.pointerType !== 'touch') return
+  handleTouchStart = { x: e.clientX, y: e.clientY, pointerId: e.pointerId }
+  clearHandleLongPress()
+  handleLongPressTimer = setTimeout(() => {
+    handleLongPressTimer = null
+    handleTouchDragActive = true
+    document.addEventListener('touchmove', blockHandleTouchScroll, { passive: false })
+    navigator.vibrate?.(30)
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    emit('column-drag-start')
+    emit('column-drag-move', handleTouchStart!.x, handleTouchStart!.y)
+  }, HANDLE_LONG_PRESS_MS)
+}
+
+function onHandlePointerMove(e: PointerEvent) {
+  if (e.pointerType !== 'touch' || !handleTouchStart || e.pointerId !== handleTouchStart.pointerId) return
+  if (handleTouchDragActive) {
+    emit('column-drag-move', e.clientX, e.clientY)
+    return
+  }
+  const dx = e.clientX - handleTouchStart.x
+  const dy = e.clientY - handleTouchStart.y
+  if (Math.hypot(dx, dy) > HANDLE_MOVE_CANCEL_PX) clearHandleLongPress()
+}
+
+function onHandlePointerUp(e: PointerEvent) {
+  if (e.pointerType !== 'touch' || !handleTouchStart || e.pointerId !== handleTouchStart.pointerId) return
+  clearHandleLongPress()
+  if (handleTouchDragActive) {
+    handleTouchDragActive = false
+    document.removeEventListener('touchmove', blockHandleTouchScroll)
+    emit('column-drag-end', e.clientX, e.clientY)
+  }
+  handleTouchStart = null
+}
+
+onUnmounted(() => {
+  clearHandleLongPress()
+  document.removeEventListener('touchmove', blockHandleTouchScroll)
+})
 </script>
 
 <template>
   <div
     class="kanban-column"
-    :class="{ 'drag-over': dragOverCount > 0 || touchDragOver }"
+    :class="{ 'drag-over': !columnDragActive && (dragOverCount > 0 || touchDragOver), dragging: isDragging }"
     :data-column-id="id"
     @dragover.prevent
     @dragenter="dragOverCount++"
@@ -116,6 +189,17 @@ function onColumnDrop() {
     @drop.prevent="onColumnDrop"
   >
     <div class="column-header">
+      <span
+        class="column-drag-handle"
+        title="Drag to reorder columns"
+        :draggable="nativeColumnDraggable"
+        @dragstart="emit('column-drag-start')"
+        @dragend="emit('column-drag-end', 0, 0)"
+        @pointerdown="onHandlePointerDown"
+        @pointermove="onHandlePointerMove"
+        @pointerup="onHandlePointerUp"
+        @pointercancel="onHandlePointerUp"
+      >⠿</span>
       <input
         v-if="isEditing"
         ref="inputEl"
@@ -208,6 +292,10 @@ function onColumnDrop() {
   outline: 2px dashed var(--color-ember);
 }
 
+.kanban-column.dragging {
+  opacity: 0.4;
+}
+
 .column-header {
   flex-shrink: 0;
   display: flex;
@@ -285,6 +373,25 @@ function onColumnDrop() {
 .settings-btn:hover {
   background: var(--color-surface-light);
   opacity: 1;
+}
+
+.column-drag-handle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  opacity: 0.4;
+  font-size: 16px;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+.column-drag-handle:hover {
+  opacity: 0.8;
 }
 
 .card-list {

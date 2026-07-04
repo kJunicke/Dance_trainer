@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from './authStore'
-import { parseTrelloExport, buildTrelloExport } from '@/lib/trelloFormat'
+import { parseTrelloExport, buildTrelloExport, type ParsedBoard } from '@/lib/trelloFormat'
 import { localToday, addDays, isDue } from '@/lib/dates'
 
 export interface Board {
@@ -136,6 +136,59 @@ export const useBoardStore = defineStore('board', () => {
     boards.value = boards.value.filter((b) => b.id !== id)
   }
 
+  // Inserts a parsed Trello export's columns/cards/labels into an existing
+  // (already-created, already-emptied-if-needed) board. Shared by a fresh
+  // import and an overwrite-in-place import.
+  async function insertParsedContent(boardId: number, parsed: ParsedBoard) {
+    const columnIdByTrelloId = new Map<string, number>()
+    const labelIdByTrelloId = new Map<string, number>()
+
+    const [columnsResult, labelsResult] = await Promise.all([
+      parsed.columns.length > 0
+        ? supabase
+            .from('columns')
+            .insert(parsed.columns.map((c) => ({ board_id: boardId, name: c.name, position: c.position })))
+            .select()
+        : { data: [] as Column[], error: null },
+      parsed.labels.length > 0
+        ? supabase
+            .from('labels')
+            .insert(parsed.labels.map((l) => ({ board_id: boardId, name: l.name, color: l.color })))
+            .select()
+        : { data: [] as Label[], error: null },
+    ])
+    if (columnsResult.error) throw columnsResult.error
+    if (labelsResult.error) throw labelsResult.error
+    parsed.columns.forEach((c, i) => columnIdByTrelloId.set(c.trelloId, columnsResult.data![i].id))
+    parsed.labels.forEach((l, i) => labelIdByTrelloId.set(l.trelloId, labelsResult.data![i].id))
+
+    const cardIdByTrelloId = new Map<string, number>()
+    if (parsed.cards.length > 0) {
+      const { data: cardRows, error: cardErr } = await supabase
+        .from('cards')
+        .insert(parsed.cards.map((c) => ({
+          column_id: columnIdByTrelloId.get(c.trelloColumnId)!,
+          name: c.name,
+          description: c.description,
+          due_date: c.dueDate,
+          position: c.position,
+        })))
+        .select()
+      if (cardErr) throw cardErr
+      parsed.cards.forEach((c, i) => cardIdByTrelloId.set(c.trelloId, cardRows[i].id))
+    }
+
+    if (parsed.cardLabels.length > 0) {
+      const { error: clErr } = await supabase.from('card_labels').insert(
+        parsed.cardLabels.map((cl) => ({
+          card_id: cardIdByTrelloId.get(cl.trelloCardId)!,
+          label_id: labelIdByTrelloId.get(cl.trelloLabelId)!,
+        })),
+      )
+      if (clErr) throw clErr
+    }
+  }
+
   async function importTrelloBoard(file: File): Promise<number | null> {
     const auth = useAuthStore()
     if (!auth.user) return null
@@ -147,59 +200,40 @@ export const useBoardStore = defineStore('board', () => {
       const { data: boardData, error: boardErr } = await insertBoardWithMembership(parsed.boardName, auth.user.id)
       if (boardErr) throw boardErr
 
-      const columnIdByTrelloId = new Map<string, number>()
-      const labelIdByTrelloId = new Map<string, number>()
-
-      const [columnsResult, labelsResult] = await Promise.all([
-        parsed.columns.length > 0
-          ? supabase
-              .from('columns')
-              .insert(parsed.columns.map((c) => ({ board_id: boardData.id, name: c.name, position: c.position })))
-              .select()
-          : { data: [] as Column[], error: null },
-        parsed.labels.length > 0
-          ? supabase
-              .from('labels')
-              .insert(parsed.labels.map((l) => ({ board_id: boardData.id, name: l.name, color: l.color })))
-              .select()
-          : { data: [] as Label[], error: null },
-      ])
-      if (columnsResult.error) throw columnsResult.error
-      if (labelsResult.error) throw labelsResult.error
-      parsed.columns.forEach((c, i) => columnIdByTrelloId.set(c.trelloId, columnsResult.data![i].id))
-      parsed.labels.forEach((l, i) => labelIdByTrelloId.set(l.trelloId, labelsResult.data![i].id))
-
-      const cardIdByTrelloId = new Map<string, number>()
-      if (parsed.cards.length > 0) {
-        const { data: cardRows, error: cardErr } = await supabase
-          .from('cards')
-          .insert(parsed.cards.map((c) => ({
-            column_id: columnIdByTrelloId.get(c.trelloColumnId)!,
-            name: c.name,
-            description: c.description,
-            due_date: c.dueDate,
-            position: c.position,
-          })))
-          .select()
-        if (cardErr) throw cardErr
-        parsed.cards.forEach((c, i) => cardIdByTrelloId.set(c.trelloId, cardRows[i].id))
-      }
-
-      if (parsed.cardLabels.length > 0) {
-        const { error: clErr } = await supabase.from('card_labels').insert(
-          parsed.cardLabels.map((cl) => ({
-            card_id: cardIdByTrelloId.get(cl.trelloCardId)!,
-            label_id: labelIdByTrelloId.get(cl.trelloLabelId)!,
-          })),
-        )
-        if (clErr) throw clErr
-      }
+      await insertParsedContent(boardData.id, parsed)
 
       boards.value.push({ id: boardData.id, name: boardData.name, invite_code: boardData.invite_code })
       return boardData.id as number
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : 'Failed to import board'
       return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // Replaces an existing board's columns/cards/labels with a Trello export's
+  // content, in place — keeps the board's id/invite_code (and thus sharing)
+  // intact, for "update my board" rather than "start a new one".
+  async function importTrelloIntoBoard(boardId: number, file: File): Promise<boolean> {
+    loading.value = true
+    error.value = null
+    try {
+      const parsed = parseTrelloExport(JSON.parse(await file.text()))
+
+      // Deleting columns cascades to their cards (and those cards' card_labels);
+      // deleting labels cascades any remaining card_labels.
+      const { error: delColumnsErr } = await supabase.from('columns').delete().eq('board_id', boardId)
+      if (delColumnsErr) throw delColumnsErr
+      const { error: delLabelsErr } = await supabase.from('labels').delete().eq('board_id', boardId)
+      if (delLabelsErr) throw delLabelsErr
+
+      await insertParsedContent(boardId, parsed)
+      await loadBoard(boardId)
+      return true
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : 'Failed to import board'
+      return false
     } finally {
       loading.value = false
     }
@@ -379,6 +413,30 @@ export const useBoardStore = defineStore('board', () => {
       error.value = err.message
       col.position = prev.colPos
       neighbor.position = prev.neighborPos
+      columns.value.sort((a, b) => a.position - b.position)
+    }
+  }
+
+  /** Move a column to an arbitrary position (drag-and-drop reorder). */
+  async function moveColumnTo(columnId: number, targetPosition: number) {
+    const sorted = [...columns.value].sort((a, b) => a.position - b.position)
+    const col = sorted.find((c) => c.id === columnId)
+    if (!col) return
+    const rest = sorted.filter((c) => c.id !== columnId)
+    const clamped = Math.max(0, Math.min(targetPosition, rest.length))
+    rest.splice(clamped, 0, col)
+
+    const prevPositions = new Map(columns.value.map((c) => [c.id, c.position]))
+    rest.forEach((c, i) => { c.position = i })
+    columns.value.sort((a, b) => a.position - b.position)
+
+    const results = await Promise.all(
+      rest.map((c) => supabase.from('columns').update({ position: c.position }).eq('id', c.id)),
+    )
+    const err = results.find((r) => r.error)?.error
+    if (err) {
+      error.value = err.message
+      columns.value.forEach((c) => { c.position = prevPositions.get(c.id)! })
       columns.value.sort((a, b) => a.position - b.position)
     }
   }
@@ -569,9 +627,9 @@ export const useBoardStore = defineStore('board', () => {
     boards, board, columns, cards, labels, cardLabels, loading, error,
     cardsByColumn, labelsForCard, dueColumn, quickTargetColumns,
     loadBoards, createBoard, deleteBoard, joinBoard,
-    importTrelloBoard, exportBoard,
+    importTrelloBoard, importTrelloIntoBoard, exportBoard,
     loadBoard,
-    addColumn, renameColumn, updateColumnSettings, setColumnQuickTarget, deleteColumn, moveColumn,
+    addColumn, renameColumn, updateColumnSettings, setColumnQuickTarget, deleteColumn, moveColumn, moveColumnTo,
     addCard, renameCard, deleteCard,
     updateCardDescription, updateCardDueDate,
     createLabel, deleteLabel, toggleCardLabel,

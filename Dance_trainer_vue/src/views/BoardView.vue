@@ -45,6 +45,24 @@ async function copyCode() {
   setTimeout(() => { copied.value = false }, 1500)
 }
 
+const importing = ref(false)
+const importInput = ref<HTMLInputElement | null>(null)
+
+async function onImportFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const proceed = window.confirm(
+    `Import "${file.name}"? This replaces every column, card, and label on "${store.board?.name}" with the contents of this file. This cannot be undone.`,
+  )
+  if (!proceed) { input.value = ''; return }
+  importing.value = true
+  await store.importTrelloIntoBoard(boardId, file)
+  importing.value = false
+  input.value = ''
+  menuOpen.value = false
+}
+
 const dragState = ref<{ cardId: number; sourceColumnId: number } | null>(null)
 
 function onCardDragStart(columnId: number, cardId: number) {
@@ -75,6 +93,56 @@ function onCardDroppedOnCard(
   }
   const insertAt = position === 'before' ? targetIndex : targetIndex + 1
   store.moveCard(cardId, targetColumnId, insertAt)
+}
+
+// --- Column drag: reorder columns by dragging their handle. Mirrors the card
+// drag above (mouse via native DnD, touch via the handle's own long-press —
+// see KanbanColumn.vue), sharing the same edge auto-scroll.
+const columnDragId = ref<number | null>(null)
+const columnDropIndex = ref<number | null>(null)
+
+function onColumnDragStart(columnId: number) {
+  columnDragId.value = columnId
+}
+
+// Index (within store.columns, which stays sorted by position) to insert the
+// dragged column at — before the column under the point if left of its
+// midpoint, else after; past the last column if the point isn't over one.
+function computeColumnDropIndex(x: number, y: number): number {
+  const sorted = [...store.columns].sort((a, b) => a.position - b.position)
+  const overEl = document.elementFromPoint(x, y)?.closest<HTMLElement>('.kanban-column')
+  if (!overEl) return sorted.length
+  const idx = sorted.findIndex((c) => c.id === Number(overEl.dataset.columnId))
+  if (idx === -1) return sorted.length
+  const rect = overEl.getBoundingClientRect()
+  return x < rect.left + rect.width / 2 ? idx : idx + 1
+}
+
+// columnDropIndex is a position in the full column list (for the insertion
+// marker to line up with); moveColumnTo wants a position with the dragged
+// column already removed, so shift down by one if the drop is past it.
+function finishColumnDrop() {
+  const id = columnDragId.value
+  const target = columnDropIndex.value
+  columnDragId.value = null
+  columnDropIndex.value = null
+  if (id === null || target === null) return
+  const sorted = [...store.columns].sort((a, b) => a.position - b.position)
+  const draggedIndex = sorted.findIndex((c) => c.id === id)
+  store.moveColumnTo(id, draggedIndex !== -1 && target > draggedIndex ? target - 1 : target)
+}
+
+function onColumnDragMove(x: number, y: number) {
+  touchPoint.value = { x, y }
+  columnDropIndex.value = computeColumnDropIndex(x, y)
+  startAutoScroll(x)
+}
+
+function onColumnDragEndTouch(x: number, y: number) {
+  stopAutoScroll()
+  if (columnDragId.value === null) return
+  columnDropIndex.value = computeColumnDropIndex(x, y)
+  finishColumnDrop()
 }
 
 // --- Touch drag: ghost, drop-target highlight, edge auto-scroll ---
@@ -155,7 +223,7 @@ function startAutoScroll(x: number) {
 function autoScrollLoop() {
   autoScrollRaf = requestAnimationFrame(() => {
     const el = boardEl.value
-    if (!el || autoScrollX === null || !dragState.value) {
+    if (!el || autoScrollX === null || (!dragState.value && columnDragId.value === null)) {
       autoScrollRaf = 0
       return
     }
@@ -164,7 +232,12 @@ function autoScrollLoop() {
       el.scrollLeft += v
       // Scrolling moves columns under a stationary finger, so re-resolve the
       // touch highlight here, not just on finger movement.
-      if (touchPoint.value) touchOverColumnId.value = columnIdAtPoint(touchPoint.value.x, touchPoint.value.y)
+      if (touchPoint.value) {
+        touchOverColumnId.value = columnIdAtPoint(touchPoint.value.x, touchPoint.value.y)
+        if (columnDragId.value !== null) {
+          columnDropIndex.value = computeColumnDropIndex(touchPoint.value.x, touchPoint.value.y)
+        }
+      }
     }
     autoScrollLoop()
   })
@@ -183,16 +256,32 @@ function stopAutoScroll() {
 // cursor x for edge scrolling; dragend fires even on a cancelled drop, so it's
 // the reliable place to stop scrolling and clear drag state.
 function onBoardDragOver(e: DragEvent) {
-  if (dragState.value) startAutoScroll(e.clientX)
+  if (dragState.value) {
+    startAutoScroll(e.clientX)
+  } else if (columnDragId.value !== null) {
+    // Unlike a card drop (always over a column/card, which already call
+    // preventDefault), a column can be dropped past the last one, over empty
+    // board background — that needs its own preventDefault to be a valid target.
+    e.preventDefault()
+    startAutoScroll(e.clientX)
+    columnDropIndex.value = computeColumnDropIndex(e.clientX, e.clientY)
+  }
+}
+
+function onBoardDrop() {
+  if (columnDragId.value !== null) finishColumnDrop()
 }
 
 function onBoardDragEnd() {
-  // Touch drags are cleaned up on pointerup (onCardDragEndTouch), not dragend —
-  // guards against a stray native dragend (e.g. an aborted native touch DnD
-  // that TaskCard mostly prevents now) clearing state mid touch-drag.
+  // Touch drags are cleaned up on pointerup (onCardDragEndTouch /
+  // onColumnDragEndTouch), not dragend — guards against a stray native
+  // dragend (e.g. an aborted native touch DnD that TaskCard mostly prevents
+  // now) clearing state mid touch-drag.
   if (touchPoint.value) return
   stopAutoScroll()
   dragState.value = null
+  columnDragId.value = null
+  columnDropIndex.value = null
 }
 
 function onCardDragEndTouch(x: number, y: number) {
@@ -281,11 +370,24 @@ function onBoardPointerUp(e: PointerEvent) {
           title="Download this board as a Trello-compatible JSON file"
           @click="store.exportBoard()"
         >Export</button>
+        <button
+          class="bar-btn"
+          title="Replace this board's columns, cards, and labels with a Trello JSON file"
+          :disabled="importing"
+          @click="importInput?.click()"
+        >{{ importing ? 'Importing…' : 'Import' }}</button>
       </span>
       <span class="user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</span>
       <button class="bar-btn signout-btn" @click="signOut">Sign out</button>
 
       <button class="menu-btn" title="Board menu" @click="menuOpen = !menuOpen">⋯</button>
+      <input
+        ref="importInput"
+        type="file"
+        accept="application/json"
+        class="file-input"
+        @change="onImportFile"
+      />
     </header>
 
     <div v-if="menuOpen" class="menu-backdrop" @click="menuOpen = false" />
@@ -296,6 +398,9 @@ function onBoardPointerUp(e: PointerEvent) {
       </div>
       <button class="menu-row menu-action" @click="store.exportBoard(); menuOpen = false">
         Export board (Trello JSON)
+      </button>
+      <button class="menu-row menu-action" :disabled="importing" @click="importInput?.click()">
+        {{ importing ? 'Importing…' : 'Import board (Trello JSON)' }}
       </button>
       <div class="menu-row menu-user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</div>
       <button class="menu-row menu-action" @click="signOut">Sign out</button>
@@ -330,25 +435,33 @@ function onBoardPointerUp(e: PointerEvent) {
       @pointerup="onBoardPointerUp"
       @pointercancel="onBoardPointerUp"
       @dragover="onBoardDragOver"
+      @drop="onBoardDrop"
       @dragend="onBoardDragEnd"
     >
-      <KanbanColumn
-        v-for="column in store.columns"
-        :key="column.id"
-        :id="column.id"
-        :name="column.name"
-        :cards="store.cardsByColumn(column.id).map((c) => ({ ...c, labels: store.labelsForCard(c.id) }))"
-        :touch-drag-over="touchOverColumnId === column.id"
-        @rename="store.renameColumn(column.id, $event)"
-        @add-card="(name) => store.addCard(column.id, name)"
-        @card-drag-start="onCardDragStart(column.id, $event)"
-        @card-drag-move="onCardDragMove"
-        @card-drag-end="onCardDragEndTouch"
-        @card-dropped="onColumnDrop(column.id)"
-        @card-dropped-on-card="(cardId, pos) => onCardDroppedOnCard(column.id, cardId, pos)"
-        @open-card="openCardId = $event"
-        @open-settings="settingsColumnId = column.id"
-      />
+      <template v-for="(column, index) in store.columns" :key="column.id">
+        <div v-if="columnDropIndex === index" class="column-drop-line" />
+        <KanbanColumn
+          :id="column.id"
+          :name="column.name"
+          :cards="store.cardsByColumn(column.id).map((c) => ({ ...c, labels: store.labelsForCard(c.id) }))"
+          :touch-drag-over="touchOverColumnId === column.id"
+          :column-drag-active="columnDragId !== null"
+          :is-dragging="columnDragId === column.id"
+          @rename="store.renameColumn(column.id, $event)"
+          @add-card="(name) => store.addCard(column.id, name)"
+          @card-drag-start="onCardDragStart(column.id, $event)"
+          @card-drag-move="onCardDragMove"
+          @card-drag-end="onCardDragEndTouch"
+          @card-dropped="onColumnDrop(column.id)"
+          @card-dropped-on-card="(cardId, pos) => onCardDroppedOnCard(column.id, cardId, pos)"
+          @open-card="openCardId = $event"
+          @open-settings="settingsColumnId = column.id"
+          @column-drag-start="onColumnDragStart(column.id)"
+          @column-drag-move="onColumnDragMove"
+          @column-drag-end="onColumnDragEndTouch"
+        />
+      </template>
+      <div v-if="columnDropIndex === store.columns.length" class="column-drop-line" />
       <button class="add-column-btn" title="Add a new column to this board" @click="store.addColumn()">+ Add Column</button>
       </div>
     </div>
@@ -447,6 +560,20 @@ function onBoardPointerUp(e: PointerEvent) {
 
 .bar-btn:hover {
   background: var(--color-surface-light);
+}
+
+.bar-btn:disabled,
+.menu-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
 }
 
 .user {
@@ -578,6 +705,16 @@ function onBoardPointerUp(e: PointerEvent) {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
   cursor: grab;
+}
+
+/* Vertical insertion marker while dragging a column, mirroring KanbanColumn's
+   own horizontal .drop-line for card reordering. */
+.column-drop-line {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--color-ember);
 }
 
 /* Quick-move drop buckets: a floating bar over the top of the board, shown only
