@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
 import { renderMarkdown } from '@/lib/markdown'
 import { LABEL_COLORS } from '@/lib/labelColors'
@@ -88,6 +88,16 @@ const labelQuery = ref('')
 const colorPickerOpen = ref(false)
 const newLabelColor = ref<string>(Object.keys(LABEL_COLORS)[0] ?? 'rose')
 const labelInputEl = ref<HTMLInputElement | null>(null)
+const labelFieldEl = ref<HTMLElement | null>(null)
+
+// Click anywhere outside the labels field while the adder is open closes it —
+// it's an inline popover, not a modal of its own.
+function onDocumentClick(e: MouseEvent) {
+  if (!addingLabel.value) return
+  if (labelFieldEl.value && !labelFieldEl.value.contains(e.target as Node)) {
+    addingLabel.value = false
+  }
+}
 
 // Labels not yet on this card, filtered by the query.
 const addableLabels = computed(() => {
@@ -147,7 +157,11 @@ function onKeydown(event: KeyboardEvent) {
 // Escape only reaches the backdrop's keydown handler if something inside the
 // modal has focus.
 const backdropEl = ref<HTMLElement | null>(null)
-onMounted(() => backdropEl.value?.focus())
+onMounted(() => {
+  backdropEl.value?.focus()
+  document.addEventListener('click', onDocumentClick)
+})
+onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 </script>
 
 <template>
@@ -179,7 +193,7 @@ onMounted(() => backdropEl.value?.focus())
         </section>
       </div>
 
-      <section class="field">
+      <section ref="labelFieldEl" class="field">
         <label class="field-label">Labels</label>
         <div class="label-list">
           <button

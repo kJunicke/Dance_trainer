@@ -44,9 +44,10 @@ Run from `Dance_trainer_vue/`:
 # Github
 - is connected to remote repo Dance_trainer
 - always commit everything that has changed even if you didn't make the changes. Look at the diff and include them in your commit message
+- update the version number rendered in the header of the board selection view with every push
 
 # Testing
-- I've installed a phone simulator browser extension. Please use it to test mobile functionality
+- I've installed a phone simulator browser extension. I can open it up when you have browser access to let you test it on a proper screen
 
 # General guidelines
 - be brief
