@@ -15,7 +15,14 @@ const emit = defineEmits<{
 
 const store = useBoardStore()
 
-useBackButtonClose(() => emit('close'))
+// Any close path (X, backdrop, Escape, phone back-gesture) flushes an in-progress
+// description edit instead of discarding it.
+function closeModal() {
+  if (editingDescription.value) saveDescription()
+  emit('close')
+}
+
+useBackButtonClose(closeModal)
 
 const card = computed(() => store.cards.find((c) => c.id === props.cardId) ?? null)
 const boardId = computed(() => store.board?.id ?? null)
@@ -147,11 +154,11 @@ async function submitLabel() {
 }
 
 function onBackdropClick(event: MouseEvent) {
-  if (event.target === event.currentTarget) emit('close')
+  if (event.target === event.currentTarget) closeModal()
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') emit('close')
+  if (event.key === 'Escape') closeModal()
 }
 
 // Escape only reaches the backdrop's keydown handler if something inside the
@@ -167,7 +174,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 <template>
   <div ref="backdropEl" class="backdrop" @click="onBackdropClick" @keydown="onKeydown" tabindex="-1">
     <div v-if="card" class="modal">
-      <button class="close-btn" title="Close" @click="emit('close')">×</button>
+      <button class="close-btn" title="Close" @click="closeModal">×</button>
       <input
         v-if="editingTitle"
         ref="titleInputEl"
