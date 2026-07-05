@@ -50,6 +50,17 @@ function saveDescription() {
   editingDescription.value = false
 }
 
+function onDescriptionKeydown(e: KeyboardEvent) {
+  if (e.key !== 'Tab') return
+  e.preventDefault()
+  const el = e.target as HTMLTextAreaElement
+  const { selectionStart, selectionEnd, value } = el
+  descriptionDraft.value = value.slice(0, selectionStart) + '\t' + value.slice(selectionEnd)
+  nextTick(() => {
+    el.selectionStart = el.selectionEnd = selectionStart + 1
+  })
+}
+
 async function startEditTitle() {
   titleDraft.value = card.value?.name ?? ''
   editingTitle.value = true
@@ -272,7 +283,12 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
       <section class="field">
         <label class="field-label">Description</label>
         <div v-if="editingDescription">
-          <textarea v-model="descriptionDraft" rows="8" placeholder="Markdown supported" />
+          <textarea
+            v-model="descriptionDraft"
+            rows="8"
+            placeholder="Markdown supported"
+            @keydown="onDescriptionKeydown"
+          />
           <div class="desc-actions">
             <button @click="saveDescription">Save</button>
             <button @click="editingDescription = false">Cancel</button>

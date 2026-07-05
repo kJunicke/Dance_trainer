@@ -5,14 +5,26 @@ import KanbanColumn from '../components/KanbanColumn.vue'
 import CardModal from '../components/CardModal.vue'
 import ColumnSettingsModal from '../components/ColumnSettingsModal.vue'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
+import PracticeView from './PracticeView.vue'
+import PracticeAddDrawer from '../components/PracticeAddDrawer.vue'
+import PracticeSessionReview from '../components/PracticeSessionReview.vue'
 import { useBoardStore } from '../stores/boardStore'
 import { useAuthStore } from '../stores/authStore'
+import { usePracticeSessionStore } from '../stores/practiceSessionStore'
 
 const store = useBoardStore()
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const boardId = Number(route.params.id)
+const practiceSession = usePracticeSessionStore()
+
+// Board is the desktop-oriented Kanban; Practice is the mobile-first
+// companion for building/running today's session. See
+// Dance_trainer_logseq/pages/Practice Companion View.md.
+const viewMode = ref<'board' | 'practice'>('board')
+const showAddDrawer = ref(false)
+const showReview = ref(false)
 
 // Re-sweep when the PWA is resumed — it may have been backgrounded past midnight.
 function onVisibilityChange() {
@@ -423,20 +435,49 @@ function onBoardPointerUp(e: PointerEvent) {
 
 <template>
   <div class="board-view">
-    <header class="topbar">
-      <button class="back-btn" title="Back to your boards" @click="router.push({ name: 'boards' })">
+    <header class="topbar" :class="{ 'practice-view': viewMode === 'practice' }">
+      <button
+        v-if="viewMode === 'board'"
+        class="back-btn"
+        title="Back to your boards"
+        @click="router.push({ name: 'boards' })"
+      >
         ←<span class="back-label"> Boards</span>
       </button>
       <h1 class="board-name">{{ store.board?.name }}</h1>
 
-      <button class="search-btn" title="Search cards" @click="openSearch">
+      <div class="mode-switch" role="tablist" aria-label="View">
+        <button
+          role="tab"
+          :aria-selected="viewMode === 'board'"
+          class="mode-btn"
+          :class="{ active: viewMode === 'board' }"
+          @click="viewMode = 'board'"
+        >Board</button>
+        <button
+          role="tab"
+          :aria-selected="viewMode === 'practice'"
+          class="mode-btn"
+          :class="{ active: viewMode === 'practice' }"
+          @click="viewMode = 'practice'"
+        >Practice</button>
+      </div>
+
+      <span v-if="viewMode === 'practice'" class="practice-actions">
+        <button class="bar-btn" @click="showAddDrawer = true">+ Add</button>
+        <button v-if="practiceSession.doneIds.length" class="bar-btn review-btn" @click="showReview = true">
+          Review ({{ practiceSession.doneIds.length }})
+        </button>
+      </span>
+
+      <button v-if="viewMode === 'board'" class="search-btn" title="Search cards" @click="openSearch">
         <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="8.5" cy="8.5" r="6" />
           <line x1="13.2" y1="13.2" x2="18" y2="18" stroke-linecap="round" />
         </svg>
       </button>
 
-      <span v-if="store.board" class="invite">
+      <span v-if="viewMode === 'board' && store.board" class="invite">
         <code :title="'Invite code — share it to let others join this board'">{{ store.board.invite_code }}</code>
         <button
           class="bar-btn"
@@ -455,10 +496,10 @@ function onBoardPointerUp(e: PointerEvent) {
           @click="importInput?.click()"
         >{{ importing ? 'Importing…' : 'Import' }}</button>
       </span>
-      <span class="user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</span>
-      <button class="bar-btn signout-btn" @click="signOut">Sign out</button>
+      <span v-if="viewMode === 'board'" class="user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</span>
+      <button v-if="viewMode === 'board'" class="bar-btn signout-btn" @click="signOut">Sign out</button>
 
-      <button class="menu-btn" title="Board menu" @click="menuOpen = !menuOpen">⋯</button>
+      <button v-if="viewMode === 'board'" class="menu-btn" title="Board menu" @click="menuOpen = !menuOpen">⋯</button>
       <input
         ref="importInput"
         type="file"
@@ -511,6 +552,11 @@ function onBoardPointerUp(e: PointerEvent) {
 
     <div v-if="store.loading" class="status"><LoadingSpinner :size="16" /> Loading…</div>
     <div v-else-if="!store.board" class="status error">Couldn't load this board.</div>
+    <PracticeView
+      v-else-if="viewMode === 'practice'"
+      :board-id="boardId"
+      @open-add="showAddDrawer = true"
+    />
     <div v-else class="board-area">
       <!-- Kept mounted and toggled via class, not v-if: inserting a node during
            dragstart cancels the browser's native drag. -->
@@ -586,6 +632,8 @@ function onBoardPointerUp(e: PointerEvent) {
       :column-id="settingsColumnId"
       @close="settingsColumnId = null"
     />
+    <PracticeAddDrawer v-if="showAddDrawer" @close="showAddDrawer = false" />
+    <PracticeSessionReview v-if="showReview" @close="showReview = false" />
   </div>
 </template>
 
@@ -606,6 +654,45 @@ function onBoardPointerUp(e: PointerEvent) {
   padding: 10px 16px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* The bar itself stays shared chrome, but sitting light-on-dark over the
+   Practice view read as a mismatched seam — darken it to the same palette
+   while in that mode. */
+.topbar.practice-view {
+  background: var(--pc-surface);
+  border-bottom-color: var(--pc-border);
+}
+
+.topbar.practice-view .board-name {
+  color: var(--pc-ink);
+}
+
+.topbar.practice-view .mode-switch {
+  background: var(--pc-bg);
+  border-color: var(--pc-border);
+}
+
+.topbar.practice-view .mode-btn {
+  color: var(--pc-ink-dim);
+}
+
+.topbar.practice-view .mode-btn.active {
+  background: var(--pc-ember);
+  color: #1f1404;
+}
+
+.topbar.practice-view .practice-actions .bar-btn {
+  border-color: var(--pc-ember);
+  color: var(--pc-ink);
+}
+
+.topbar.practice-view .practice-actions .bar-btn:hover {
+  background: color-mix(in srgb, var(--pc-ember) 16%, transparent);
+}
+
+.topbar.practice-view .practice-actions .review-btn {
+  border-color: var(--pc-good);
 }
 
 .back-btn {
@@ -634,6 +721,40 @@ function onBoardPointerUp(e: PointerEvent) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mode-switch {
+  flex-shrink: 0;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+.mode-btn {
+  min-height: 32px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-ink-dim);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1), color 150ms;
+}
+
+.mode-btn.active {
+  background: var(--color-ember);
+  color: var(--color-text-on-ember);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-btn {
+    transition: none;
+  }
 }
 
 .invite {
@@ -674,6 +795,16 @@ function onBoardPointerUp(e: PointerEvent) {
 .menu-action:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.practice-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.review-btn {
+  border-color: var(--color-good);
 }
 
 .file-input {

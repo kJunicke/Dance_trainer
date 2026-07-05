@@ -31,9 +31,38 @@ Run from `Dance_trainer_vue/`:
 # Deployment
 - App is served under `/Dance_trainer/` on GitHub Pages but `/` in local dev (see `base` in vite.config.ts). The PWA manifest's `scope`/`start_url` must stay derived from `base` — don't hardcode them, or the installed PWA will break in production while testing fine locally.
 
-# Docs
-- All Documentations lives in the [Logseq](Dance_trainer_logseq) folder
-- Use Loqgseq markdown formating
+# Docs (Logseq wiki)
+Docs live in [Logseq](Dance_trainer_logseq) and work as a project wiki, not a file dump: `pages/`
+holds durable knowledge, `journals/` is the chronological build log, `contents.md` is the index.
+The codebase and git history are the source of truth — the wiki is a synthesized, cross-linked
+layer on top, so it answers "why/how does X work" without re-deriving it from a diff every time.
+
+## Ingest — before every commit (per the Github rule below), plus mid-session for undocumented decisions
+- Update any `pages/` entries the change touches: schema fields, feature behavior, invariants,
+  gotchas. Link related pages with `[[Page Name]]`.
+- Append an entry to today's journal (`journals/YYYY_MM_DD.md`), one line per unit of work, tagged
+  `[feature]`, `[fix]`, `[decision]`, or `[doc]`, linking to any pages it touches, e.g.
+  `- [fix] Card drag always dropped at column end — [[Tables]]`. TODO/DONE blocks keep their
+  existing untagged format so Logseq still recognizes them as tasks.
+- Update `contents.md`: one line per page — link, one-line summary, category (Schema / Backend /
+  Feature / Spec).
+
+## Query
+- Before starting work, check `contents.md` and relevant pages for prior context — don't
+  rediscover a decision that's already recorded.
+- Read `contents.md` first and only open the page(s) its summaries point to — don't grep/read
+  every page for a normal question. Grep everything only for structural passes (e.g. a lint pass)
+  that genuinely need full coverage. For journals, grep by `[tag]` or date instead of reading each
+  day file.
+- If a conversation produces a non-trivial synthesis not yet captured (a design decision, a
+  tradeoff, an architecture rationale), file it into the relevant page rather than leaving it
+  stranded in chat history.
+
+## Conventions
+- Logseq markdown: bullet outlines and `[[links]]`, not prose Obsidian-style pages.
+- Flag TODOs with the `TODO` keyword so they surface as Logseq tasks.
+- Wiki health checks (orphan pages, stale/contradicted claims, missing cross-links) are on-request
+  only — ask if the wiki needs a lint pass, don't run one automatically.
 
 # Supabase
 - Github is connected to Supabase. Migrations will get pushed to Supabase automatically when they are pushed to main. Use this as the main way to apply migrations

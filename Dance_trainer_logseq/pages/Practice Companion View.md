@@ -1,0 +1,24 @@
+- New mobile-first screen, a "practice companion" for use right before and during a dance practice session. Sits alongside the existing Kanban board (kept as-is, desktop-oriented) — a header toggle switches between the two for a given board. See [[PROJECT_HANDOFF]] for the underlying skill/column model this builds on.
+- ## Why
+	- The board is built for organizing/documenting at a desk. Mid-practice, on a phone, the need is different: quickly build today's session, reorder on the fly, glance at notes/video, log quick thoughts, mark things done — without navigating away, because real practice is messy (fatigue, interleaving, re-planning mid-session).
+- ## Design direction
+	- Color strategy: **Committed** — one saturated color carries real surface weight, related to but distinct from the board's ember/status family.
+	- Dark/near-dark base (unlike the board's warm-light theme) — this view is short-glance, variable-light use, not long reading, so the earlier "dark is fatiguing" verdict (which was about the board) doesn't apply here.
+	- No named anchor references; direction is originated for this view.
+- ## Structure — three surfaces
+	- ### Companion view (primary, persistent)
+		- Pinned focus card (current skill: notes, video link, quick-note field, Done action) + a horizontal, reorderable chip strip below it.
+		- Tap a chip → becomes the focus card. Long-press/drag a chip → reorder.
+		- Tap "Done" on the focus card → demotes it below a divider in the strip (dimmed, still reachable/reopenable), no rating prompt, auto-advances focus to the next pending card.
+		- Quick-note field auto-saves to the card's existing `description` field on collapse/blur — reuses the auto-save-on-close pattern already built for `CardModal`, not a new persistence mechanism.
+		- Session state (today's lineup, order, done flags) is ephemeral — ***not*** synced server-side or kept as history — but persisted to `localStorage` per board so a reload/PWA background-kill mid-practice doesn't lose it.
+	- ### Add/Remove drawer (modal sheet over the companion view)
+		- Segmented by column, "Due" selected by default, other columns reachable.
+		- Checkbox-style add/remove into today's session. No reordering here — reordering only happens in the companion view itself.
+	- ### Session Review (manual, sequential triage)
+		- A "Review session" button appears once ≥1 card is marked done. Never auto-prompted.
+		- One card at a time: quick-target columns (`is_quick_target`, see [[Tables]]) as one-tap buckets — reuses the exact mechanic the board's drag-and-drop quick-move bar already uses (`store.moveCard`), just triggered by tap instead of drag. Plus an explicit **"Keep in Due"** no-op, and a **"choose another column"** fallback for non-quick-target destinations.
+		- Also allows editing the card's notes inline during review (confirmed in scope, not deferred).
+- ## Later / TODO (deferred, not in this pass)
+	- TODO Quick-note function in Session Review with an option to append the note to *any* card's description, not just the one currently being reviewed.
+	- TODO Companion view: a fast "create new card" action that drops the new card into a configurable **inbox column** — same on/off mechanism as the existing `is_due_column` flag (e.g. a new `is_inbox_column` column setting). Session Review should be able to triage these newly created inbox cards too, alongside done cards.

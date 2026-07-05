@@ -1,1 +1,9 @@
--
+- ## Spec
+	- [[PROJECT_HANDOFF]] — Core rebuild brief: 5-status system, spaced-repetition algorithm, data model, v1→v2 architecture decisions
+- ## Schema
+	- [[Tables]] — DB schema: profiles, boards/columns/cards, labels, ownership, RLS policies, import/export formats
+- ## Backend
+	- [[Supabase]] — Migration gotchas (grants, constraint ordering), RLS/grant patterns, GitHub auto-deploy caveats
+	- [[Authentification]] — Supabase auth table vs profiles table
+- ## Feature
+	- [[Practice Companion View]] — Mobile practice-session companion screen (design + spec, in progress)

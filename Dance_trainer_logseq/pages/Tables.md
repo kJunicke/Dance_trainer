@@ -1,5 +1,5 @@
 # Profiles
-	- auth table
+	- auth table — see [[Authentification]]
 		- is not exposed to the Data API -> not dirrectly accessable
 		- Values:
 			- UDI

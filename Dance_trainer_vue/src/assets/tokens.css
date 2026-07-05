@@ -31,3 +31,22 @@
   --shadow-card: 0 1px 2px rgba(70, 55, 40, 0.1), 0 2px 5px rgba(70, 55, 40, 0.07);
   --shadow-modal: 0 16px 40px rgba(50, 38, 25, 0.24);
 }
+
+/* Practice Companion — a deliberately dark, "committed" palette scoped to the
+   mobile companion view only (see Dance_trainer_logseq/pages/Practice
+   Companion View.md). Short, variable-light glances mid-practice call for a
+   different scheme than the board's long-reading warm-paper theme; the ember
+   hue carries over so it still reads as the same app. Scoped to .practice-view
+   rather than :root so it never affects the Kanban board. */
+.practice-view {
+  --pc-bg: #14100c;
+  --pc-surface: #1d1712;
+  --pc-border: #4a3320;
+  --pc-ink: #f5ede2;
+  --pc-ink-dim: #b7a693;
+  --pc-ember: #ff8a3d;
+  --pc-ember-light: #ffb073;
+  --pc-good: #5bc794;
+  --pc-due: #e0a83d;
+  --pc-overdue: #e8695f;
+}
