@@ -21,6 +21,8 @@ watch(() => props.boardId, (id) => session.load(id), { immediate: true })
 
 const focusedId = ref<number | null>(null)
 const listExpanded = ref(false)
+const confirming = ref(false)
+let confirmTimer: ReturnType<typeof setTimeout> | null = null
 
 function resolveCards(ids: number[]): Card[] {
   return ids
@@ -38,6 +40,15 @@ const focusedCard = computed(
 
 function onDone(cardId: number) {
   session.markDone(cardId)
+  // Reuses the drag-start haptic precedent from PracticeSessionList.vue.
+  navigator.vibrate?.(20)
+  // Brief "logged" receipt on the FAB itself — it's the one stable element
+  // across every rep, the card underneath is about to be swapped out.
+  confirming.value = true
+  if (confirmTimer) clearTimeout(confirmTimer)
+  confirmTimer = setTimeout(() => {
+    confirming.value = false
+  }, 200)
 }
 
 function onUndo(cardId: number) {
@@ -55,7 +66,12 @@ function onUndo(cardId: number) {
         <p>No cards in today's session yet.</p>
         <button class="add-cta" @click="emit('open-add')">+ Add cards to start</button>
       </div>
-      <PracticeFocusCard v-else-if="focusedCard" :card="focusedCard" />
+      <!-- out-in rather than a hard swap: markDone advances focusedCard
+           instantly, and this is the single highest-frequency action in the
+           view — an abrupt jump-cut every rep reads as broken, not snappy. -->
+      <Transition v-else name="focus-swap" mode="out-in">
+        <PracticeFocusCard v-if="focusedCard" :key="focusedCard.id" :card="focusedCard" />
+      </Transition>
     </div>
 
     <PracticeSessionList
@@ -78,6 +94,7 @@ function onUndo(cardId: number) {
     <button
       v-if="!listExpanded && focusedCard"
       class="done-fab"
+      :class="{ confirming }"
       @click="onDone(focusedCard.id)"
     >Done</button>
   </div>
@@ -164,6 +181,12 @@ function onUndo(cardId: number) {
   transform: scale(0.96);
 }
 
+/* After :hover so it wins the specificity tie — the "logged" receipt should
+   still read even if a mouse happens to be hovering. */
+.done-fab.confirming {
+  background: var(--pc-good);
+}
+
 .done-fab:focus-visible {
   outline: 2px solid var(--pc-ember-light);
   outline-offset: 2px;
@@ -171,6 +194,31 @@ function onUndo(cardId: number) {
 
 @media (prefers-reduced-motion: reduce) {
   .done-fab {
+    transition: none;
+  }
+}
+
+/* Card clearing off the top of the stack, not an index change. mode="out-in"
+   avoids position:absolute overlap hacks; ~280ms total stays well under the
+   "quick" delight budget. */
+.focus-swap-enter-active,
+.focus-swap-leave-active {
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.focus-swap-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.focus-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-swap-enter-active,
+  .focus-swap-leave-active {
     transition: none;
   }
 }

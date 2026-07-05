@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, onBeforeUnmount, nextTick } from 'vue'
 import type { Card } from '@/stores/boardStore'
 import { useBoardStore } from '@/stores/boardStore'
 import { renderMarkdownWithLinkChips } from '@/lib/markdown'
@@ -21,14 +21,13 @@ const editing = ref(false)
 const noteDraft = ref('')
 const textareaEl = ref<HTMLTextAreaElement | null>(null)
 
-// A focus-card swap while mid-edit would otherwise silently drop the edit —
-// flush it to the card it belonged to before the watcher's draft reset fires.
-watch(
-  () => props.card.id,
-  (_, prevId) => {
-    if (editing.value && prevId !== undefined) saveNote(prevId)
-  },
-)
+// The parent keys this component by card.id (PracticeView.vue's focus-swap
+// transition), so a card change unmounts this instance rather than patching
+// its props — a mid-edit note would otherwise be silently dropped when that
+// happens. Flush it to the card it belonged to before teardown.
+onBeforeUnmount(() => {
+  if (editing.value) saveNote()
+})
 
 async function startEdit() {
   noteDraft.value = props.card.description ?? ''

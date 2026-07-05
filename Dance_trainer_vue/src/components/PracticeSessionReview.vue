@@ -91,7 +91,12 @@ function onOtherColumnPick(e: Event) {
     </div>
 
     <div v-else class="review-done">
-      <p>All caught up — every card from today's session has been sorted.</p>
+      <template v-if="total > 0">
+        <div class="review-done-badge" aria-hidden="true">✓</div>
+        <h2 class="review-done-heading">Session reviewed</h2>
+        <p class="review-done-sub">{{ total }} card{{ total === 1 ? '' : 's' }} sorted into columns.</p>
+      </template>
+      <p v-else class="review-done-sub">No cards marked done in today's session yet.</p>
       <button class="bucket-btn keep" @click="emit('close')">Close</button>
     </div>
   </div>
@@ -210,8 +215,55 @@ function onOtherColumnPick(e: Event) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 16px;
+  gap: 8px;
   color: var(--pc-ink-dim);
   font-size: 14px;
+}
+
+.review-done-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--pc-good) 18%, transparent);
+  color: var(--pc-good);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  animation: review-done-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.review-done-heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--pc-ink);
+}
+
+.review-done-sub {
+  margin: 0 0 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--pc-ink-dim);
+}
+
+@keyframes review-done-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-done-badge {
+    animation: none;
+  }
 }
 </style>
