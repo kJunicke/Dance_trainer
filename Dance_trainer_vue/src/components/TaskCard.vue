@@ -168,6 +168,11 @@ onUnmounted(() => {
   /* pan-x/pan-y keep both board and column scrolling native from a card;
      long-press drags block scrolling themselves via a touchmove listener. */
   touch-action: pan-x pan-y;
+  /* Without this, a long-press on Android/iOS selects the card's text (or
+     shows the text-selection callout) instead of starting the drag. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Traffic-light urgency rail on the left edge, drawn with an inset shadow so it
