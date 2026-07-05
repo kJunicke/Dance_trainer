@@ -510,7 +510,7 @@ function onBoardPointerUp(e: PointerEvent) {
     </div>
 
     <div v-if="store.loading" class="status"><LoadingSpinner :size="16" /> Loading…</div>
-    <div v-else-if="store.error" class="status error">{{ store.error }}</div>
+    <div v-else-if="!store.board" class="status error">Couldn't load this board.</div>
     <div v-else class="board-area">
       <!-- Kept mounted and toggled via class, not v-if: inserting a node during
            dragstart cancels the browser's native drag. -->

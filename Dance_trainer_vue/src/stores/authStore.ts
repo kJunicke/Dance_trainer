@@ -2,10 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { useToastStore } from './toastStore'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
-  const error = ref<string | null>(null)
 
   async function init() {
     const { data } = await supabase.auth.getSession()
@@ -16,29 +16,27 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Returns true if signup produced a session (email confirmation off → logged in),
-  // false if a confirmation step is still required.
+  // false if a confirmation step is still required, null if signup failed.
   async function signUp(email: string, password: string, displayName: string) {
-    error.value = null
     const { data, error: err } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { display_name: displayName } },
     })
-    if (err) { error.value = err.message; return false }
+    if (err) { useToastStore().show(err.message); return null }
     return data.session !== null
   }
 
   async function signIn(email: string, password: string) {
-    error.value = null
     const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-    if (err) { error.value = err.message; return false }
+    if (err) { useToastStore().show(err.message); return false }
     return true
   }
 
   async function signOut() {
     const { error: err } = await supabase.auth.signOut()
-    if (err) error.value = err.message
+    if (err) useToastStore().show(err.message)
   }
 
-  return { user, error, init, signUp, signIn, signOut }
+  return { user, init, signUp, signIn, signOut }
 })

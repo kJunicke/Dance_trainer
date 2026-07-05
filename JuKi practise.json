@@ -1,0 +1,985 @@
+{
+  "name": "JuKi practise",
+  "lists": [
+    {
+      "id": "67",
+      "name": "Ziele (COC)",
+      "closed": false,
+      "pos": 0
+    },
+    {
+      "id": "68",
+      "name": "Inbox",
+      "closed": false,
+      "pos": 1
+    },
+    {
+      "id": "69",
+      "name": "Today",
+      "closed": false,
+      "pos": 2
+    },
+    {
+      "id": "70",
+      "name": "Wöchentlich",
+      "closed": false,
+      "pos": 3
+    },
+    {
+      "id": "71",
+      "name": "2 Wöchentlich",
+      "closed": false,
+      "pos": 4
+    },
+    {
+      "id": "72",
+      "name": "3 Wöchentlich",
+      "closed": false,
+      "pos": 5
+    },
+    {
+      "id": "73",
+      "name": "Monatlich",
+      "closed": false,
+      "pos": 6
+    },
+    {
+      "id": "74",
+      "name": "2 Monatlich",
+      "closed": false,
+      "pos": 7
+    },
+    {
+      "id": "76",
+      "name": "Kilian Solo",
+      "closed": false,
+      "pos": 9
+    },
+    {
+      "id": "77",
+      "name": "Library und Backlog",
+      "closed": false,
+      "pos": 10
+    },
+    {
+      "id": "78",
+      "name": "Privates und Feedback",
+      "closed": false,
+      "pos": 11
+    },
+    {
+      "id": "79",
+      "name": "Allgemein",
+      "closed": false,
+      "pos": 12
+    },
+    {
+      "id": "80",
+      "name": "Ziele (bis Blackpool)",
+      "closed": false,
+      "pos": 13
+    }
+  ],
+  "labels": [
+    {
+      "id": "23",
+      "name": "Skill Block",
+      "color": "sage"
+    },
+    {
+      "id": "24",
+      "name": "Move",
+      "color": "plum"
+    },
+    {
+      "id": "25",
+      "name": "60s practise",
+      "color": "ochre"
+    },
+    {
+      "id": "26",
+      "name": "Im Hinterkopf",
+      "color": "denim"
+    },
+    {
+      "id": "27",
+      "name": "Timing",
+      "color": "denim"
+    },
+    {
+      "id": "28",
+      "name": "Drill",
+      "color": "rose"
+    },
+    {
+      "id": "29",
+      "name": "Learning",
+      "color": "sage"
+    },
+    {
+      "id": "30",
+      "name": "Move Complex",
+      "color": "plum"
+    }
+  ],
+  "cards": [
+    {
+      "id": "242",
+      "idList": "78",
+      "name": "Dancefest 24 - Mevans - Ki",
+      "desc": "## 1. Technical Fundamentals\n\n### Footwork\n\n- Core principle: Dance on the balls of your feet\n  - Better control over weight changes\n  - Easier to maintain level movement without bounce\n- Exceptions:\n  - When taking large steps (makes pointing feet difficult)\n  - For bouncy music styles (e.g., country dancing)\n\n### Energy Management\n\n- Match your partner's energy level - mismatches look bad in competitions\n- When partner dances at lower energy (e.g., at 3/10):\n  - Dance slightly higher (e.g., at 4/10) instead of jumping to 7/10\n  - slowly try to raise their energy\n  - Encourage through:\n    - Nodding at their good moves\n    - Giving space for expression\n    - Building on their movements (e.g., copying their body wave and adding your style)\n    - Leading playful movements f.e. [https://team.jive.berlin/f/44665](https://team.jive.berlin/f/44665 \"‌\")\n- Managing high energy:\n  - Think of it like driving - going faster doesn't always mean better\n  - Ground yourself and redirect energy to planning:\n    - \"What move haven't I done yet?\"\n    - \"What is my partner doing that I can build upon?\"\n  - Goal: Learn to recognize when partner is going too high and help ground them\n\n### Dance Interpretation\n\n- Listen to partner's interpretation before imposing yours\n- Key questions to ask yourself:\n  - Are they dancing flowy or elegant?\n  - Which musical elements are they responding to?\n\n## 2. Training Methods\n\n### Deliberate Limitations\n\nPractice with restrictions to develop other skills:\n\n- Make 8-count pauses where you do nothing\n- Dance blindfolded\n- Limit your go-to moves\n- Ask: \"What skills can I develop when my usual tools aren't available?\"\n\n### Competition Preparation\n\n- Energy management:\n  - Keep first rounds simple and clean\n  - Save complex moves for later rounds\n  - Avoid unpolished moves entirely\n- Mental check-in during doubts:\n  - \"Am I executing moves?\"\n  - \"Am I on beat?\"\n  - \"What other skills can shine right now?\"\n\n## 3. Musical Adaptation\n\n### Challenging Music\n\nWhen dancing to uninspiring songs:\n\n- Focus on alternative skills:\n  - Clean execution of moves\n  - Basic techniques\n  - Space utilization\n- Let your partner shine if they're inspired\n- It's okay to fake enthusiasm - focus on technical challenges instead\n\n### Energy Generation\n\n- Energy starts in the mind\n- Practice self-motivation:\n  - Even with \"boring\" songs, challenge yourself to go all out\n  - Example: Transform \"I don't want to dance to this\" into \"Let's get crazy with this\"\n  - Result: Often leads to unexpectedly fun dances\n\n## 4. Practice Focus\n\n### Move Selection\n\n- Trust your existing repertoire\n- Competition principle: A move done badly costs more than not doing it at all\n- Regularly evaluate: Are specific moves consistently causing problems?\n\n### Fundamental Training\n\n- In beginner lessons, focus on:\n  - Weight shifts\n  - Hip movement\n  - Step variations\n- Experiment with footwork from other styles:\n  - House dance patterns\n  - Shuffle steps\n  - Ask: When can these be integrated into basic moves?\n\n### Freestyle Practice\n\n- Approach as an active listener\n- Focus on:\n  - Picking up partner's style\n  - Amplifying their choices\n  - Building on their interpretation",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 0
+    },
+    {
+      "id": "244",
+      "idList": "80",
+      "name": "Dynamics ins normale Tanzen Integrieren und nicht separate dynamische Moves haben",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 0
+    },
+    {
+      "id": "237",
+      "idList": "72",
+      "name": "Rides",
+      "desc": "[https://team.jive.berlin/s/PN6Fgkw9AnL7LKn](https://team.jive.berlin/s/PN6Fgkw9AnL7LKn \"smartCard-inline\")\n\n[https://team.jive.berlin/s/ZzXfR337pwmMXeL](https://team.jive.berlin/s/ZzXfR337pwmMXeL \"smartCard-inline\")\n\n### Jailbreak Ride\n\n[https://team.jive.berlin/s/LXAj2Wsye4KfHya](https://team.jive.berlin/s/LXAj2Wsye4KfHya \"smartCard-inline\")\n\n[https://team.jive.berlin/s/snwSZ583or2Sgcs](https://team.jive.berlin/s/snwSZ583or2Sgcs \"smartCard-inline\")\n\n[https://team.jive.berlin/s/GesR7dKSajANdyM](https://team.jive.berlin/s/GesR7dKSajANdyM \"smartCard-inline\")\n\nStandard ending mit backdrop and slideout\n\n‌\n\n[https://team.jive.berlin/s/7mWi5cnkQQyeXJR](https://team.jive.berlin/s/7mWi5cnkQQyeXJR \"smartCard-inline\")\n\n### Technique Cues\n\nMevans: I needed more rotational weight not backward, but to the turning direction, because you were at full extension there was no space to make adjustments in body positions, nor speed. Consider hitting 90% stretch in rides so you're still able to correct/change positions slightly",
+      "due": null,
+      "closed": false,
+      "idLabels": [
+        "23",
+        "30"
+      ],
+      "pos": 0
+    },
+    {
+      "id": "245",
+      "idList": "67",
+      "name": "Connection Weiter mit allem private Feedback - Play und Moves fluidisieren",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 0
+    },
+    {
+      "id": "259",
+      "idList": "68",
+      "name": "Dance and Videofeedback - Lee training cycle",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 0
+    },
+    {
+      "id": "235",
+      "idList": "73",
+      "name": "Leviosa collects",
+      "desc": "[https://team.jive.berlin/s/eqZbEs5JS2DdMMw](https://team.jive.berlin/s/eqZbEs5JS2DdMMw \"smartCard-inline\")\n\nArm nahe am Körper erst nach unten dann zum follower führen um einzusammeln",
+      "due": "2026-07-14T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 0
+    },
+    {
+      "id": "240",
+      "idList": "79",
+      "name": "Trainingstruktur und Beispieltraining: Dynamics",
+      "desc": "# Tanztraining Struktur\n\n## Gesamtkonzept\n\n### Ein Thema pro Monat\n\nJeden Monat fokussiert ihr euch auf ein spezifisches Thema (z.B. Dynamics, Balance, Musicality, etc.)\n\n**Beim Training:**\n\n- Spezifisches Feedback zum aktuellen Monatsthema einholen\n- Inspiration sammeln\n- Im Freestyle testen und experimentieren\n- Mehr Fokus durch **60s Practice**\n  - Erst kurze Sequenzen üben\n  - Ganze Lieder später für Ausdauertraining\n\n---\n\n## Dienstags-Training (2-wöchentlich)\n\n**Dauer:** 1 Stunde\n**Charakter:** Strukturiert und fokussiert\n\n### Trainingsprinzipien\n\n#### Viele Repetitionen\n\n- Konzentration auf Wiederholungen für Muskelgedächtnis\n\n#### Low-Impact-Versionen\n\nFür anstrengende Elemente nur die aktuell relevanten Parts üben:\n\n- Nur das Intro\n- Nur 1 Spin statt mehrere\n- Einzelne Sequenzen isolieren\n\n#### Separate Übungen\n\n- Balance halten\n- Haltung\n- Kraft\n\n---\n\n## Beispiel-Training: Thema \"Dynamics\"\n\n### Aufbau (60 Minuten)\n\n#### 1. Aufwärmen (5 min)\n\n- Dynamic Stretching\n\n#### 2. Timing-Übungen (5 min)\n\n- Verschiedene Timings durchgehen:\n  - Half-Time\n  - Normal\n  - Double-Time\n- Übergänge zwischen den Timings üben\n- Zählen hilft dabei sehr\n\n#### 3. Moves & Sequenzen (20 min)\n\n- Bekannte Moves lernen und üben\n- **Vorbereitung:** Moves zum nächsten Training raussuchen\n- Fokus auf das Monatsthema (hier: Dynamics)\n\n#### 4. Konsolidierungspause (5 min)\n\n- Kurze Pause zum Verarbeiten\n- Mental nachvollziehen, was geübt wurde\n\n#### 5. 60s Practice mit Video-Feedback (20 min)\n\n- 60-Sekunden-Sequenzen tanzen\n- Aufnehmen und gemeinsam analysieren\n- Spezifisches Feedback zum Monatsthema\n\n#### 6. Entwicklung & Kreativität (10 min)\n\n- Brainstorming neuer Ideen\n- Kreative Phase\n- Neue Bewegungen entwickeln\n\n#### 7. Cool-Down (5 min)\n\n- Dehnen\n- Entspannen\n- Kurzes Feedback zur Session\n\n---\n\n## Notizen & To-Dos\n\n**Für nächstes Training:**\n\n- [ ] Moves und Sequenzen zum aktuellen Thema recherchieren",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 0
+    },
+    {
+      "id": "238",
+      "idList": "71",
+      "name": "Hammers",
+      "desc": "- Arm nach unten für initiierung der Bewegung, dann kurve für den Throw\n- Schoulder sway hammer: K nicht mitdrehen → verdeckt sonst J nur\n- Basket Hammer Figurhead: K auf 5 schon richtig aufgedreht sein, J in bewegung setzen Lead leicht nach unten denken dann über Kopf\n  Videos ergänzen…\n- Mit Up down connection sollten die noch einfacher sein\n\n# Mevans Feedback\n\n- Kilian mehr Distanz zu Judith um sie nicht zu verdecken\n- Eigenes drehen nach dem Turn leicht delayen, damit es dynamischer wirkt\n\n# Hammers\n\n- Shoulder Sway Hammer\n- Doubledecker\n  [https://www.youtube.com/clip/UgkxQ_PeOhh5CJgaF1719rXbuv_0x6uf1_5u](https://www.youtube.com/clip/UgkxQ_PeOhh5CJgaF1719rXbuv_0x6uf1_5u \"smartCard-inline\")\n  - K links von J. Facing same same direction start. Lunge auf rechts links runter → squat → hoch , drehen auf der Stelle keine unsinnigen um den follower rumgelaufsteppe\n    Left hand comb → right over head → extra turn or hammer\n  - J travelt den Slot ACW drehend\n  - Frontal variant: [https://team.jive.berlin/s/JBoRyCH4eXP7W9B](https://team.jive.berlin/s/JBoRyCH4eXP7W9B \"smartCard-inline\")\n\n‌\n\n# Videos to transcribe into notes\n\n[https://team.jive.berlin/s/DKRN7rgeGwwmGWt](https://team.jive.berlin/s/DKRN7rgeGwwmGWt \"smartCard-inline\")",
+      "due": "2026-07-10T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "30"
+      ],
+      "pos": 0
+    },
+    {
+      "id": "241",
+      "idList": "76",
+      "name": "Isolation practise",
+      "desc": "[https://team.jive.berlin/s/ACYenT9zNyciPiw](https://team.jive.berlin/s/ACYenT9zNyciPiw \"smartCard-inline\")",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 0
+    },
+    {
+      "id": "248",
+      "idList": "70",
+      "name": "Second Arm",
+      "desc": "- An die Hüfte anlegen\n- Hinter den Rücken einklappen\n- Faust nach unten gerichtet\n- Arm dynamisch zur Seite bewegen nicht schnell auf einmal.\n- in drops, Im Tempo des drops\n\n[https://team.jive.berlin/s/BcYyFzH6bfzSE4N](https://team.jive.berlin/s/BcYyFzH6bfzSE4N \"smartCard-inlin\")\n\n### Gunslinger\n\n[https://team.jive.berlin/s/FGsq452dPEnPD8E](https://team.jive.berlin/s/FGsq452dPEnPD8E \"smartCard-inline\")",
+      "due": "2026-07-10T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "25"
+      ],
+      "pos": 0
+    },
+    {
+      "id": "253",
+      "idList": "67",
+      "name": "Präsentation weiterentwickeln. Spezifische Bewegungen und Instant feedback mit Spiegel",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 1
+    },
+    {
+      "id": "247",
+      "idList": "73",
+      "name": "Tuck turn pulse",
+      "desc": "[https://team.jive.berlin/s/EzjoCgptqsPEx9P](https://team.jive.berlin/s/EzjoCgptqsPEx9P \"smartCard-inline\")",
+      "due": "2026-08-02T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 1
+    },
+    {
+      "id": "249",
+      "idList": "71",
+      "name": "inside turn followups",
+      "desc": "[https://team.jive.berlin/s/kFxmJwDbPb6ewpc](https://team.jive.berlin/s/kFxmJwDbPb6ewpc \"smartCard-inline\")",
+      "due": "2026-07-07T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 1
+    },
+    {
+      "id": "250",
+      "idList": "78",
+      "name": "Dancefest 24 - Mevans - Lead Levels - JuKi",
+      "desc": "# Communication\n\n3 different possible leads\n\n## Anchor Lead:\n\n- Providing a high tension point of stability.\n- generally not moving\n\n## Dead Lead\n\n- Signaling to Partner that they can play\n- 0 Tension\n- Tension needs to be instigated again to go back to lead and follow\n\n### instigating Tension\n\n- partner is playing\n- move with them as if you led the movement to build connection again\n- then lead new movement\n\n## Play Lead\n\n- Signaling that a play movement is coming\n- Tense up and provide tension and visual clues\n\n### going back to leading\n\n- release the tension a bit backwards\n- spring into the next movement\n- Alternativly follows can build connection again when they are ready\n  - 1 beat before the next movement should start",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 1
+    },
+    {
+      "id": "251",
+      "idList": "80",
+      "name": "Timing gemeistert haben",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 1
+    },
+    {
+      "id": "255",
+      "idList": "79",
+      "name": "Media / Resources",
+      "desc": "[https://www.youtube.com/@fevahdance](https://www.youtube.com/@fevahdance \"smartCard-inline\")\n\n### Clips\n\n[https://youtube.com/clip/Ugkxmf3tKZUHn7ParekAAJoxDm-CUgJAdcon?si=5fnl4HpVImJl4NEd](https://youtube.com/clip/Ugkxmf3tKZUHn7ParekAAJoxDm-CUgJAdcon?si=5fnl4HpVImJl4NEd \"smartCard-inline\")",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 1
+    },
+    {
+      "id": "260",
+      "idList": "70",
+      "name": "Gaze & Facing Cues",
+      "desc": "- Neigen dazu jetzt zu oft in die audience zu gucken. Mehr auch zum Partner\n- Look at Judges ~50% of the time\n- Kilian: Head back",
+      "due": "2026-07-11T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 1
+    },
+    {
+      "id": "254",
+      "idList": "74",
+      "name": "Hitting Ones",
+      "desc": "",
+      "due": "2026-07-19T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "25",
+        "26"
+      ],
+      "pos": 1
+    },
+    {
+      "id": "297",
+      "idList": "70",
+      "name": "OFS",
+      "desc": "One foot spins, Spot Turns, Piroutte turns\n\n# Variants\n\n[https://team.jive.berlin/s/Ry9wfx7iYCyfn2N](https://team.jive.berlin/s/Ry9wfx7iYCyfn2N \"smartCard-inline\")\n\n[https://team.jive.berlin/s/wPczeM6etx5HpSR](https://team.jive.berlin/s/wPczeM6etx5HpSR \"smartCard-inline\")\n\n[https://team.jive.berlin/s/HaLXKrLscg5yfSe](https://team.jive.berlin/s/HaLXKrLscg5yfSe \"smartCard-inline\")\n\n# ACW\n\n[https://team.jive.berlin/s/wsJ5LHtDXx2x6zL](https://team.jive.berlin/s/wsJ5LHtDXx2x6zL \"smartCard-inline\")\n\n[https://team.jive.berlin/s/XwR9Fy5S3FnxKHs](https://team.jive.berlin/s/XwR9Fy5S3FnxKHs \"smartCard-inline\")\n\n# Other\n\n[https://team.jive.berlin/s/PQmmDXpiZqQe9Fs](https://team.jive.berlin/s/PQmmDXpiZqQe9Fs \"smartCard-inline\")\n\n# Pushen\n- height changes\n- different connection points\n- elbows",
+      "due": "2026-07-11T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 1
+    },
+    {
+      "id": "296",
+      "idList": "72",
+      "name": "OFS - Exits",
+      "desc": "[https://team.jive.berlin/s/mEPTst6yaGdfMzi](https://team.jive.berlin/s/mEPTst6yaGdfMzi \"smartCard-inline\")\n[https://team.jive.berlin/s/RySJjEcLkCWFkxk](https://team.jive.berlin/s/RySJjEcLkCWFkxk \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/qdsxpmH8tfpCCPA](https://team.jive.berlin/s/qdsxpmH8tfpCCPA \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/aMc7mTyKLzs9zm7](https://team.jive.berlin/s/aMc7mTyKLzs9zm7 \"smartCard-inline\")",
+      "due": "2026-07-25T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 1
+    },
+    {
+      "id": "279",
+      "idList": "69",
+      "name": "Isolations Moves/Communication",
+      "desc": "[https://team.jive.berlin/s/k7jWymGGssCy8rt](https://team.jive.berlin/s/k7jWymGGssCy8rt \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/moWdtkEqgmcDdSw](https://team.jive.berlin/s/moWdtkEqgmcDdSw \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/XDCxPxFKRWqXcf9](https://team.jive.berlin/s/XDCxPxFKRWqXcf9 \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/76Twtw2aTk6Sb3k](https://team.jive.berlin/s/76Twtw2aTk6Sb3k \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/L6dTTAFWo9drxea](https://team.jive.berlin/s/L6dTTAFWo9drxea \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/yaWmn6gL8fo3EDE](https://team.jive.berlin/s/yaWmn6gL8fo3EDE \"smartCard-inline\")\n\n### Staccato isolations\n\n### K follows upper-body isolations",
+      "due": "2026-05-26T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 1
+    },
+    {
+      "id": "273",
+      "idList": "68",
+      "name": "Privates J&A M&C notes hier einfügen",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 2
+    },
+    {
+      "id": "256",
+      "idList": "74",
+      "name": "Shoulder Sweep",
+      "desc": "[https://team.jive.berlin/s/j6tsw6xnr49zimo](https://team.jive.berlin/s/j6tsw6xnr49zimo \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/YWN6qK73Qjq6BLp](https://team.jive.berlin/s/YWN6qK73Qjq6BLp \"smartCard-inline\")",
+      "due": "2026-09-02T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 2
+    },
+    {
+      "id": "257",
+      "idList": "80",
+      "name": "Isolations weiterentwickeln",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 2
+    },
+    {
+      "id": "261",
+      "idList": "67",
+      "name": "Paraden Competition ready machen.",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 2
+    },
+    {
+      "id": "258",
+      "idList": "71",
+      "name": "Multiturns",
+      "desc": "[https://team.jive.berlin/s/3KiMgm7WqCx7iDp](https://team.jive.berlin/s/3KiMgm7WqCx7iDp \"smartCard-inline\")\n\n### Eturnity\n\nFollow starts turning on 3. Lead does a quick spin on the 'And'\n\nMevans Feedback:\n\nextend arm at the end - strike a pose\n\n### Infinite Broken Wing\n\n### Wurlitzer Collect vs. Multiturn\n\n[https://team.jive.berlin/s/Wdfikmzn9LLBS8C](https://team.jive.berlin/s/Wdfikmzn9LLBS8C \"smartCard-inline\")",
+      "due": "2026-07-17T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 2
+    },
+    {
+      "id": "266",
+      "idList": "77",
+      "name": "Moonwalk turn chrissy",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 2
+    },
+    {
+      "id": "298",
+      "idList": "70",
+      "name": "Plumber",
+      "desc": "Linker Arm nicht komplett elbow roll zum festhalten. Früh loslassen, damit follower sich besser drehen kann. Drehung nur mit Rechts führen.\n\n‌\n\n[https://team.jive.berlin/s/9od2ABZfytcbNro](https://team.jive.berlin/s/9od2ABZfytcbNro \"smartCard-inline\")\n\nVon anderer richtung kommend trotzdem runtergehen. kleine Pause klarer down lead\n\nWorking on acceleration to 4 counts video Inc.\n\n[https://team.jive.berlin/s/Fx5R69ageR82kD2](https://team.jive.berlin/s/Fx5R69ageR82kD2 \"smartCard-inline\")",
+      "due": "2026-07-11T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 2
+    },
+    {
+      "id": "301",
+      "idList": "73",
+      "name": "Walks",
+      "desc": "# Hop Walks\n\n[https://team.jive.berlin/s/7gWTAWkTRYfGQZr](https://team.jive.berlin/s/7gWTAWkTRYfGQZr \"smartCard-inline\")\n\n# Moon Walks\n\n[https://team.jive.berlin/s/Q8CpH34XL2qrSRz](https://team.jive.berlin/s/Q8CpH34XL2qrSRz \"smartCard-inline\")\n\n# Ronde Walks\n\n[https://team.jive.berlin/s/JWrmAxNXW5iq5r6](https://team.jive.berlin/s/JWrmAxNXW5iq5r6 \"‌\")\n\n# Bodywave Walks\n\n[https://team.jive.berlin/s/PiWicbDFfnjKXEJ](https://team.jive.berlin/s/PiWicbDFfnjKXEJ \"smartCard-inline\")\n\n# Other Walk Variants\n\n- Gemeinsame walks mit open connection\n- Simultanous walks\n- leaving the slot with walks",
+      "due": "2026-08-02T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [],
+      "pos": 2
+    },
+    {
+      "id": "236",
+      "idList": "69",
+      "name": "Drops",
+      "desc": "[https://team.jive.berlin/s/anYHTeT958GzQc4](https://team.jive.berlin/s/anYHTeT958GzQc4 \"smartCard-inline\")\n\n### General Cues\n\n- Bracing before drops\n- Arms, Legs, Body — experiment more\n- Dip is not being done to you!\n- Do the same thing when coming up from drops\n- Exits: Wie kommt man hoch. Inspiration: head rolls, leg kicks, wave\n  [https://team.jive.berlin/s/rSmwify3Gr9SqFH](https://team.jive.berlin/s/rSmwify3Gr9SqFH \"smartCard-inline\")\n  [https://team.jive.berlin/s/rrr3N8zkPrxA5Pw](https://team.jive.berlin/s/rrr3N8zkPrxA5Pw \"smartCard-inline\")\n\n### Kiwi Drop (back bend)\n\n[https://www.youtube.com/clip/UgkxBMKLbdwfaKTjwyqEtqujKxjB49DA7Fe7](https://www.youtube.com/clip/UgkxBMKLbdwfaKTjwyqEtqujKxjB49DA7Fe7 \"smartCard-inline\")\nIn den freestyle bringen\n\n### Monkey Drop\n\n### Secret Hold Drop\n\n[https://team.jive.berlin/s/95jNRs25KjiETNc](https://team.jive.berlin/s/95jNRs25KjiETNc \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/BG2WGKZnKGZLWwW](https://team.jive.berlin/s/BG2WGKZnKGZLWwW \"smartCard-inline\")\n\n### Straight-back Drop (front & cross)\n\n### Forward Fall Drop\n\n### Elbow Hook Drop Slide\n\n### Rotating Drops to the Judges\n\n[https://team.jive.berlin/s/5Gw7Qr9gsGktwB4](https://team.jive.berlin/s/5Gw7Qr9gsGktwB4 \"smartCard-inline\")",
+      "due": "2026-06-04T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [],
+      "pos": 2
+    },
+    {
+      "id": "262",
+      "idList": "78",
+      "name": "Springfling 25 - Mevans - Juki",
+      "desc": "- Be louder in our dancing\n- don’t play it safe all the time\n- J take over more\n- J have the Arms up more\n- keep chin up\n- K make moves rotational\n- K on travelling end in extended pose with either arms or legs\n- J don’t look elegant all the time\n- K Stand with purpose\n- K remember the spare arm\n- Start dances with L back to judges then switch\n- In musical tracks also put flashy moves in\n- ",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 2
+    },
+    {
+      "id": "315",
+      "idList": "70",
+      "name": "Communication & Play Cues",
+      "desc": "### 360° Connection and Play Communication - Jay&Anna\n\n[https://team.jive.berlin/s/oMmirTPj9RozHLo](https://team.jive.berlin/s/oMmirTPj9RozHLo \"smartCard-inline\")\n\n[https://team.jive.berlin/s/HiXX8oDX4SAJ5Wp](https://team.jive.berlin/s/HiXX8oDX4SAJ5Wp \"smartCard-inline\")\n\n### Other Cues\n\n- J - clearer signal for playtime and end of playtime\n- Spielen in leverage situations\n- Kilian: Be even clearer when to stop and when to go. Practise initiating pure follow moments\n- Red & Green Light",
+      "due": "2026-07-11T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 3
+    },
+    {
+      "id": "269",
+      "idList": "80",
+      "name": "Gezielt Posen Gelegenheiten identifizieren und üben",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 3
+    },
+    {
+      "id": "314",
+      "idList": "73",
+      "name": "First Move Lunge / Lunges Allgemein/ Legwork -> Mehr in den Knien tanzen",
+      "desc": "[https://team.jive.berlin/s/8XQiLKaJ3iamcK8](https://team.jive.berlin/s/8XQiLKaJ3iamcK8 \"smartCard-inline\")",
+      "due": "2026-08-03T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "25"
+      ],
+      "pos": 3
+    },
+    {
+      "id": "286",
+      "idList": "69",
+      "name": "Blindfold",
+      "desc": "",
+      "due": "2026-06-07T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "28"
+      ],
+      "pos": 3
+    },
+    {
+      "id": "275",
+      "idList": "77",
+      "name": "rotational Backbend",
+      "desc": "[https://team.jive.berlin/s/DWwx9y4JgQxtiQm](https://team.jive.berlin/s/DWwx9y4JgQxtiQm \"smartCard-inline\")\n\n‌\n\nErstmal kleiner machen. Nur Oberkörper",
+      "due": null,
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 3
+    },
+    {
+      "id": "281",
+      "idList": "68",
+      "name": "Caine connection",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 3
+    },
+    {
+      "id": "239",
+      "idList": "74",
+      "name": "Musicality",
+      "desc": "- Kilian: lower musical resolution. Build anticipation for longer and hit something big\n- 1 funny thing per dance\n- How to build in a crescendo\n- Higher highs, lower lows\n- Wring the cloth. Style for 8 counts, not 4\n- Call and Answer: [https://youtube.com/shorts/HOrECEByn1s?is=5iITxOgeAQqWnMQ_](https://youtube.com/shorts/HOrECEByn1s?is=5iITxOgeAQqWnMQ_ \"smartCard-embed\")",
+      "due": "2026-09-02T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 3
+    },
+    {
+      "id": "317",
+      "idList": "71",
+      "name": "Shoulder & Posture Cues",
+      "desc": "- Schultern auf einer Höhe lassen während ich mich drehe\n- Shultern öffnen, mehr Platz im Körper. Ich sehe oft zusammengezogen aus\n- Relax shoulders during ducks\n- Hals gerade",
+      "due": "2026-07-18T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "25",
+        "26"
+      ],
+      "pos": 3
+    },
+    {
+      "id": "268",
+      "idList": "67",
+      "name": "Transitions. Move übergänge. Wie haben die sich entwickelt?",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 3
+    },
+    {
+      "id": "265",
+      "idList": "78",
+      "name": "CoC 25 - Mevans - JuKi",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 3
+    },
+    {
+      "id": "287",
+      "idList": "69",
+      "name": "Permission to Play",
+      "desc": "",
+      "due": "2026-06-07T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "28"
+      ],
+      "pos": 4
+    },
+    {
+      "id": "277",
+      "idList": "74",
+      "name": "Reconnection Momente einbauen / Grounding",
+      "desc": "",
+      "due": "2026-09-02T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 4
+    },
+    {
+      "id": "270",
+      "idList": "67",
+      "name": "Dynamics weiterentwickeln",
+      "desc": "- ganz gut\n- DT intros funktionieren in FS und Comps\n\n‌\n\nMögliche Entwicklungen:\n\n- Zu schnellerer Musik?\n- Move basierte Dynamics (Max & Chrissy)\n  - Whips\n  - Hammer\n- ",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 4
+    },
+    {
+      "id": "289",
+      "idList": "73",
+      "name": "Copy&Elevate",
+      "desc": "",
+      "due": "2026-08-03T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "28"
+      ],
+      "pos": 4
+    },
+    {
+      "id": "272",
+      "idList": "78",
+      "name": "Warsaw Lee&Dawn",
+      "desc": "[https://team.jive.berlin/s/ieTaPwgYdCfqarK](https://team.jive.berlin/s/ieTaPwgYdCfqarK \"‌\")",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 4
+    },
+    {
+      "id": "274",
+      "idList": "80",
+      "name": "Energielevel matchen",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 4
+    },
+    {
+      "id": "291",
+      "idList": "71",
+      "name": "travelling hip blocks",
+      "desc": "[https://team.jive.berlin/s/2yBYFfF3xrTrPgg](https://team.jive.berlin/s/2yBYFfF3xrTrPgg \"smartCard-inline\")",
+      "due": "2026-07-18T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 4
+    },
+    {
+      "id": "263",
+      "idList": "74",
+      "name": "Leader Dives",
+      "desc": "[https://team.jive.berlin/s/2QJFpo6bAz9x5em](https://team.jive.berlin/s/2QJFpo6bAz9x5em \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/ca9sFxnBKW8g75T](https://team.jive.berlin/s/ca9sFxnBKW8g75T \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/9cGqcgqS43Pkdxe](https://team.jive.berlin/s/9cGqcgqS43Pkdxe \"smartCard-inline\")\n\n- keeping Back straight",
+      "due": "2026-09-02T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 5
+    },
+    {
+      "id": "280",
+      "idList": "77",
+      "name": "Reentry on 1 after Breaks or Dynamics",
+      "desc": "# Nach breaks auf Hauptfuß\n\n- Vom langsam auf den nebenfuß verlagern.\n- Auf 1 wieder einsetzen\n\n# Nach Dynamics\n\n- auf Nebenfuß Stoppen.\n- auf 1 auf Hauptfuß absetzen\n\n‌\n\nWenn dynamische Inhalte dazu führen, dass wir nicht auf 8 oder 1 aus dem Move kommen/in den neuen Move reingehen können → den Rückschritt / Follow Schritt auf rechts verzögern, um den Rückschritt dann auf 1 machen zu lassen. Follow kann hier ausstylen\n\n[https://team.jive.berlin/s/2HTRxrSkJtKc42d](https://team.jive.berlin/s/2HTRxrSkJtKc42d \"smartCard-inline\")\n\n[https://team.jive.berlin/s/QnpGmRn24byAjGk](https://team.jive.berlin/s/QnpGmRn24byAjGk \"smartCard-inline\")",
+      "due": null,
+      "closed": false,
+      "idLabels": [
+        "27"
+      ],
+      "pos": 5
+    },
+    {
+      "id": "293",
+      "idList": "71",
+      "name": "Pinguin",
+      "desc": "focus on keeping right inner foot stable",
+      "due": "2026-07-18T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 5
+    },
+    {
+      "id": "288",
+      "idList": "69",
+      "name": "Seducers",
+      "desc": "Styling:\n[https://team.jive.berlin/s/C6t5Q6GFpq2ej5c](https://team.jive.berlin/s/C6t5Q6GFpq2ej5c \"smartCard-inline\")\n\nExits:\n\n[https://team.jive.berlin/s/HLLf2DGoH57RwXk](https://team.jive.berlin/s/HLLf2DGoH57RwXk \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/AKw5eQTqnrXDecz](https://team.jive.berlin/s/AKw5eQTqnrXDecz \"smartCard-inline\")\n\nStyling option Judith:\n\n[https://team.jive.berlin/s/bNbwseLpWjL68bq](https://team.jive.berlin/s/bNbwseLpWjL68bq \"smartCard-inline\")\n\n‌\n\nideas:\n[https://youtube.com/clip/UgkxT_eywZ5FRc6WDy99A3Lh2ns4GkpPNw9S?si=PnZkCbuFa_muMte3](https://youtube.com/clip/UgkxT_eywZ5FRc6WDy99A3Lh2ns4GkpPNw9S?si=PnZkCbuFa_muMte3 \"smartCard-inline\") Leg dive\n\n### Aussie Dips",
+      "due": "2026-06-11T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 5
+    },
+    {
+      "id": "278",
+      "idList": "80",
+      "name": "Eine Tanzhaltung finden mit der ich langfristig zufrieden bin",
+      "desc": "Regelmäßiges Krafttrainning. Tanzen mit viel Höhenkontrolle.",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 5
+    },
+    {
+      "id": "300",
+      "idList": "69",
+      "name": "Hip Posting - J in die Connection rein gehen",
+      "desc": "",
+      "due": "2026-06-22T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "29"
+      ],
+      "pos": 6
+    },
+    {
+      "id": "295",
+      "idList": "71",
+      "name": "Wurlitzer (Posing)",
+      "desc": "[https://team.jive.berlin/s/w7CiFm9MSncrmS9](https://team.jive.berlin/s/w7CiFm9MSncrmS9 \"smartCard-inline\")\n\nÜben Fluide in steps left right zu gehen ",
+      "due": "2026-07-18T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 6
+    },
+    {
+      "id": "302",
+      "idList": "69",
+      "name": "Step-over Scroll (Humpa-Scroll)",
+      "desc": "[https://team.jive.berlin/s/68G2P9CqnjpJEKS](https://team.jive.berlin/s/68G2P9CqnjpJEKS \"smartCard-inline\")\n\n[https://team.jive.berlin/s/T93dc5fa2q6Jr4M](https://team.jive.berlin/s/T93dc5fa2q6Jr4M \"smartCard-inline\")\n\n[https://team.jive.berlin/s/oj5bcm3SWtpXDKX](https://team.jive.berlin/s/oj5bcm3SWtpXDKX \"smartCard-inline\")\n\n[https://team.jive.berlin/s/3QRFMtBWN3Epoxx](https://team.jive.berlin/s/3QRFMtBWN3Epoxx \"smartCard-inline\")",
+      "due": "2026-06-23T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 7
+    },
+    {
+      "id": "267",
+      "idList": "71",
+      "name": "Revolving Basket - Back to Back intro",
+      "desc": "[https://youtube.com/clip/UgkxykvpYsW1hemvesZW2TASa54_Ot0EKnpg?si=ir-KKcRDrA4wlzJP](https://youtube.com/clip/UgkxykvpYsW1hemvesZW2TASa54_Ot0EKnpg?si=ir-KKcRDrA4wlzJP \"smartCard-inline\")\n\n[https://team.jive.berlin/s/qatxxnFGaM8b59G](https://team.jive.berlin/s/qatxxnFGaM8b59G \"smartCard-inline\")\n\n[https://team.jive.berlin/s/paQo3ami6qiPtHC](https://team.jive.berlin/s/paQo3ami6qiPtHC \"smartCard-inline\")",
+      "due": "2026-07-18T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 7
+    },
+    {
+      "id": "285",
+      "idList": "77",
+      "name": "Newton 3rd dancing",
+      "desc": "Sich selbst durch den Gegendruck des Partners bewegen (Aktion), welcher sich dann durch die gegenbewegung (Reaktion) mitbewegt",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 7
+    },
+    {
+      "id": "299",
+      "idList": "74",
+      "name": "Doubletime (DT) - Sequenzen",
+      "desc": "[https://team.jive.berlin/s/d4MLMLP5ZXLWPKk](https://team.jive.berlin/s/d4MLMLP5ZXLWPKk \"smartCard-inline\")",
+      "due": "2026-09-02T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 7
+    },
+    {
+      "id": "303",
+      "idList": "69",
+      "name": "Scrolls",
+      "desc": "Frame sehr short. Linken Schritt früher machen und mit Judith schneller mitdrehen. Rechts außen rum und nach dem Rumtreten näher an Judith dran bleiben\n\n[https://team.jive.berlin/s/JCA5MNSXC9teie5](https://team.jive.berlin/s/JCA5MNSXC9teie5 \"smartCard-inline\")\n\n[https://team.jive.berlin/s/8QYTkTcYobTQgtw](https://team.jive.berlin/s/8QYTkTcYobTQgtw \"smartCard-inline\")\n\n‌\n\n### Leader Turnout\n\n- Achten wieder im Slot zu landen\n- drehen wenn vor Judith\n\n[https://team.jive.berlin/s/QcQF9DeWMCrsNEi](https://team.jive.berlin/s/QcQF9DeWMCrsNEi \"smartCard-inline\")",
+      "due": "2026-06-23T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 8
+    },
+    {
+      "id": "290",
+      "idList": "77",
+      "name": "Competition Sequences",
+      "desc": "# C1\n\n[https://team.jive.berlin/s/QWdcsecDQZ4xGk9](https://team.jive.berlin/s/QWdcsecDQZ4xGk9 \"smartCard-inline\")\n\n# C 2\n\n[https://team.jive.berlin/s/dAoZwASeePyjQoS](https://team.jive.berlin/s/dAoZwASeePyjQoS \"smartCard-inline\")\n\n[https://team.jive.berlin/s/XGt4CyXEGgk5zKE](https://team.jive.berlin/s/XGt4CyXEGgk5zKE \"smartCard-inline\")",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 8
+    },
+    {
+      "id": "292",
+      "idList": "77",
+      "name": "Styling Principles",
+      "desc": "- Let styling glide into movements afterwards. Kein Full reset\n- Don't get sloppy with overzealous musicality\n- J try to style the step back at the end of a move if it fits the music\n- J - do styling with wide stances, bend into the knees for a more relaxed look if it fits the music\n- J Arm styling\n- Armbewegung mit Purpose vor dem Spiegel üben\n- Stargaze styling: [https://team.jive.berlin/s/o6StiPacgRFs2ZC](https://team.jive.berlin/s/o6StiPacgRFs2ZC \"‌\")",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 9
+    },
+    {
+      "id": "306",
+      "idList": "69",
+      "name": "Pidgeon",
+      "desc": "[https://team.jive.berlin/s/aYMgdnXH3XPNdMN](https://team.jive.berlin/s/aYMgdnXH3XPNdMN \"smartCard-inline\")",
+      "due": "2026-06-23T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 9
+    },
+    {
+      "id": "307",
+      "idList": "69",
+      "name": "DT-Intros",
+      "desc": "# General\n\n- Arme kurz und Stabil\n- Alle Intros funktionieren mit einem Twist als prep\n- Beim First move Lunge im Twist Körper zu Judith drehen\n\n[https://team.jive.berlin/s/zSyLX8YLp32qtYc](https://team.jive.berlin/s/zSyLX8YLp32qtYc \"smartCard-inline\")\n\nShoulder sweep intro:\nSlot mit linkem fuß schneller frei machen.\nIrgendwas passt bei dem intro mit dem Timing immernoch nicht\n\n[https://team.jive.berlin/s/m9NMLdJf4trM8o3](https://team.jive.berlin/s/m9NMLdJf4trM8o3 \"smartCard-inline\")\n\nMehr in die knie beim eindrehen wenn Judith an mir vorbei travelt und nach hinten in DT gehen soll\n\nStopps klar nach unten denken. Am eigenen Körper abfedern. Vor der letzten Drehung Spannung raus und dann langsam aber fest runterführen.\n\n# Quick Intros:\n\n[https://team.jive.berlin/s/2rfageozP9wtgpj](https://team.jive.berlin/s/2rfageozP9wtgpj \"smartCard-inline\")\n\n[https://team.jive.berlin/s/zsemxT7gDtNT53C](https://team.jive.berlin/s/zsemxT7gDtNT53C \"smartCard-inline\")\n\n‌\n\n# New\n\n[https://team.jive.berlin/s/JtdAw5jTNyie37g](https://team.jive.berlin/s/JtdAw5jTNyie37g \"smartCard-inline\")\n[https://team.jive.berlin/s/56jRqS9BHGyX3oS](https://team.jive.berlin/s/56jRqS9BHGyX3oS \"smartCard-inline\")",
+      "due": "2026-06-28T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 10
+    },
+    {
+      "id": "304",
+      "idList": "77",
+      "name": "Aktiver Bodendruck",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 10
+    },
+    {
+      "id": "305",
+      "idList": "77",
+      "name": "Eholung während eines Songs",
+      "desc": "[https://team.jive.berlin/s/Rtt7EMdpB5jJHnN](https://team.jive.berlin/s/Rtt7EMdpB5jJHnN \"smartCard-inline\")\n\n- Walks taktisch nutzen um Energie wiederherzustellen.\n- In Liedern mit schneller Stimme auf den Beat wechseln.\n  - Schneller Beat auf die Stimme",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 11
+    },
+    {
+      "id": "308",
+      "idList": "77",
+      "name": "Footwork",
+      "desc": "How do i get from point A to B\n\n- pointing feet\n- cross feet\n- slide\n\n### Synchrones Footwork\n\nAkzentuierter Shuffle\n\nMoonwalk\n\n- Chest Push back and forth",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 12
+    },
+    {
+      "id": "310",
+      "idList": "69",
+      "name": "Paraden",
+      "desc": "",
+      "due": "2026-06-30T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 12
+    },
+    {
+      "id": "311",
+      "idList": "74",
+      "name": "Hip Connections",
+      "desc": "[https://team.jive.berlin/s/m4PsK5YkkAWHPqS](https://team.jive.berlin/s/m4PsK5YkkAWHPqS \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/sz3wdXBzjsXqiag](https://team.jive.berlin/s/sz3wdXBzjsXqiag \"smartCard-inline\")\n\n‌\n\n[https://team.jive.berlin/s/epRDwCLeJmTRm72](https://team.jive.berlin/s/epRDwCLeJmTRm72 \"smartCard-inline\")\n\n‌\n\nTODO: Drill Behind the Back Connections\n\n### Smoothies\n\n[https://team.jive.berlin/s/r2AS2jf2KLRWC3E](https://team.jive.berlin/s/r2AS2jf2KLRWC3E \"smartCard-inline\")\n\n- Hip connections mehr in die knie gehen. durchgehen und drillen\n- Rücken Grade\n- Mehr Counterbalance\n\n#### Travelling / Rotating variant\n\n- walk around partner\n- stay far away\n- quickly move counterbalance from side to side",
+      "due": "2026-09-02T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "23",
+        "24"
+      ],
+      "pos": 13
+    },
+    {
+      "id": "316",
+      "idList": "77",
+      "name": "K - more single handhold",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 13
+    },
+    {
+      "id": "318",
+      "idList": "77",
+      "name": "K - Display the Energy present in moves by shaping my body more -> more body leading; overroatation",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 14
+    },
+    {
+      "id": "312",
+      "idList": "69",
+      "name": "Take more space during Dancing",
+      "desc": "Scrolls, Open Scroll, humpa scroll\n\nEturnity, carousels\n\ntraveling hip blocks\n\nParaden",
+      "due": "2026-07-02T23:59:59.000Z",
+      "closed": false,
+      "idLabels": [
+        "25"
+      ],
+      "pos": 14
+    },
+    {
+      "id": "320",
+      "idList": "77",
+      "name": "K - Push shared center with legs",
+      "desc": "Instead of pulling partner",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 16
+    },
+    {
+      "id": "321",
+      "idList": "77",
+      "name": "Leading in Kurven",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 17
+    },
+    {
+      "id": "322",
+      "idList": "77",
+      "name": "Level & Height Changes",
+      "desc": "- Back bends\n- Lunges",
+      "due": null,
+      "closed": false,
+      "idLabels": [
+        "23"
+      ],
+      "pos": 18
+    },
+    {
+      "id": "323",
+      "idList": "77",
+      "name": "Tango leg kick whip",
+      "desc": "",
+      "due": null,
+      "closed": false,
+      "idLabels": [],
+      "pos": 19
+    },
+    {
+      "id": "313",
+      "idList": "77",
+      "name": "Side to Side Block",
+      "desc": "[https://team.jive.berlin/s/BFDMMY87cEGEPC9](https://team.jive.berlin/s/BFDMMY87cEGEPC9 \"smartCard-inline\")",
+      "due": null,
+      "closed": false,
+      "idLabels": [
+        "24"
+      ],
+      "pos": 21
+    }
+  ]
+}

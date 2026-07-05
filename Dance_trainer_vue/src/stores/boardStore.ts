@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from './authStore'
+import { useToastStore } from './toastStore'
 import type { ParsedBoard } from '@/lib/trelloFormat'
 import { parseBoardFile, buildBoardExport } from '@/lib/boardFormat'
 import { localToday, addDays, isDue } from '@/lib/dates'
@@ -47,7 +48,16 @@ export const useBoardStore = defineStore('board', () => {
   const labels = ref<Label[]>([])
   const cardLabels = ref<{ card_id: number; label_id: number }[]>([])
   const loading = ref(false)
-  const error = ref<string | null>(null)
+
+  // Serializes writes for a given card so overlapping calls (fast double-drag,
+  // rapid label toggles) can't have their DB updates land out of order.
+  const cardWriteQueues = new Map<number, Promise<unknown>>()
+  function queueCardWrite(cardId: number, task: () => Promise<unknown>) {
+    const prior = cardWriteQueues.get(cardId) ?? Promise.resolve()
+    const next = prior.then(task, task)
+    cardWriteQueues.set(cardId, next)
+    return next
+  }
 
   const cardsByColumn = computed(() => (columnId: number) =>
     cards.value
@@ -88,21 +98,19 @@ export const useBoardStore = defineStore('board', () => {
     const auth = useAuthStore()
     if (!auth.user) return
     loading.value = true
-    error.value = null
     const { data, error: err } = await supabase
       .from('boards')
       .select('id, name, invite_code, board_members!inner(user_id)')
       .eq('board_members.user_id', auth.user.id)
       .order('id')
-    if (err) error.value = err.message
+    if (err) useToastStore().show(err.message)
     else boards.value = (data ?? []).map((b) => ({ id: b.id, name: b.name, invite_code: b.invite_code }))
     loading.value = false
   }
 
   async function joinBoard(code: string) {
-    error.value = null
     const { data, error: err } = await supabase.rpc('join_board', { _invite_code: code })
-    if (err) { error.value = err.message; return null }
+    if (err) { useToastStore().show(err.message); return null }
     await loadBoards()
     return data as number
   }
@@ -127,13 +135,13 @@ export const useBoardStore = defineStore('board', () => {
     const auth = useAuthStore()
     if (!auth.user) return
     const { data, error: err } = await insertBoardWithMembership(name, auth.user.id)
-    if (err) { error.value = err.message; return }
+    if (err) { useToastStore().show(err.message); return }
     boards.value.push(data)
   }
 
   async function deleteBoard(id: number) {
     const { error: err } = await supabase.from('boards').delete().eq('id', id)
-    if (err) { error.value = err.message; return }
+    if (err) { useToastStore().show(err.message); return }
     boards.value = boards.value.filter((b) => b.id !== id)
   }
 
@@ -202,7 +210,6 @@ export const useBoardStore = defineStore('board', () => {
     const auth = useAuthStore()
     if (!auth.user) return null
     loading.value = true
-    error.value = null
     try {
       const parsed = parseBoardFile(JSON.parse(await file.text()))
 
@@ -214,7 +221,7 @@ export const useBoardStore = defineStore('board', () => {
       boards.value.push({ id: boardData.id, name: boardData.name, invite_code: boardData.invite_code })
       return boardData.id as number
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : 'Failed to import board'
+      useToastStore().show(e instanceof Error ? e.message : 'Failed to import board')
       return null
     } finally {
       loading.value = false
@@ -230,7 +237,6 @@ export const useBoardStore = defineStore('board', () => {
   // as-is (a deliberate restore).
   async function importTrelloIntoBoard(boardId: number, file: File): Promise<boolean> {
     loading.value = true
-    error.value = null
     try {
       const parsed = parseBoardFile(JSON.parse(await file.text()))
 
@@ -260,7 +266,7 @@ export const useBoardStore = defineStore('board', () => {
       await loadBoard(boardId)
       return true
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : 'Failed to import board'
+      useToastStore().show(e instanceof Error ? e.message : 'Failed to import board')
       return false
     } finally {
       loading.value = false
@@ -281,7 +287,6 @@ export const useBoardStore = defineStore('board', () => {
 
   async function loadBoard(id: number) {
     loading.value = true
-    error.value = null
     try {
       const { data: boardData, error: boardErr } = await supabase
         .from('boards')
@@ -328,7 +333,7 @@ export const useBoardStore = defineStore('board', () => {
         }
       }
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : 'Failed to load board'
+      useToastStore().show(e instanceof Error ? e.message : 'Failed to load board')
     } finally {
       loading.value = false
     }
@@ -342,7 +347,7 @@ export const useBoardStore = defineStore('board', () => {
       .insert({ board_id: board.value.id, name: 'New Column', position })
       .select()
       .single()
-    if (err) { error.value = err.message; return }
+    if (err) { useToastStore().show(err.message); return }
     columns.value.push(data)
   }
 
@@ -352,7 +357,7 @@ export const useBoardStore = defineStore('board', () => {
     const oldName = col.name
     col.name = name
     const { error: err } = await supabase.from('columns').update({ name }).eq('id', columnId)
-    if (err) { error.value = err.message; col.name = oldName }
+    if (err) { useToastStore().show(err.message); col.name = oldName }
   }
 
   async function updateColumnSettings(
@@ -384,7 +389,7 @@ export const useBoardStore = defineStore('board', () => {
         .update({ is_due_column: false })
         .eq('id', prevDue.id)
       if (err) {
-        error.value = err.message
+        useToastStore().show(err.message)
         prevDue.is_due_column = true
         Object.assign(col, prev)
         return
@@ -392,7 +397,7 @@ export const useBoardStore = defineStore('board', () => {
     }
     const { error: err } = await supabase.from('columns').update(next).eq('id', columnId)
     if (err) {
-      error.value = err.message
+      useToastStore().show(err.message)
       Object.assign(col, prev)
       if (prevDue) {
         prevDue.is_due_column = true
@@ -410,12 +415,12 @@ export const useBoardStore = defineStore('board', () => {
       .from('columns')
       .update({ is_quick_target: value })
       .eq('id', columnId)
-    if (err) { error.value = err.message; col.is_quick_target = prev }
+    if (err) { useToastStore().show(err.message); col.is_quick_target = prev }
   }
 
   async function deleteColumn(columnId: number) {
     const { error: err } = await supabase.from('columns').delete().eq('id', columnId)
-    if (err) { error.value = err.message; return }
+    if (err) { useToastStore().show(err.message); return }
     columns.value = columns.value.filter((c) => c.id !== columnId)
     cards.value = cards.value.filter((c) => c.column_id !== columnId)
   }
@@ -438,7 +443,7 @@ export const useBoardStore = defineStore('board', () => {
     ])
     const err = results.find((r) => r.error)?.error
     if (err) {
-      error.value = err.message
+      useToastStore().show(err.message)
       col.position = prev.colPos
       neighbor.position = prev.neighborPos
       columns.value.sort((a, b) => a.position - b.position)
@@ -463,7 +468,7 @@ export const useBoardStore = defineStore('board', () => {
     )
     const err = results.find((r) => r.error)?.error
     if (err) {
-      error.value = err.message
+      useToastStore().show(err.message)
       columns.value.forEach((c) => { c.position = prevPositions.get(c.id)! })
       columns.value.sort((a, b) => a.position - b.position)
     }
@@ -480,7 +485,7 @@ export const useBoardStore = defineStore('board', () => {
       .select()
       .single()
     if (err) {
-      error.value = err.message
+      useToastStore().show(err.message)
       cards.value = cards.value.filter((c) => c.id !== tempId)
       return
     }
@@ -498,7 +503,7 @@ export const useBoardStore = defineStore('board', () => {
     const old = card[field]
     card[field] = value
     const { error: err } = await supabase.from('cards').update({ [field]: value }).eq('id', cardId)
-    if (err) { error.value = err.message; card[field] = old }
+    if (err) { useToastStore().show(err.message); card[field] = old }
   }
 
   function renameCard(cardId: number, name: string) {
@@ -522,7 +527,7 @@ export const useBoardStore = defineStore('board', () => {
       .select()
       .single()
     if (err) {
-      error.value = err.message
+      useToastStore().show(err.message)
       labels.value = labels.value.filter((l) => l.id !== tempId)
       return null
     }
@@ -533,7 +538,7 @@ export const useBoardStore = defineStore('board', () => {
 
   async function deleteLabel(labelId: number) {
     const { error: err } = await supabase.from('labels').delete().eq('id', labelId)
-    if (err) { error.value = err.message; return }
+    if (err) { useToastStore().show(err.message); return }
     labels.value = labels.value.filter((l) => l.id !== labelId)
     cardLabels.value = cardLabels.value.filter((cl) => cl.label_id !== labelId)
   }
@@ -546,29 +551,36 @@ export const useBoardStore = defineStore('board', () => {
       cardLabels.value = cardLabels.value.filter(
         (cl) => !(cl.card_id === cardId && cl.label_id === labelId),
       )
-      const { error: err } = await supabase
-        .from('card_labels')
-        .delete()
-        .eq('card_id', cardId)
-        .eq('label_id', labelId)
-      if (err) { error.value = err.message; cardLabels.value.push({ card_id: cardId, label_id: labelId }) }
+      await queueCardWrite(cardId, async () => {
+        const { error: err } = await supabase
+          .from('card_labels')
+          .delete()
+          .eq('card_id', cardId)
+          .eq('label_id', labelId)
+        if (err) {
+          useToastStore().show(err.message)
+          cardLabels.value.push({ card_id: cardId, label_id: labelId })
+        }
+      })
     } else {
       cardLabels.value.push({ card_id: cardId, label_id: labelId })
-      const { error: err } = await supabase
-        .from('card_labels')
-        .insert({ card_id: cardId, label_id: labelId })
-      if (err) {
-        error.value = err.message
-        cardLabels.value = cardLabels.value.filter(
-          (cl) => !(cl.card_id === cardId && cl.label_id === labelId),
-        )
-      }
+      await queueCardWrite(cardId, async () => {
+        const { error: err } = await supabase
+          .from('card_labels')
+          .insert({ card_id: cardId, label_id: labelId })
+        if (err) {
+          useToastStore().show(err.message)
+          cardLabels.value = cardLabels.value.filter(
+            (cl) => !(cl.card_id === cardId && cl.label_id === labelId),
+          )
+        }
+      })
     }
   }
 
   async function deleteCard(cardId: number) {
     const { error: err } = await supabase.from('cards').delete().eq('id', cardId)
-    if (err) { error.value = err.message; return }
+    if (err) { useToastStore().show(err.message); return }
     cards.value = cards.value.filter((c) => c.id !== cardId)
   }
 
@@ -581,6 +593,13 @@ export const useBoardStore = defineStore('board', () => {
     const card = cards.value.find((c) => c.id === cardId)
     if (!card) return
     const oldColumnId = card.column_id
+
+    // Snapshot every card in the source/target columns before mutating, so a
+    // failed persist can be rolled back to exactly this state.
+    const affectedColumnIds = new Set([oldColumnId, targetColumnId])
+    const snapshot = cards.value
+      .filter((c) => affectedColumnIds.has(c.column_id))
+      .map((c) => ({ id: c.id, column_id: c.column_id, position: c.position, due_date: c.due_date }))
 
     // Entering a column with an on-enter rule stamps the due date (overwrites).
     // Same-column reorders and sweep moves never fire the rule.
@@ -608,16 +627,30 @@ export const useBoardStore = defineStore('board', () => {
     card.position = targetPosition
     cardsByColumn.value(targetColumnId).forEach((c, i) => { c.position = i })
 
-    // Persist all affected cards
-    const affectedColumnIds = new Set([oldColumnId, targetColumnId])
+    // Persist all affected cards, serialized per-card so a rapid second move
+    // of the same card can't have its write land before this one's.
     const allAffected = cards.value.filter((c) => affectedColumnIds.has(c.column_id))
-    for (const c of allAffected) {
-      const payload =
-        c.id === cardId && ruleFired
-          ? { column_id: c.column_id, position: c.position, due_date: c.due_date }
-          : { column_id: c.column_id, position: c.position }
-      await supabase.from('cards').update(payload).eq('id', c.id)
-    }
+    await queueCardWrite(cardId, async () => {
+      for (const c of allAffected) {
+        const payload =
+          c.id === cardId && ruleFired
+            ? { column_id: c.column_id, position: c.position, due_date: c.due_date }
+            : { column_id: c.column_id, position: c.position }
+        const { error: err } = await supabase.from('cards').update(payload).eq('id', c.id)
+        if (err) {
+          for (const snap of snapshot) {
+            const liveCard = cards.value.find((cc) => cc.id === snap.id)
+            if (liveCard) {
+              liveCard.column_id = snap.column_id
+              liveCard.position = snap.position
+              liveCard.due_date = snap.due_date
+            }
+          }
+          useToastStore().show(err.message)
+          return
+        }
+      }
+    })
   }
 
   // Move every card whose due date has arrived into the due column.
@@ -634,6 +667,10 @@ export const useBoardStore = defineStore('board', () => {
     const affectedColumnIds = new Set<number>([target.id])
     for (const c of swept) affectedColumnIds.add(c.column_id)
 
+    const snapshot = cards.value
+      .filter((c) => affectedColumnIds.has(c.column_id))
+      .map((c) => ({ id: c.id, column_id: c.column_id, position: c.position }))
+
     // Swept cards land on top of the due column, most overdue first.
     const existing = cardsByColumn.value(target.id)
     swept.forEach((c) => { c.column_id = target.id })
@@ -644,15 +681,26 @@ export const useBoardStore = defineStore('board', () => {
 
     const allAffected = cards.value.filter((c) => affectedColumnIds.has(c.column_id))
     for (const c of allAffected) {
-      await supabase
+      const { error: err } = await supabase
         .from('cards')
         .update({ column_id: c.column_id, position: c.position })
         .eq('id', c.id)
+      if (err) {
+        for (const snap of snapshot) {
+          const liveCard = cards.value.find((cc) => cc.id === snap.id)
+          if (liveCard) {
+            liveCard.column_id = snap.column_id
+            liveCard.position = snap.position
+          }
+        }
+        useToastStore().show(err.message)
+        return
+      }
     }
   }
 
   return {
-    boards, board, columns, cards, labels, cardLabels, loading, error,
+    boards, board, columns, cards, labels, cardLabels, loading,
     cardsByColumn, labelsForCard, dueColumn, quickTargetColumns,
     loadBoards, createBoard, deleteBoard, joinBoard,
     importTrelloBoard, importTrelloIntoBoard, exportBoard,

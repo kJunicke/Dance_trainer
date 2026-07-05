@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onUnmounted } from 'vue'
+import { computed, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import TaskCard from './TaskCard.vue'
 
 const props = defineProps<{
@@ -177,9 +177,22 @@ function onHandlePointerUp(e: PointerEvent) {
   handleTouchStart = null
 }
 
+// `dragend` always fires on the drag source once a native drag ends, even if
+// it's aborted (Escape, dropped outside the window) without a matching
+// `dragleave` — a plain dragenter/dragleave counter can otherwise get stuck
+// above zero and leave this column's highlight on indefinitely.
+function resetDragOverCount() {
+  dragOverCount.value = 0
+}
+
+onMounted(() => {
+  document.addEventListener('dragend', resetDragOverCount)
+})
+
 onUnmounted(() => {
   clearHandleLongPress()
   document.removeEventListener('touchmove', blockHandleTouchScroll)
+  document.removeEventListener('dragend', resetDragOverCount)
 })
 </script>
 

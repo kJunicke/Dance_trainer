@@ -36,7 +36,6 @@ function toggleMode() {
   // Fields stay bound to the same refs, so typed values persist across the toggle.
   mode.value = mode.value === 'login' ? 'signup' : 'login'
   info.value = null
-  auth.error = null
 }
 
 async function onSubmit() {
@@ -45,7 +44,7 @@ async function onSubmit() {
   try {
     if (mode.value === 'signup') {
       const loggedIn = await auth.signUp(email.value, password.value, displayName.value)
-      if (auth.error) return
+      if (loggedIn === null) return
       if (loggedIn) {
         router.push({ name: 'boards' })
       } else {
@@ -86,8 +85,7 @@ async function onSubmit() {
         />
       </label>
 
-      <p v-if="auth.error" class="msg error">{{ auth.error }}</p>
-      <p v-else-if="info" class="msg info">{{ info }}</p>
+      <p v-if="info" class="msg info">{{ info }}</p>
 
       <button class="submit" type="submit" :disabled="submitting">
         <LoadingSpinner v-if="submitting" :size="14" />
@@ -171,10 +169,6 @@ input:focus {
 .msg {
   font-size: 13px;
   margin: 0;
-}
-
-.msg.error {
-  color: var(--color-overdue);
 }
 
 .msg.info {

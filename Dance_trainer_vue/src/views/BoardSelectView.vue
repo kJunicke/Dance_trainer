@@ -108,7 +108,6 @@ async function onImportFile(event: Event) {
     </div>
 
     <p v-if="store.loading" class="status"><LoadingSpinner :size="14" /> Loading…</p>
-    <p v-else-if="store.error" class="status error">{{ store.error }}</p>
     <p v-else-if="store.boards.length === 0" class="status">No boards yet — create one above.</p>
 
     <ul v-else class="list">
@@ -236,10 +235,6 @@ h1 {
   gap: 8px;
   font-size: 14px;
   color: var(--color-ink-dim);
-}
-
-.status.error {
-  color: var(--color-overdue);
 }
 
 .list {
