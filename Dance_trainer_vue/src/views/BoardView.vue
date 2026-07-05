@@ -224,11 +224,47 @@ function columnIdAtPoint(x: number, y: number): number | null {
   return columnEl ? Number(columnEl.dataset.columnId) : null
 }
 
+// Touch drop position within a column: unlike native mouse dragover (which fires
+// per-card as the cursor crosses it), a touch drop only gets one point at
+// pointerup — landing in the gap between cards (or anywhere elementFromPoint
+// doesn't resolve to a .task-card) used to fall through to "append at the end".
+// Scanning the column's cards by vertical midpoint instead of requiring an exact
+// hit covers the whole column height, so any y resolves to a slot.
+function resolveCardDrop(
+  columnId: number,
+  excludeCardId: number,
+  y: number,
+): { cardId: number; position: 'before' | 'after' } | null {
+  const columnEl = document.querySelector<HTMLElement>(`.kanban-column[data-column-id="${columnId}"]`)
+  if (!columnEl) return null
+  const cardEls = Array.from(columnEl.querySelectorAll<HTMLElement>('.task-card')).filter(
+    (el) => Number(el.dataset.cardId) !== excludeCardId,
+  )
+  for (const el of cardEls) {
+    const rect = el.getBoundingClientRect()
+    if (y < rect.top + rect.height / 2) return { cardId: Number(el.dataset.cardId), position: 'before' }
+  }
+  const last = cardEls[cardEls.length - 1]
+  return last ? { cardId: Number(last.dataset.cardId), position: 'after' } : null
+}
+
+// Live insertion-line target while touch-dragging, mirroring KanbanColumn's own
+// dropIndicator (which only updates from native dragover, so touch needs its
+// own) — gives the same visual feedback mouse users get from hovering a card.
+const touchDropTarget = ref<{ columnId: number; cardId: number; position: 'before' | 'after' } | null>(null)
+
 function onCardDragMove(x: number, y: number) {
   touchPoint.value = { x, y }
   // A bucket overlays the top strip, so a point over it isn't inside any column.
   quickOverColumnId.value = quickColumnIdAtPoint(x, y)
-  touchOverColumnId.value = columnIdAtPoint(x, y)
+  const columnId = columnIdAtPoint(x, y)
+  touchOverColumnId.value = columnId
+  if (columnId !== null && dragState.value) {
+    const target = resolveCardDrop(columnId, dragState.value.cardId, y)
+    touchDropTarget.value = target ? { columnId, ...target } : null
+  } else {
+    touchDropTarget.value = null
+  }
   startAutoScroll(x)
 }
 
@@ -288,6 +324,7 @@ function stopAutoScroll() {
   touchPoint.value = null
   touchOverColumnId.value = null
   quickOverColumnId.value = null
+  touchDropTarget.value = null
 }
 
 // Native (mouse) drag: dragover bubbles up from columns/cards, giving us the
@@ -323,30 +360,26 @@ function onBoardDragEnd() {
 }
 
 function onCardDragEndTouch(x: number, y: number) {
+  const sourceCardId = dragState.value?.cardId
   stopAutoScroll()
-  if (!dragState.value) return
-  const sourceCardId = dragState.value.cardId
+  if (sourceCardId === undefined) return
   const el = document.elementFromPoint(x, y)
   const quickEl = el?.closest<HTMLElement>('[data-quick-column-id]')
   if (quickEl) {
     dropToQuick(Number(quickEl.dataset.quickColumnId))
     return
   }
-  const columnEl = el?.closest<HTMLElement>('.kanban-column')
-  if (!columnEl) {
+  const columnId = columnIdAtPoint(x, y)
+  if (columnId === null) {
     dragState.value = null
     return
   }
-  const columnId = Number(columnEl.dataset.columnId)
-  const cardEl = el?.closest<HTMLElement>('.task-card')
-  if (cardEl && Number(cardEl.dataset.cardId) !== sourceCardId) {
-    const targetCardId = Number(cardEl.dataset.cardId)
-    const rect = cardEl.getBoundingClientRect()
-    const position = y < rect.top + rect.height / 2 ? 'before' : 'after'
-    onCardDroppedOnCard(columnId, targetCardId, position)
-    return
+  const target = resolveCardDrop(columnId, sourceCardId, y)
+  if (target) {
+    onCardDroppedOnCard(columnId, target.cardId, target.position)
+  } else {
+    onColumnDrop(columnId)
   }
-  onColumnDrop(columnId)
 }
 
 const openCardId = ref<number | null>(null)
@@ -515,6 +548,11 @@ function onBoardPointerUp(e: PointerEvent) {
           :name="column.name"
           :cards="store.cardsByColumn(column.id).map((c) => ({ ...c, labels: store.labelsForCard(c.id) }))"
           :touch-drag-over="touchOverColumnId === column.id"
+          :touch-drop-indicator="
+            touchDropTarget && touchDropTarget.columnId === column.id
+              ? { cardId: touchDropTarget.cardId, position: touchDropTarget.position }
+              : null
+          "
           :column-drag-active="columnDragId !== null"
           :is-dragging="columnDragId === column.id"
           @rename="store.renameColumn(column.id, $event)"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onUnmounted } from 'vue'
+import { computed, ref, nextTick, onUnmounted } from 'vue'
 import TaskCard from './TaskCard.vue'
 
 const props = defineProps<{
@@ -13,6 +13,10 @@ const props = defineProps<{
     labels?: { id: number; name: string; color: string }[]
   }[]
   touchDragOver?: boolean
+  // Live insertion target while a touch drag hovers this column — native mouse
+  // drags get this from dragover (see dropIndicator below), touch drags have no
+  // per-card hover event so BoardView resolves it geometrically and passes it in.
+  touchDropIndicator?: { cardId: number; position: 'before' | 'after' } | null
   // True board-wide while a column (not a card) is being dragged, so this
   // column doesn't show its card-drop highlight for column-reorder dragover.
   columnDragActive?: boolean
@@ -40,6 +44,7 @@ const editValue = ref('')
 const inputEl = ref<HTMLInputElement | null>(null)
 const dragOverCount = ref(0)
 const dropIndicator = ref<{ cardId: number; position: 'before' | 'after' } | null>(null)
+const effectiveDropIndicator = computed(() => dropIndicator.value ?? props.touchDropIndicator ?? null)
 
 async function startEdit() {
   editValue.value = props.name
@@ -216,7 +221,7 @@ onUnmounted(() => {
     <div class="card-list">
       <template v-for="card in cards" :key="card.id">
         <div
-          v-if="dropIndicator?.cardId === card.id && dropIndicator.position === 'before'"
+          v-if="effectiveDropIndicator?.cardId === card.id && effectiveDropIndicator.position === 'before'"
           class="drop-line"
         />
         <TaskCard
@@ -233,7 +238,7 @@ onUnmounted(() => {
           @drop.prevent.stop="onCardDrop(card.id)"
         />
         <div
-          v-if="dropIndicator?.cardId === card.id && dropIndicator.position === 'after'"
+          v-if="effectiveDropIndicator?.cardId === card.id && effectiveDropIndicator.position === 'after'"
           class="drop-line"
         />
       </template>

@@ -53,3 +53,4 @@ Run from `Dance_trainer_vue/`:
 # General guidelines
 - be brief and efficient
 - before any changes always check logseq for relevant context
+- be direct and honest
