@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import type { Card } from '@/stores/boardStore'
 import { useBoardStore } from '@/stores/boardStore'
 import { usePracticeSessionStore } from '@/stores/practiceSessionStore'
+import { dueStatus } from '@/lib/dates'
 import PracticeFocusCard from '@/components/PracticeFocusCard.vue'
 import PracticeSessionList from '@/components/PracticeSessionList.vue'
 
@@ -38,17 +39,33 @@ const focusedCard = computed(
   () => pendingCards.value.find((c) => c.id === focusedId.value) ?? pendingCards.value[0] ?? null,
 )
 
+// The empty queue reports the board's situation rather than just stating that
+// it's empty. Deliberately *only* a report: picking what to drill is the
+// user's call, so there is no "start with everything due" shortcut here.
+const readyCounts = computed(() => {
+  let due = 0
+  let overdue = 0
+  for (const card of store.cards) {
+    const status = dueStatus(card.due_date)
+    if (status === 'overdue') overdue++
+    if (status === 'overdue' || status === 'due') due++
+  }
+  return { due, overdue }
+})
+
 function onDone(cardId: number) {
   session.markDone(cardId)
   // Reuses the drag-start haptic precedent from PracticeSessionList.vue.
   navigator.vibrate?.(20)
-  // Brief "logged" receipt on the FAB itself — it's the one stable element
-  // across every rep, the card underneath is about to be swapped out.
+  // The receipt used to be a 200ms background swap on the FAB — invisible by
+  // construction, since the thumb that triggered it is physically covering the
+  // button. It floats above the FAB now, clear of the hand, and holds long
+  // enough to actually register.
   confirming.value = true
   if (confirmTimer) clearTimeout(confirmTimer)
   confirmTimer = setTimeout(() => {
     confirming.value = false
-  }, 200)
+  }, 900)
 }
 
 function onUndo(cardId: number) {
@@ -63,8 +80,14 @@ function onUndo(cardId: number) {
          hand then, and the focus card would just be dead space above it. -->
     <div v-if="!listExpanded" class="practice-body">
       <div v-if="pendingCards.length === 0 && doneCards.length === 0" class="empty-state">
-        <p>No cards in today's session yet.</p>
-        <button class="add-cta" @click="emit('open-add')">+ Add cards to start</button>
+        <p v-if="readyCounts.due === 0" class="empty-headline">Nothing is due right now.</p>
+        <p v-else class="empty-headline">
+          {{ readyCounts.due }} card{{ readyCounts.due === 1 ? '' : 's' }} due<template
+            v-if="readyCounts.overdue"
+          >, {{ readyCounts.overdue }} overdue</template>.
+        </p>
+        <p class="empty-sub">Your practice queue is empty — pick what you'll drill.</p>
+        <button class="add-cta" @click="emit('open-add')">Choose cards</button>
       </div>
       <!-- out-in rather than a hard swap: markDone advances focusedCard
            instantly, and this is the single highest-frequency action in the
@@ -91,10 +114,13 @@ function onUndo(cardId: number) {
          Material-style FAB rather than living inline in the card flow (which
          made it shift around under a long or short note). Hidden while the
          list is expanded: there's no focus card to act on then. -->
+    <Transition name="receipt">
+      <div v-if="confirming" class="done-receipt" role="status">✓ Logged</div>
+    </Transition>
+
     <button
       v-if="!listExpanded && focusedCard"
       class="done-fab"
-      :class="{ confirming }"
       @click="onDone(focusedCard.id)"
     >Done</button>
   </div>
@@ -118,7 +144,10 @@ function onUndo(cardId: number) {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  padding: 14px 16px;
+  /* The FAB is fixed, so it isn't in this box's flow — without the reserved
+     gutter the last ~48px of every note sat under an opaque pill. Covers the
+     FAB's 48px plus the 12px it floats above this element's bottom edge. */
+  padding: 14px 16px calc(60px + 14px);
   background: var(--pc-bg);
 }
 
@@ -134,6 +163,19 @@ function onUndo(cardId: number) {
 
 .empty-state p {
   margin: 0;
+}
+
+/* The count is the point of the screen — it's the one thing the practice
+   surface knows that the user doesn't without going back to the board. */
+.empty-headline {
+  color: var(--pc-ink);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.empty-sub {
+  margin-top: -6px;
 }
 
 .add-cta {
@@ -181,10 +223,40 @@ function onUndo(cardId: number) {
   transform: scale(0.96);
 }
 
-/* After :hover so it wins the specificity tie — the "logged" receipt should
-   still read even if a mouse happens to be hovering. */
-.done-fab.confirming {
+/* Sits directly above the FAB — 48px of button plus an 8px gap — so it lands
+   in clear air rather than under the hand that just tapped. */
+.done-receipt {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--session-list-height) + 12px + 56px);
+  z-index: 20;
+  padding: 6px 12px;
+  border-radius: 999px;
   background: var(--pc-good);
+  color: #10240f;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  box-shadow: var(--shadow-modal);
+}
+
+.receipt-enter-active {
+  transition: opacity 120ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.receipt-leave-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.receipt-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.receipt-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .done-fab:focus-visible {

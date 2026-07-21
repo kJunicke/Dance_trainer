@@ -5,7 +5,7 @@ import { useAuthStore } from './authStore'
 import { useToastStore } from './toastStore'
 import type { ParsedBoard } from '@/lib/trelloFormat'
 import { parseBoardFile, buildBoardExport } from '@/lib/boardFormat'
-import { localToday, addDays, isDue } from '@/lib/dates'
+import { localToday, addDays, isDue, daysBetween } from '@/lib/dates'
 
 export interface Board {
   id: number
@@ -31,6 +31,10 @@ export interface Card {
   description: string | null
   position: number
   due_date: string | null
+  // Which column's on-enter rule last set this card's due date, and when.
+  // See the 20260721000000 migration for why these are stored, not derived.
+  last_scheduled_column_id: number | null
+  last_practiced_on: string | null
 }
 
 export interface Label {
@@ -189,6 +193,12 @@ export const useBoardStore = defineStore('board', () => {
           description: c.description,
           due_date: c.dueDate,
           position: c.position,
+          // Resolves through the same map as columnRef. Falls back to null if
+          // the referenced column isn't in the file — a hand-edited export, or
+          // a column deleted after the history was written.
+          last_scheduled_column_id:
+            (c.lastScheduledColumnRef && columnIdByLocalId.get(c.lastScheduledColumnRef)) || null,
+          last_practiced_on: c.lastPracticedOn,
         })))
         .select()
       if (cardErr) throw cardErr
@@ -264,6 +274,7 @@ export const useBoardStore = defineStore('board', () => {
 
       await insertParsedContent(boardId, parsed)
       await loadBoard(boardId)
+      useToastStore().success('Board replaced with the imported file')
       return true
     } catch (e: unknown) {
       useToastStore().show(e instanceof Error ? e.message : 'Failed to import board')
@@ -283,6 +294,7 @@ export const useBoardStore = defineStore('board', () => {
     a.download = `${board.value.name}.json`
     a.click()
     URL.revokeObjectURL(url)
+    useToastStore().success(`Exported ${a.download}`)
   }
 
   async function loadBoard(id: number) {
@@ -478,7 +490,16 @@ export const useBoardStore = defineStore('board', () => {
     const columnCards = cardsByColumn.value(columnId)
     const position = columnCards.length
     const tempId = -Date.now()
-    cards.value.push({ id: tempId, column_id: columnId, name, description: null, position, due_date: null })
+    cards.value.push({
+      id: tempId,
+      column_id: columnId,
+      name,
+      description: null,
+      position,
+      due_date: null,
+      last_scheduled_column_id: null,
+      last_practiced_on: null,
+    })
     const { data, error: err } = await supabase
       .from('cards')
       .insert({ column_id: columnId, name, position, description: null })
@@ -516,6 +537,56 @@ export const useBoardStore = defineStore('board', () => {
 
   function updateCardDueDate(cardId: number, dueDate: string | null) {
     return updateCardField(cardId, 'due_date', dueDate)
+  }
+
+  // Session Review's "Keep in place": the card was practiced but stays where it
+  // is, so no move happens and no column rule can fire. Without this its due
+  // date is never touched and its lateness climbs forever, which is why a
+  // practiced-and-kept card reads as "14d late" — measuring how long ago it
+  // first came due rather than how long since it was last worked on.
+  //
+  // Applies the card's *own* column's on-enter offset rather than always
+  // stamping today. Keeping a card in the due column (offset null) means "due
+  // again now", but keeping one in Wöchentlich has to mean "due again in a
+  // week" — stamping today there would make the column's own interval a lie
+  // and bounce the card straight back out on the next sweep.
+  async function recordPracticeInPlace(cardId: number) {
+    const card = cards.value.find((c) => c.id === cardId)
+    if (!card) return
+    const old = {
+      due_date: card.due_date,
+      last_scheduled_column_id: card.last_scheduled_column_id,
+      last_practiced_on: card.last_practiced_on,
+    }
+    const today = localToday()
+    const offset = columns.value.find((c) => c.id === card.column_id)?.due_offset_days ?? null
+    card.due_date = offset === null ? today : addDays(today, offset)
+    card.last_scheduled_column_id = card.column_id
+    card.last_practiced_on = today
+    const { error: err } = await supabase
+      .from('cards')
+      .update({
+        due_date: card.due_date,
+        last_scheduled_column_id: card.last_scheduled_column_id,
+        last_practiced_on: card.last_practiced_on,
+      })
+      .eq('id', cardId)
+    if (err) {
+      useToastStore().show(err.message)
+      Object.assign(card, old)
+    }
+  }
+
+  // "Wöchentlich · practiced 8d ago" — the line that lets you reason "this was
+  // weekly and it went well, move it up a rung". Null until the card has been
+  // scheduled at least once since the history fields were added.
+  function cardHistoryLabel(card: Card): string | null {
+    if (!card.last_practiced_on) return null
+    const days = daysBetween(card.last_practiced_on, localToday())
+    const when =
+      days <= 0 ? 'practiced today' : days === 1 ? 'practiced yesterday' : `practiced ${days}d ago`
+    const columnName = columns.value.find((c) => c.id === card.last_scheduled_column_id)?.name
+    return columnName ? `${columnName} · ${when}` : when
   }
 
   async function createLabel(boardId: number, name: string, color: string): Promise<Label | null> {
@@ -599,7 +670,14 @@ export const useBoardStore = defineStore('board', () => {
     const affectedColumnIds = new Set([oldColumnId, targetColumnId])
     const snapshot = cards.value
       .filter((c) => affectedColumnIds.has(c.column_id))
-      .map((c) => ({ id: c.id, column_id: c.column_id, position: c.position, due_date: c.due_date }))
+      .map((c) => ({
+        id: c.id,
+        column_id: c.column_id,
+        position: c.position,
+        due_date: c.due_date,
+        last_scheduled_column_id: c.last_scheduled_column_id,
+        last_practiced_on: c.last_practiced_on,
+      }))
 
     // Entering a column with an on-enter rule stamps the due date (overwrites).
     // Same-column reorders and sweep moves never fire the rule.
@@ -609,6 +687,12 @@ export const useBoardStore = defineStore('board', () => {
       if (target && target.due_offset_days !== null) {
         card.due_date = addDays(localToday(), target.due_offset_days)
         ruleFired = true
+        // This is the moment the interval was chosen — the card was practiced
+        // and is being filed into a bucket. Recorded only for the offset rule:
+        // due_clear_on_enter means "no longer scheduled", which is the opposite
+        // of a scheduling event and would otherwise write a misleading history.
+        card.last_scheduled_column_id = targetColumnId
+        card.last_practiced_on = localToday()
       } else if (target?.due_clear_on_enter && card.due_date !== null) {
         card.due_date = null
         ruleFired = true
@@ -634,7 +718,13 @@ export const useBoardStore = defineStore('board', () => {
       for (const c of allAffected) {
         const payload =
           c.id === cardId && ruleFired
-            ? { column_id: c.column_id, position: c.position, due_date: c.due_date }
+            ? {
+                column_id: c.column_id,
+                position: c.position,
+                due_date: c.due_date,
+                last_scheduled_column_id: c.last_scheduled_column_id,
+                last_practiced_on: c.last_practiced_on,
+              }
             : { column_id: c.column_id, position: c.position }
         const { error: err } = await supabase.from('cards').update(payload).eq('id', c.id)
         if (err) {
@@ -644,6 +734,8 @@ export const useBoardStore = defineStore('board', () => {
               liveCard.column_id = snap.column_id
               liveCard.position = snap.position
               liveCard.due_date = snap.due_date
+              liveCard.last_scheduled_column_id = snap.last_scheduled_column_id
+              liveCard.last_practiced_on = snap.last_practiced_on
             }
           }
           useToastStore().show(err.message)
@@ -707,7 +799,7 @@ export const useBoardStore = defineStore('board', () => {
     loadBoard,
     addColumn, renameColumn, updateColumnSettings, setColumnQuickTarget, deleteColumn, moveColumn, moveColumnTo,
     addCard, renameCard, deleteCard,
-    updateCardDescription, updateCardDueDate,
+    updateCardDescription, updateCardDueDate, recordPracticeInPlace, cardHistoryLabel,
     createLabel, deleteLabel, toggleCardLabel,
     moveCard, sweepDueCards,
   }

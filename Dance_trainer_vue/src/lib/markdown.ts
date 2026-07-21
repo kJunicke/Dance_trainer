@@ -3,8 +3,16 @@ import DOMPurify from 'dompurify'
 
 marked.setOptions({ breaks: true })
 
+// The board face (TaskCard) shows descriptions as a decorative preview and
+// already kills clicks on them with pointer-events: none — but an <a href> is
+// still a tab stop, so ~100 invisible anchors sat in the board's tab order
+// reading out clipped URL fragments. Dropping href/target/rel takes them out of
+// it while the link text still renders. Links stay live wherever notes are
+// actually read: renderMarkdownWithLinkChips() below.
 export function renderMarkdown(source: string): string {
-  return DOMPurify.sanitize(marked.parse(source, { async: false }))
+  return DOMPurify.sanitize(marked.parse(source, { async: false }), {
+    FORBID_ATTR: ['href', 'target', 'rel'],
+  })
 }
 
 // Character offset in `source` where the nth rendered block starts, so clicking
@@ -28,13 +36,13 @@ export function blockSourceOffset(source: string, blockIndex: number): number {
   return source.length
 }
 
-// Same rendering, but every link gets a distinct tappable-chip class plus
-// target="_blank" — used where notes are read mid-practice (reference videos)
-// and a plain inline link would be too easy to miss or to tap accidentally
-// into an in-app navigation.
+// Same markdown, but links keep their href and every one gets a distinct
+// tappable-chip class plus target="_blank" — used where notes are read
+// mid-practice (reference videos) and a plain inline link would be too easy to
+// miss or to tap accidentally into an in-app navigation.
 export function renderMarkdownWithLinkChips(source: string): string {
   const container = document.createElement('div')
-  container.innerHTML = renderMarkdown(source)
+  container.innerHTML = DOMPurify.sanitize(marked.parse(source, { async: false }))
   container.querySelectorAll('a').forEach((a) => {
     a.classList.add('md-link-chip')
     a.setAttribute('target', '_blank')

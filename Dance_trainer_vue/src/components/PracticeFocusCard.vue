@@ -2,7 +2,7 @@
 import { ref, computed, onBeforeUnmount, nextTick } from 'vue'
 import type { Card } from '@/stores/boardStore'
 import { useBoardStore } from '@/stores/boardStore'
-import { renderMarkdownWithLinkChips } from '@/lib/markdown'
+import { renderMarkdownWithLinkChips, blockSourceOffset } from '@/lib/markdown'
 import { dueStatus, dueLabel } from '@/lib/dates'
 
 const props = defineProps<{
@@ -13,6 +13,10 @@ const store = useBoardStore()
 
 const status = computed(() => dueStatus(props.card.due_date))
 const dueText = computed(() => dueLabel(props.card.due_date))
+// "Wöchentlich · practiced 8d ago". This component is what Session Review shows
+// above the bucket buttons, so this line is the evidence for the choice being
+// made there — "it was weekly and it went well, move it up a rung".
+const historyText = computed(() => store.cardHistoryLabel(props.card))
 const renderedNotes = computed(() =>
   props.card.description ? renderMarkdownWithLinkChips(props.card.description) : '',
 )
@@ -29,12 +33,31 @@ onBeforeUnmount(() => {
   if (editing.value) saveNote()
 })
 
-async function startEdit() {
+// The caret lands in the block that was tapped rather than at the end of the
+// note — editing a line halfway down a month-old note meant scrolling back up
+// to it every time. Straight port of CardModal.startEditDescription(); the
+// height-preservation half of that function doesn't apply here, since this
+// textarea sizes itself. Falls back to the end of the source when the tap
+// didn't resolve to a rendered block (the placeholder, or padding).
+async function startEdit(e: MouseEvent) {
   noteDraft.value = props.card.description ?? ''
+
+  const body = (e.currentTarget as HTMLElement).querySelector('.md-body')
+  let blockIndex = -1
+  if (body) {
+    let node = e.target as HTMLElement | null
+    while (node && node.parentElement !== body) node = node.parentElement
+    if (node) blockIndex = Array.prototype.indexOf.call(body.children, node)
+  }
+
   editing.value = true
   await nextTick()
-  textareaEl.value?.focus()
-  textareaEl.value?.setSelectionRange(noteDraft.value.length, noteDraft.value.length)
+  const el = textareaEl.value
+  if (!el) return
+  el.focus()
+  const offset =
+    blockIndex >= 0 ? blockSourceOffset(noteDraft.value, blockIndex) : noteDraft.value.length
+  el.setSelectionRange(offset, offset)
 }
 
 function saveNote(cardId = props.card.id) {
@@ -59,6 +82,7 @@ function saveNote(cardId = props.card.id) {
       <span v-if="dueText" class="due-text" :class="{ overdue: status === 'overdue' }">{{ dueText }}</span>
     </div>
     <h2 class="focus-title">{{ card.name }}</h2>
+    <p v-if="historyText" class="focus-history">{{ historyText }}</p>
 
     <div v-if="editing" class="note-edit">
       <textarea
@@ -70,7 +94,9 @@ function saveNote(cardId = props.card.id) {
     </div>
     <div v-else class="note-preview" @click="startEdit">
       <p v-if="!card.description" class="placeholder">Tap to add notes or a reference link…</p>
-      <div v-else v-html="renderedNotes" />
+      <!-- .md-body is what startEdit walks up to, to identify which top-level
+           rendered block was tapped. -->
+      <div v-else class="md-body" v-html="renderedNotes" />
     </div>
   </div>
 </template>
@@ -135,15 +161,29 @@ function saveNote(cardId = props.card.id) {
   overflow-wrap: anywhere;
 }
 
+.focus-history {
+  flex-shrink: 0;
+  margin: 6px 0 0;
+  color: var(--pc-ink-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
 /* Deliberately NOT flex:1 — a long note should push whatever comes after it
    (Session Review's bucket buttons) further down the page, not have those
    buttons overlap the overflow. Natural block sizing plus the page's own
    scroll (practice-body / review) handles long content correctly; flex:1
    here caused exactly that overlap. */
+/* Base is --pc-ink with .placeholder as the one dim exception. It was the
+   other way round — base dim, with p/ul/ol overridden back — which left
+   headings, blockquotes, tables and bare text nodes inheriting the dim colour,
+   so a markdown heading rendered quieter than the body under it. Same
+   inversion, same fix as .desc-preview in CardModal.vue: exceptions are opted
+   into, never out of. */
 .note-preview {
   min-height: 44px;
   padding: 4px 0;
-  color: var(--pc-ink-dim);
+  color: var(--pc-ink);
   font-size: 14px;
   line-height: 1.5;
   cursor: pointer;
@@ -151,12 +191,12 @@ function saveNote(cardId = props.card.id) {
 
 .note-preview .placeholder {
   margin: 0;
+  color: var(--pc-ink-dim);
   font-style: italic;
 }
 
 .note-preview :deep(p) {
   margin: 0 0 8px;
-  color: var(--pc-ink);
 }
 
 .note-preview :deep(p:last-child) {
@@ -167,15 +207,19 @@ function saveNote(cardId = props.card.id) {
 .note-preview :deep(ol) {
   margin: 0 0 8px;
   padding-left: 18px;
-  color: var(--pc-ink);
 }
 
+/* Head truncation, same technique and same reasoning as the card modal's chip —
+   see the long comment on `.desc-preview :deep(.md-link-chip)` in CardModal.vue.
+   This is the surface where it mattered most: six share links filled 60% of the
+   focus card with the same clipped host. Colors stay on the dark --pc-* palette,
+   which already clears the text floor (--pc-ember-light is 7.84:1 on the tinted
+   pill), so only the truncation changes here. */
 .note-preview :deep(.md-link-chip) {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
+  display: inline-block;
+  position: relative;
   max-width: 40vw;
-  padding: 2px 8px;
+  padding: 2px 8px 2px 19px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--pc-ember) 18%, transparent);
   color: var(--pc-ember-light);
@@ -186,11 +230,16 @@ function saveNote(cardId = props.card.id) {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
+  direction: rtl;
+  text-align: left;
 }
 
 .note-preview :deep(.md-link-chip::before) {
   content: '▶';
-  flex-shrink: 0;
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
   font-size: 8px;
 }
 

@@ -254,14 +254,17 @@ onMounted(() => backdropEl.value?.focus())
   opacity: 0.5;
 }
 
+/* Kept byte-identical to CardModal's .field-label — same eyebrow, same job,
+   four of them stacked down one dialog. Ember here was 2.78:1 and, being an
+   accent, made the labels louder than the settings they name. */
 .field-label {
   display: block;
   font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-ember);
+  letter-spacing: 0.06em;
+  color: var(--color-ink-dim);
   margin-bottom: 6px;
 }
 

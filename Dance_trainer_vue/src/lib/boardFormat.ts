@@ -32,6 +32,8 @@ interface NativeCard {
   dueDate: string | null
   position: number
   labelIds: string[]
+  lastScheduledColumnId: string | null
+  lastPracticedOn: string | null
 }
 
 interface NativeBoardExport {
@@ -65,6 +67,8 @@ export function buildBoardExport(
     description: string | null
     due_date: string | null
     position: number
+    last_scheduled_column_id: number | null
+    last_practiced_on: string | null
   }[],
   labels: { id: number; name: string; color: string }[],
   cardLabels: { card_id: number; label_id: number }[],
@@ -95,6 +99,9 @@ export function buildBoardExport(
         dueDate: c.due_date,
         position: c.position,
         labelIds: cardLabels.filter((cl) => cl.card_id === c.id).map((cl) => String(cl.label_id)),
+        lastScheduledColumnId:
+          c.last_scheduled_column_id === null ? null : String(c.last_scheduled_column_id),
+        lastPracticedOn: c.last_practiced_on,
       })),
   }
 }
@@ -127,6 +134,8 @@ export function parseBoardExport(raw: unknown): ParsedBoard {
     name: c.name,
     description: c.description ?? null,
     dueDate: c.dueDate ?? null,
+    lastScheduledColumnRef: c.lastScheduledColumnId ?? null,
+    lastPracticedOn: c.lastPracticedOn ?? null,
     position: c.position,
   }))
 

@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
 import { blockSourceOffset, renderMarkdownWithLinkChips } from '@/lib/markdown'
-import { LABEL_COLORS } from '@/lib/labelColors'
+import { LABEL_COLORS, LABEL_TEXT_COLORS } from '@/lib/labelColors'
 import { useBackButtonClose } from '@/lib/useBackButtonClose'
 
 const props = defineProps<{
@@ -25,6 +25,7 @@ function closeModal() {
 useBackButtonClose(closeModal)
 
 const card = computed(() => store.cards.find((c) => c.id === props.cardId) ?? null)
+const historyText = computed(() => (card.value ? store.cardHistoryLabel(card.value) : null))
 const boardId = computed(() => store.board?.id ?? null)
 const cardLabelIds = computed(
   () => new Set(store.labelsForCard(props.cardId).map((l) => l.id)),
@@ -251,6 +252,11 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         </section>
       </div>
 
+      <!-- Where this card was last filed, and when — the scheduling context the
+           due date alone can't give, since a swept card's date says nothing
+           about which bucket it came from. -->
+      <p v-if="historyText" class="history-line">{{ historyText }}</p>
+
       <section ref="labelFieldEl" class="field">
         <label class="field-label">Labels</label>
         <div class="label-list">
@@ -258,7 +264,10 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
             v-for="label in activeLabels"
             :key="label.id"
             class="label-chip active"
-            :style="{ background: LABEL_COLORS[label.color] ?? '#ccc' }"
+            :style="{
+              background: LABEL_COLORS[label.color] ?? '#ccc',
+              color: LABEL_TEXT_COLORS[label.color] ?? '#2a2420',
+            }"
             title="Remove label from card"
             @click="store.toggleCardLabel(props.cardId, label.id)"
           >
@@ -452,14 +461,26 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
   font-size: 14px;
 }
 
+/* An eyebrow names the field; the value under it is the content. Four 12px bold
+   uppercase ember runs stacked down one dialog inverted that — the labels shouted
+   and the values whispered. Dropped to the regular mono weight and the dim ink so
+   it reads as a caption, not an accent. (It also moves off ember-as-text, which
+   only cleared 2.78:1 here; --color-ink-dim is 5.11 on the modal surface.) */
+.history-line {
+  margin: -8px 0 20px;
+  color: var(--color-ink-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
 .field-label {
   display: block;
   font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-ember);
+  letter-spacing: 0.06em;
+  color: var(--color-ink-dim);
   margin-bottom: 6px;
 }
 
@@ -480,6 +501,8 @@ input[type='date'] {
   gap: 6px;
 }
 
+/* Chip ink comes from LABEL_TEXT_COLORS alongside the fill — white doesn't
+   clear 4.5:1 on the three lighter label colors. */
 .label-chip {
   display: inline-flex;
   align-items: center;
@@ -488,7 +511,6 @@ input[type='date'] {
   border-radius: 4px;
   padding: 4px 8px 4px 10px;
   font-size: 12px;
-  color: #fff;
   cursor: pointer;
 }
 
@@ -508,7 +530,7 @@ input[type='date'] {
   border: 1px dashed var(--color-ember);
   border-radius: 4px;
   background: transparent;
-  color: var(--color-ember);
+  color: var(--color-ember-text);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
@@ -695,25 +717,8 @@ input[type='date'] {
   padding-left: 20px;
 }
 
-.desc-preview :deep(h1),
-.desc-preview :deep(h2),
-.desc-preview :deep(h3) {
-  margin: 0 0 6px;
-  font-family: var(--font-display);
-  font-weight: 700;
-}
-
-.desc-preview :deep(h1) {
-  font-size: 16px;
-}
-
-.desc-preview :deep(h2) {
-  font-size: 15px;
-}
-
-.desc-preview :deep(h3) {
-  font-size: 14px;
-}
+/* Heading sizing/weight is the shared em-relative block in assets/tokens.css,
+   which keys off .desc-preview. The 14px base above is what it scales from. */
 
 .desc-preview :deep(code) {
   font-family: var(--font-mono);
@@ -723,15 +728,32 @@ input[type='date'] {
   border-radius: var(--radius-sm);
 }
 
+/* Truncated from the HEAD, not the tail. A Nextcloud share URL is ~280px wide
+   and its first 156px are the same host on every link, so clipping the tail
+   rendered six different links as six identical `https://team.jive.berli`
+   pills. `direction: rtl` puts the overflow edge — and the ellipsis — at the
+   start, so the distinguishing `…/s/k7jWymo` is what survives; `text-align:
+   left` keeps a short URL flush against the ▶ instead of drifting right. A URL
+   is one strong-LTR run, so the RTL paragraph direction reorders nothing inside
+   it (a trailing `/` is the one neutral that would move, and it lands in the
+   clipped head).
+
+   inline-block, not inline-flex: text-overflow only applies to block
+   containers, so on the old flex container the text was an anonymous flex item
+   and the ellipsis never rendered — it was a hard clip. The ▶ is taken out of
+   the inline flow so the RTL direction can't pull it to the far side.
+
+   The fill is 10% ember rather than 18%: --color-ember-text is 4.52:1 on the
+   lighter tint but only 4.17:1 on the heavier one, i.e. still short of the text
+   floor these 10px chips need. */
 .desc-preview :deep(.md-link-chip) {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
+  display: inline-block;
+  position: relative;
   max-width: 40vw;
-  padding: 2px 8px;
+  padding: 2px 8px 2px 19px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-ember) 18%, transparent);
-  color: var(--color-ember);
+  background: color-mix(in srgb, var(--color-ember) 10%, transparent);
+  color: var(--color-ember-text);
   font-family: var(--font-mono);
   font-size: 10px;
   text-decoration: none;
@@ -739,11 +761,16 @@ input[type='date'] {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
+  direction: rtl;
+  text-align: left;
 }
 
 .desc-preview :deep(.md-link-chip::before) {
   content: '▶';
-  flex-shrink: 0;
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
   font-size: 8px;
 }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import { renderMarkdown } from '@/lib/markdown'
-import { LABEL_COLORS } from '@/lib/labelColors'
+import { LABEL_COLORS, LABEL_TEXT_COLORS } from '@/lib/labelColors'
 import { dueStatus, dueLabel } from '@/lib/dates'
 
 const props = defineProps<{
@@ -143,7 +143,10 @@ onUnmounted(() => {
         v-for="label in labels"
         :key="label.id"
         class="label-chip"
-        :style="{ background: LABEL_COLORS[label.color] ?? '#ccc' }"
+        :style="{
+          background: LABEL_COLORS[label.color] ?? '#ccc',
+          color: LABEL_TEXT_COLORS[label.color] ?? '#2a2420',
+        }"
       >{{ label.name }}</span>
     </div>
     <p class="task-title">{{ name }}</p>
@@ -214,6 +217,9 @@ onUnmounted(() => {
   color: var(--color-ink-dim);
   overflow: hidden;
   max-height: 4.5em;
+  /* A pasted share URL is one unbreakable token; without this it runs straight
+     out past the card's right edge instead of wrapping into the preview. */
+  overflow-wrap: anywhere;
 }
 
 .task-description :deep(p) {
@@ -241,11 +247,12 @@ onUnmounted(() => {
   margin-bottom: 6px;
 }
 
+/* Chip ink comes from LABEL_TEXT_COLORS alongside the fill — white doesn't
+   clear 4.5:1 on the three lighter label colors. */
 .label-chip {
   border-radius: 4px;
   padding: 2px 8px;
   font-size: 11px;
-  color: #fff;
 }
 
 /* Consistent bottom strip: a status dot + the compact relative due label, always

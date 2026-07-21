@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import KanbanColumn from '../components/KanbanColumn.vue'
 import CardModal from '../components/CardModal.vue'
@@ -22,7 +22,13 @@ const practiceSession = usePracticeSessionStore()
 // Board is the desktop-oriented Kanban; Practice is the mobile-first
 // companion for building/running today's session. See
 // Dance_trainer_logseq/pages/Practice Companion View.md.
-const viewMode = ref<'board' | 'practice'>('board')
+// Per-board, matching the practice-session:{boardId} convention the session
+// store already uses — a reload mid-practice used to drop you back on the
+// Kanban board, which is the one place you weren't working.
+const VIEW_MODE_PREFIX = 'practice-view-mode:'
+const viewMode = ref<'board' | 'practice'>(
+  localStorage.getItem(VIEW_MODE_PREFIX + boardId) === 'practice' ? 'practice' : 'board',
+)
 const showAddDrawer = ref(false)
 const showReview = ref(false)
 
@@ -30,6 +36,7 @@ const showReview = ref(false)
 // sitting full-screen over a rendered Kanban board.
 function setViewMode(mode: 'board' | 'practice') {
   viewMode.value = mode
+  localStorage.setItem(VIEW_MODE_PREFIX + boardId, mode)
   showAddDrawer.value = false
   showReview.value = false
 }
@@ -74,6 +81,17 @@ const searchResults = computed(() => {
   return store.cards.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 12)
 })
 
+// Enter used to fire on a hardcoded searchResults[0], so arrowing down and
+// hitting Enter opened a card you weren't looking at.
+const searchHighlight = ref(0)
+watch(searchQuery, () => { searchHighlight.value = 0 })
+
+function moveSearchHighlight(delta: number) {
+  const max = searchResults.value.length - 1
+  if (max < 0) return
+  searchHighlight.value = Math.min(max, Math.max(0, searchHighlight.value + delta))
+}
+
 async function openSearch() {
   searchOpen.value = true
   await nextTick()
@@ -91,8 +109,8 @@ function openSearchResult(cardId: number) {
 }
 
 function onSearchEnter() {
-  const top = searchResults.value[0]
-  if (top) openSearchResult(top.id)
+  const picked = searchResults.value[searchHighlight.value]
+  if (picked) openSearchResult(picked.id)
 }
 
 const copied = ref(false)
@@ -485,28 +503,10 @@ function onBoardPointerUp(e: PointerEvent) {
         </svg>
       </button>
 
-      <span v-if="viewMode === 'board' && store.board" class="invite">
-        <code :title="'Invite code — share it to let others join this board'">{{ store.board.invite_code }}</code>
-        <button
-          class="bar-btn"
-          title="Copy invite code to clipboard"
-          @click="copyCode"
-        >{{ copied ? 'Copied!' : 'Copy' }}</button>
-        <button
-          class="bar-btn"
-          title="Download this board as a JSON file, for backup or to refresh it later via Import"
-          @click="store.exportBoard()"
-        >Export</button>
-        <button
-          class="bar-btn"
-          title="Replace this board's columns, cards, and labels with a JSON file — this app's own Export, or a Trello board export"
-          :disabled="importing"
-          @click="importInput?.click()"
-        >{{ importing ? 'Importing…' : 'Import' }}</button>
-      </span>
-      <span v-if="viewMode === 'board'" class="user">{{ auth.user?.user_metadata?.display_name || auth.user?.email }}</span>
-      <button v-if="viewMode === 'board'" class="bar-btn signout-btn" @click="signOut">Sign out</button>
-
+      <!-- Invite code, Copy/Export/Import, the signed-in address and Sign out all
+           live in this menu. They used to sit in the bar as well, spending prime
+           permanent space on a single-user tool for actions used once a month —
+           and they were what squeezed .board-name down to `Tes…`. -->
       <button v-if="viewMode === 'board'" class="menu-btn" title="Board menu" @click="menuOpen = !menuOpen">⋯</button>
       <input
         ref="importInput"
@@ -542,12 +542,15 @@ function onBoardPointerUp(e: PointerEvent) {
         placeholder="Search cards…"
         @keydown.esc="closeSearch"
         @keydown.enter="onSearchEnter"
+        @keydown.down.prevent="moveSearchHighlight(1)"
+        @keydown.up.prevent="moveSearchHighlight(-1)"
       />
       <ul v-if="searchResults.length" class="search-results">
         <li
-          v-for="card in searchResults"
+          v-for="(card, i) in searchResults"
           :key="card.id"
           class="search-result"
+          :class="{ highlighted: i === searchHighlight }"
           @click="openSearchResult(card.id)"
         >
           <span class="search-result-name">{{ card.name }}</span>
@@ -765,15 +768,6 @@ function onBoardPointerUp(e: PointerEvent) {
   }
 }
 
-.invite {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--color-ink-dim);
-}
-
-.invite code,
 .invite-row code {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -823,19 +817,8 @@ function onBoardPointerUp(e: PointerEvent) {
   clip: rect(0, 0, 0, 0);
 }
 
-.user {
-  margin-left: auto;
-  font-size: 14px;
-  color: var(--color-ink-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .menu-btn {
-  display: none;
   flex-shrink: 0;
-  margin-left: auto;
   width: 40px;
   height: 40px;
   border: 1px solid var(--color-border);
@@ -900,8 +883,11 @@ function onBoardPointerUp(e: PointerEvent) {
   border-top: 1px solid var(--color-border);
 }
 
+/* Carries the auto margin so search and ⋯ group together at the trailing edge
+   and every remaining pixel of slack goes to .board-name. */
 .search-btn {
   flex-shrink: 0;
+  margin-left: auto;
   width: 40px;
   height: 40px;
   display: flex;
@@ -966,8 +952,15 @@ function onBoardPointerUp(e: PointerEvent) {
   cursor: pointer;
 }
 
-.search-result:hover {
+.search-result:hover,
+.search-result.highlighted {
   background: var(--color-surface-light);
+}
+
+/* The highlight is what Enter will open, so it needs to outrank a stray hover
+   the pointer left behind while the hands moved to the keyboard. */
+.search-result.highlighted {
+  box-shadow: inset 0 0 0 1px var(--color-ember);
 }
 
 .search-result-name {
@@ -995,9 +988,6 @@ function onBoardPointerUp(e: PointerEvent) {
 }
 
 @media (max-width: 760px) {
-  .invite,
-  .user,
-  .signout-btn,
   .back-label {
     display: none;
   }
@@ -1013,10 +1003,6 @@ function onBoardPointerUp(e: PointerEvent) {
 
   .topbar.practice-view .board-name {
     display: none;
-  }
-
-  .menu-btn {
-    display: block;
   }
 
   .back-btn {

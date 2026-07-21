@@ -77,6 +77,12 @@ export interface ParsedCard {
   description: string | null
   dueDate: string | null
   position: number
+  // Scheduling history. Trello exports have no equivalent, so its parser leaves
+  // both null; the native format round-trips them so a restore doesn't silently
+  // wipe months of practice history. lastScheduledColumnRef is a columnRef, not
+  // a row id — it resolves through the same map as columnRef on import.
+  lastScheduledColumnRef: string | null
+  lastPracticedOn: string | null
 }
 
 export interface ParsedLabel {
@@ -144,6 +150,9 @@ export function parseTrelloExport(raw: unknown): ParsedBoard {
       description: c.desc || null,
       dueDate: c.due ? c.due.slice(0, 10) : null,
       position,
+      // Trello has no scheduling-history concept to map from.
+      lastScheduledColumnRef: null,
+      lastPracticedOn: null,
     }
   })
 

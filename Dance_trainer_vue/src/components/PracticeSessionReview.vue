@@ -27,6 +27,16 @@ const currentCard = computed(() => {
 
 const showMoreColumns = ref(false)
 
+// Counted rather than derived from `total`: a "keep" resolves a card without
+// moving it, so reporting the queue length as cards "sorted into columns"
+// overstated the work by every keep in the pass.
+const movedCount = ref(0)
+const keptCount = ref(0)
+
+const currentColumnName = computed(
+  () => store.columns.find((c) => c.id === currentCard.value?.column_id)?.name ?? null,
+)
+
 const quickTargets = computed(() => {
   if (!currentCard.value) return []
   return store.quickTargetColumns.filter((c) => c.id !== currentCard.value!.column_id)
@@ -46,6 +56,12 @@ function resolve(targetColumnId: number | null) {
   if (!card) return
   if (targetColumnId !== null) {
     store.moveCard(card.id, targetColumnId, store.cardsByColumn(targetColumnId).length)
+    movedCount.value++
+  } else {
+    // Keeping a card is still a practice event, and the column's own on-enter
+    // rule can't fire for a move that doesn't happen.
+    store.recordPracticeInPlace(card.id)
+    keptCount.value++
   }
   session.resolveCard(card.id)
   queue.value.shift()
@@ -67,7 +83,7 @@ function onOtherColumnPick(e: Event) {
     </div>
 
     <div v-if="currentCard" class="review-body">
-      <p class="lede">Practiced today — where should it go?</p>
+      <p class="lede">Practiced — where should it go?</p>
       <PracticeFocusCard :card="currentCard" />
 
       <div class="buckets">
@@ -77,7 +93,9 @@ function onOtherColumnPick(e: Event) {
           class="bucket-btn"
           @click="resolve(col.id)"
         >{{ col.name }}</button>
-        <button class="bucket-btn keep" @click="resolve(null)">Keep in Due</button>
+        <button class="bucket-btn keep" @click="resolve(null)">
+          Keep in {{ currentColumnName ?? 'place' }}
+        </button>
       </div>
 
       <button v-if="!showMoreColumns" class="more-link" @click="showMoreColumns = true">
@@ -92,10 +110,14 @@ function onOtherColumnPick(e: Event) {
     <div v-else class="review-done">
       <template v-if="total > 0">
         <div class="review-done-badge" aria-hidden="true">✓</div>
-        <h2 class="review-done-heading">Session reviewed</h2>
-        <p class="review-done-sub">{{ total }} card{{ total === 1 ? '' : 's' }} sorted into columns.</p>
+        <h2 class="review-done-heading">Queue sorted</h2>
+        <p class="review-done-sub">
+          <template v-if="movedCount">{{ movedCount }} rescheduled</template>
+          <template v-if="movedCount && keptCount"> · </template>
+          <template v-if="keptCount">{{ keptCount }} kept in place</template>
+        </p>
       </template>
-      <p v-else class="review-done-sub">No cards marked done in today's session yet.</p>
+      <p v-else class="review-done-sub">Nothing to sort yet.</p>
       <button class="bucket-btn keep" @click="emit('close')">Close</button>
     </div>
   </div>

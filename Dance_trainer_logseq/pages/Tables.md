@@ -22,11 +22,12 @@
 			- description (markdown, rendered client-side via `marked` + `DOMPurify`)
 			- position
 			- due_date (nullable `date`)
-			- TODO last_scheduled_column_id (nullable `bigint references columns(id) on delete set null`) — the column whose on-enter rule last stamped this card's due date. **Not yet migrated**; agreed 2026-07-21, see [[UX Backlog]]
-			- TODO last_practiced_on (nullable `date`) — written at the same moment, by the same rule
+			- last_scheduled_column_id (nullable `bigint references columns(id) on delete set null`) — the column whose on-enter rule last stamped this card's due date. Migrated 2026-07-21 (`20260721000000_card_scheduling_history.sql`), see [[UX Backlog]]
+			- last_practiced_on (nullable `date`) — written at the same moment, by the same rule
 				- Both are written in `moveCard` only when the on-enter rule fires, so they survive `sweepDueCards()` moving the card into the due column. That's the point: every card in Session Review has been swept into Today, whose `due_offset_days` is `null`, so deriving the entry date as `due_date − due_offset_days` fails precisely where [[Practice Companion View]] wants to show it. Storing the column as well as the date also keeps old cards honest when a column's interval is later edited.
-				- `ALTER TABLE` on an existing table, so the [[Supabase]] "grant `anon`/`authenticated` on new tables" rule does not apply — grants are already in place.
-				- TODO decide whether `boardFormat.ts` (the app's own full-fidelity export) should round-trip these two fields alongside the column-automation flags
+				- Also written by `recordPracticeInPlace()`, Session Review's "keep this card where it is" path — practising a card without moving it is still a scheduling event, and no column rule can fire for a move that doesn't happen. That path applies the card's *own* column's `due_offset_days` when it has one, so keeping a card in Wöchentlich means "due again in a week", not "due now".
+				- `ALTER TABLE` on an existing table, so the [[Supabase]] "grant `anon`/`authenticated` on new tables" rule does not apply — verified after the fact: all eight `cards` columns carry SELECT/INSERT/UPDATE for both roles.
+				- **Decided: `boardFormat.ts` does round-trip both fields.** The export is offered as a backup, so dropping practice history on restore would be silent data loss. `lastScheduledColumnId` is exported as the same string localId used for `columnId`, and resolves through the same map on import; the Trello parser writes both as `null`.
 			-
 	- Columns
 		- values

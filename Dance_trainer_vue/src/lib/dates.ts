@@ -49,8 +49,14 @@ export function dueStatus(
 }
 
 /**
- * Compact, scannable due label for a card: "today", "3d late", "in 4d", and a
- * short "Jul 5" once a scheduled date is more than a week out.
+ * Compact, scannable due label for a card: "3d late", "today", "in 4d".
+ *
+ * One scheme, all the way out. This used to switch to a locale-formatted
+ * absolute date past a week ("2. Aug."), which put three unrelated formats on
+ * one screen and made the far-future cards the only ones you had to do
+ * arithmetic on. Days-from-now is also the unit the schedule is *built* in —
+ * columns carry a `due_offset_days`, so "in 24d" reads directly against the
+ * rung a card sits on in a way a calendar date never does.
  */
 export function dueLabel(
   isoDate: string | null | undefined,
@@ -60,7 +66,5 @@ export function dueLabel(
   const delta = daysBetween(today, isoDate)
   if (delta < 0) return `${-delta}d late`
   if (delta === 0) return 'today'
-  if (delta <= 7) return `in ${delta}d`
-  const [y = 0, m = 1, d = 1] = isoDate.split('-').map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return `in ${delta}d`
 }

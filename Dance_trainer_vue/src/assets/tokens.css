@@ -6,12 +6,17 @@
   --color-surface-light: #ffffff; /* cards, and hover highlight (lighten toward white) */
   --color-border: #d8cfbf;
   --color-ink: #2a2420; /* near-black, warm */
-  --color-ink-dim: #7c7367; /* muted secondary text */
+  --color-ink-dim: #6a6156; /* muted secondary text — 5.11 on surface, 4.62 on bg */
 
   /* Accent + status colors deepened from the dark theme so they hold contrast
      against light surfaces (small colored text/edges need more saturation on white). */
   --color-ember: #e06d0a;
   --color-ember-light: #f2842a;
+  /* Ember is a fill/border color only: as text it is 2.78 on surface and 3.30 on
+     white, below the 4.5 text floor and below even the 3.0 non-text floor on the
+     board background. Anything that paints ember *as ink* — eyebrows, link chips,
+     the focus ring — uses this deepened variant instead (5.01 / 5.95 / 4.53). */
+  --color-ember-text: #a04c00;
   --color-good: #3e9b6e;
   --color-good-light: #4fb07f;
   --color-due: #c98a16;
@@ -49,4 +54,39 @@
   --pc-good: #5bc794;
   --pc-due: #e0a83d;
   --pc-overdue: #e8695f;
+}
+
+/* Headings inside a rendered card description, on all three surfaces that
+   render one: the board card face, the card modal, and the practice focus card.
+   A `# Heading` in a note is field content, not a page heading — left at the
+   browser default an <h1> renders at 2em, which on the board face means 24px
+   against a 15px card title inside a preview clipped at 4.5em.
+
+   Only the *relative* scale and the weight/family reset live here. The three
+   surfaces deliberately read at different base sizes (12 / 14 / 14px — see
+   Dance_trainer_logseq/pages/Card Notes.md), so the sizes stay em-relative and
+   each surface keeps owning its own base. This is global rather than a shared
+   `:deep()` mixin because scoped SFC styles can't share a block, and the three
+   copies of this override drifting apart is what it exists to stop.
+
+   :is() takes its highest-specificity argument, :where() contributes nothing, so
+   the whole selector is (0,1,0) — a surface's own scoped `:deep(h1)` rule still
+   wins if it ever needs to break out. */
+:is(.task-description, .desc-preview, .note-preview) :where(h1, h2, h3, h4, h5, h6) {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+:is(.task-description, .desc-preview, .note-preview) :where(h1) {
+  font-size: 1.15em;
+}
+
+:is(.task-description, .desc-preview, .note-preview) :where(h2) {
+  font-size: 1.08em;
+}
+
+:is(.task-description, .desc-preview, .note-preview) :where(h3, h4, h5, h6) {
+  font-size: 1em;
 }
