@@ -82,8 +82,7 @@ layer on top, so it answers "why/how does X work" without re-deriving it from a 
 - I've installed a phone simulator browser extension. I can open it up when you have browser access to let you test it on a proper screen
 
 # General guidelines
-- be brief 
-- be efficient
+- be extremly consize. Sacrifice Grammar for consizeness 
 - before any changes always check logseq for relevant context
 - be direct and honest
 

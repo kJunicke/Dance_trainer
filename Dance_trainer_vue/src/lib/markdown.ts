@@ -114,6 +114,43 @@ export function caretOffsetFromClick(body: Element, e: MouseEvent, source: strin
   return sourceOffsetAt(source, blockIndex, textBefore(node, pos.node, pos.offset))
 }
 
+// Where the caret at `offset` sits vertically in `el`, measured with an
+// off-screen mirror that wraps text exactly as the textarea does (same width,
+// font metrics and tab size). Needed because Blink's setSelectionRange places
+// the caret but never scrolls it into view, and v-model parks a freshly-mounted
+// textarea scrolled to its bottom — so clicking near the top of a long note
+// opened the editor showing the note's *end* with the caret stranded off-screen
+// above. We centre the caret's line in the field instead.
+function scrollCaretIntoView(el: HTMLTextAreaElement, offset: number): void {
+  const s = getComputedStyle(el)
+  const mirror = document.createElement('div')
+  mirror.style.cssText =
+    'position:absolute;top:0;left:-9999px;visibility:hidden;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:content-box'
+  mirror.style.width = `${el.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight)}px`
+  for (const p of ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize'] as const) {
+    mirror.style[p] = s[p]
+  }
+  mirror.textContent = el.value.slice(0, offset)
+  const marker = mirror.appendChild(document.createElement('span'))
+  marker.textContent = '​'
+  document.body.appendChild(mirror)
+  const caretTop = marker.offsetTop
+  mirror.remove()
+  const max = el.scrollHeight - el.clientHeight
+  el.scrollTop = Math.max(0, Math.min(caretTop - el.clientHeight / 2, max))
+}
+
+// Focus the note textarea with the caret at `offset` and that line centred.
+// `preventScroll` stops the browser from scrolling the surrounding modal to
+// reach the field — the field is already where the user just clicked; only the
+// textarea's own scroll needs adjusting, which scrollCaretIntoView handles.
+// Shared verbatim by both note surfaces (card modal, Practice Companion).
+export function focusAtOffset(el: HTMLTextAreaElement, offset: number): void {
+  el.focus({ preventScroll: true })
+  el.setSelectionRange(offset, offset)
+  scrollCaretIntoView(el, offset)
+}
+
 // Same markdown, but links keep their href and every one gets a distinct
 // tappable-chip class plus target="_blank" — used where notes are read
 // mid-practice (reference videos) and a plain inline link would be too easy to

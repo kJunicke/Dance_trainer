@@ -2,7 +2,7 @@
 import { ref, computed, onBeforeUnmount, nextTick } from 'vue'
 import type { Card } from '@/stores/boardStore'
 import { useBoardStore } from '@/stores/boardStore'
-import { renderMarkdownWithLinkChips, caretOffsetFromClick } from '@/lib/markdown'
+import { renderMarkdownWithLinkChips, caretOffsetFromClick, focusAtOffset } from '@/lib/markdown'
 import { dueStatus, dueLabel } from '@/lib/dates'
 
 const props = defineProps<{
@@ -47,8 +47,7 @@ async function startEdit(e: MouseEvent) {
   await nextTick()
   const el = textareaEl.value
   if (!el) return
-  el.focus()
-  el.setSelectionRange(offset, offset)
+  focusAtOffset(el, offset)
 }
 
 function saveNote(cardId = props.card.id) {

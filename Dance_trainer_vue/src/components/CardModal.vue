@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
-import { caretOffsetFromClick, renderMarkdownWithLinkChips } from '@/lib/markdown'
+import { caretOffsetFromClick, focusAtOffset, renderMarkdownWithLinkChips } from '@/lib/markdown'
 import { LABEL_COLORS, LABEL_TEXT_COLORS } from '@/lib/labelColors'
 import { useBackButtonClose } from '@/lib/useBackButtonClose'
 
@@ -73,8 +73,7 @@ async function startEditDescription(e: MouseEvent) {
   await nextTick()
   const el = descTextareaEl.value
   if (!el) return
-  el.focus()
-  el.setSelectionRange(offset, offset)
+  focusAtOffset(el, offset)
 }
 
 function saveDescription() {
@@ -372,7 +371,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
   box-shadow: var(--shadow-modal);
   padding: 24px;
   width: 100%;
-  max-width: 560px;
+  max-width: 720px;
 }
 
 .close-btn {
@@ -787,6 +786,16 @@ input[type='date'] {
 
 .delete-card-btn:hover {
   background: color-mix(in srgb, var(--color-overdue) 12%, transparent);
+}
+
+/* Desktop has vertical room to spare, so let the notes — the field people
+   actually work in — use more of it before the internal scrollbar kicks in.
+   Editing inherits this via the preview-height transfer in startEditDescription,
+   so the textarea grows to match. The phone sheet keeps the tighter 280px cap. */
+@media (min-width: 641px) {
+  .desc-preview {
+    max-height: 440px;
+  }
 }
 
 /* On a phone the modal becomes a full-screen sheet. */
