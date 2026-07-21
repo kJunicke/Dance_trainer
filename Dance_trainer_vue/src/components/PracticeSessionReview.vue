@@ -59,7 +59,6 @@ function onOtherColumnPick(e: Event) {
 </script>
 
 <template>
-  <div class="review-backdrop" @click="emit('close')" />
   <div class="review practice-view">
     <div class="review-head">
       <span v-if="currentCard" class="progress">Review · {{ position }} of {{ total }}</span>
@@ -103,13 +102,9 @@ function onOtherColumnPick(e: Event) {
 </template>
 
 <style scoped>
-.review-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 200;
-}
-
+/* No backdrop: .review is an opaque full-screen panel, so a backdrop behind it
+   was never visible and its click-to-dismiss could never fire. The ✕ in the
+   header is the dismiss target. */
 .review {
   position: fixed;
   inset: 0;

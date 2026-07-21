@@ -8,3 +8,5 @@
 - ## Feature
 	- [[Practice Companion View]] — Mobile practice-session companion screen (design + spec, in progress)
 	- [[Card Notes]] — The card `description` field: markdown render pipeline, per-surface treatments, click-to-edit and save model
+- ## Review
+	- [[UX Backlog]] — Prioritised UX findings from the 2026-07-21 critique (17/40): small bugs, Practice Companion flow, contrast/keyboard access, SM2-vs-Leitner doc divergence

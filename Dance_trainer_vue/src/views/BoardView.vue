@@ -26,6 +26,14 @@ const viewMode = ref<'board' | 'practice'>('board')
 const showAddDrawer = ref(false)
 const showReview = ref(false)
 
+// Both overlays belong to Practice. Switching modes with one open left it
+// sitting full-screen over a rendered Kanban board.
+function setViewMode(mode: 'board' | 'practice') {
+  viewMode.value = mode
+  showAddDrawer.value = false
+  showReview.value = false
+}
+
 // Re-sweep when the PWA is resumed — it may have been backgrounded past midnight.
 function onVisibilityChange() {
   if (document.visibilityState === 'visible') store.sweepDueCards()
@@ -452,14 +460,14 @@ function onBoardPointerUp(e: PointerEvent) {
           :aria-selected="viewMode === 'board'"
           class="mode-btn"
           :class="{ active: viewMode === 'board' }"
-          @click="viewMode = 'board'"
+          @click="setViewMode('board')"
         >Board</button>
         <button
           role="tab"
           :aria-selected="viewMode === 'practice'"
           class="mode-btn"
           :class="{ active: viewMode === 'practice' }"
-          @click="viewMode = 'practice'"
+          @click="setViewMode('practice')"
         >Practice</button>
       </div>
 
@@ -991,6 +999,19 @@ function onBoardPointerUp(e: PointerEvent) {
   .user,
   .signout-btn,
   .back-label {
+    display: none;
+  }
+
+  /* .board-name is the only shrinkable element in the bar, so every fixed
+     item takes its width first. Reclaim what the gaps and padding were
+     spending, and in Practice mode drop the name entirely — a 40px `Tes…`
+     is worth less than the room it costs the session actions. */
+  .topbar {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .topbar.practice-view .board-name {
     display: none;
   }
 

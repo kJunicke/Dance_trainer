@@ -15,6 +15,8 @@
 		- Session state (today's lineup, order, done flags) is ephemeral — ***not*** synced server-side or kept as history — but persisted to `localStorage` per board so a reload/PWA background-kill mid-practice doesn't lose it.
 	- ### Add/Remove drawer (full-screen sheet over the companion view)
 		- A pinned "Added" section stays on top regardless of which column tab is active. Tabs ordered Due column first, then quick-target columns, then the rest.
+		- The Added panel is **always rendered at a fixed height** (`clamp(200px, 30vh, 270px)` — label plus five rows), empty or not. It used to be `v-if`'d on the first add with a `max-height`, which meant every add grew it and shoved the tabs and browse list down 51px. Reserving the space unconditionally is the point; a `max-height` alone just moves the jump to the first tap. See [[UX Backlog]].
+		- The browse list is a `TransitionGroup`. Removing the tapped row still closes the list by a full 48px — that's unavoidable while rows leave the list — but the row fades out of flow and the rows below slide up via FLIP over 180ms, so the movement is trackable instead of instant. The alternative (leaving rows in place, checked) was rejected because it shows each added card twice.
 		- Checkbox-style add/remove into today's session. No reordering here — reordering only happens in the companion view itself.
 	- ### Session Review (manual, sequential triage)
 		- A "Review session" button appears once ≥1 card is marked done. Never auto-prompted.

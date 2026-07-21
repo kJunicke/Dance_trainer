@@ -53,9 +53,15 @@ const notAddedInTab = computed(() => {
       <button class="close-btn" @click="emit('close')">✕</button>
     </div>
 
-    <div v-if="addedCards.length" class="added-section">
+    <!-- Always rendered, at a fixed height. It used to appear on the first add
+         and grow with each one, pushing the tabs and the whole browse list down
+         51px per tap — measured mid-scan, it moved rows out from under the
+         finger. Adding a card now fills a slot inside the panel and moves
+         nothing outside it. -->
+    <div class="added-section">
       <div class="section-label">Added ({{ addedCards.length }})</div>
       <ul class="card-list added-list">
+        <li v-if="addedCards.length === 0" class="empty-row">Tap a card below to add it.</li>
         <li
           v-for="card in addedCards"
           :key="card.id"
@@ -81,8 +87,8 @@ const notAddedInTab = computed(() => {
       >{{ col.name }}</button>
     </div>
 
-    <ul class="card-list">
-      <li v-if="notAddedInTab.length === 0" class="empty-row">Nothing left to add from this column.</li>
+    <TransitionGroup tag="ul" name="row" class="card-list">
+      <li v-if="notAddedInTab.length === 0" key="empty" class="empty-row">Nothing left to add from this column.</li>
       <li
         v-for="card in notAddedInTab"
         :key="card.id"
@@ -93,7 +99,7 @@ const notAddedInTab = computed(() => {
         <span v-if="dueStatus(card.due_date)" class="status-dot" :class="`status-${dueStatus(card.due_date)}`" />
         <span class="card-name">{{ card.name }}</span>
       </li>
-    </ul>
+    </TransitionGroup>
   </div>
 </template>
 
@@ -146,12 +152,16 @@ const notAddedInTab = computed(() => {
   cursor: pointer;
 }
 
+/* Fixed, not max-height: the panel must reserve its space from the moment the
+   drawer opens, or the first add is a jump from nothing to full height. Sized
+   to the label plus five 48px rows, so a typical session fits without the list
+   scrolling inside it. Same clamp idiom as --session-list-height. */
 .added-section {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: 28vh;
+  height: clamp(200px, 30vh, 270px);
   margin-bottom: 10px;
 }
 
@@ -204,12 +214,49 @@ const notAddedInTab = computed(() => {
 }
 
 .card-list {
+  /* Anchors the absolutely-positioned leaving row below. */
+  position: relative;
   flex: 1;
   min-height: 0;
   list-style: none;
   margin: 0;
   padding: 0;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pc-border) transparent;
+}
+
+/* Adding a card removes its row, closing the list by a full 48px. Instant,
+   that's a teleport under a finger still hovering the area — and it's the rows
+   *below* the tap that move, which is exactly where you're scanning next. The
+   leaving row drops out of flow and fades while the rows below slide up, so the
+   distance is trackable and the finger has lifted before it lands. */
+.row-move {
+  transition: transform 180ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.row-leave-active {
+  position: absolute;
+  left: 0;
+  right: 0;
+  transition: opacity 120ms ease;
+}
+
+.row-enter-active {
+  transition: opacity 120ms ease;
+}
+
+.row-enter-from,
+.row-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-move,
+  .row-leave-active,
+  .row-enter-active {
+    transition: none;
+  }
 }
 
 .empty-row {

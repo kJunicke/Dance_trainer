@@ -668,7 +668,9 @@ input[type='date'] {
   border-radius: var(--radius-sm);
   font-size: 14px;
   line-height: 1.5;
-  color: var(--color-ink-dim);
+  /* Base is full ink so blockquotes, tables and bare text nodes inherit a
+     readable colour; the dim treatment is the exception, not the default. */
+  color: var(--color-ink);
   cursor: pointer;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
@@ -685,14 +687,12 @@ input[type='date'] {
 
 .desc-preview :deep(p) {
   margin: 0 0 8px;
-  color: var(--color-ink);
 }
 
 .desc-preview :deep(ul),
 .desc-preview :deep(ol) {
   margin: 0 0 8px;
   padding-left: 20px;
-  color: var(--color-ink);
 }
 
 .desc-preview :deep(h1),
@@ -701,7 +701,6 @@ input[type='date'] {
   margin: 0 0 6px;
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--color-ink);
 }
 
 .desc-preview :deep(h1) {

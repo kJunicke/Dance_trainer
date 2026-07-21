@@ -11,6 +11,7 @@
 	- ### Card modal (`CardModal.vue`) — the primary editing surface
 		- Preview: 14px/1.5, capped at `max-height: 280px` with its own internal scrollbar, so a description grown over months can't push the destructive `Delete card` button far down the modal. A hairline `border-bottom` on `.desc-field` separates freeform content from that delete action.
 		- Uses `renderMarkdownWithLinkChips()`, with chip text in `--color-ember` — ***not*** `--color-ember-light`, which is a hover/fill-only color and an established contrast trap as text on the light theme.
+		- The preview's base colour is `--color-ink`, with `.placeholder` as the single dim exception. It was the other way round until 2026-07-21 — base dim, with `p`/`ul`/`ol`/`h1-3` overridden back — which meant blockquotes, tables, `<pre>` and bare text nodes silently inherited a 3.92:1 colour. Exceptions are opted into, never out of. See [[UX Backlog]].
 		- Bespoke `:deep()` rules for `h1`/`h2`/`h3` (16/15/14px, `--font-display` 700 — field content, not page headings), inline `code` (mono on a `color-mix` ink tint), and the link chip.
 	- ### Practice Companion (`PracticeFocusCard.vue`)
 		- Separate dark `--pc-*` palette, its own tuned type. See [[Practice Companion View]]. Not a shared component with the modal — same data, different job.
