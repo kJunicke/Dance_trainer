@@ -303,16 +303,21 @@ function onRowClick(cardId: number) {
 }
 
 /* Lifted off the list rather than faded into it — the old `opacity: 0.85` made
-   the row quieter, which reads as disabled, not as picked up. `transition:
-   none` so the lifted row tracks the finger instead of trailing the FLIP
-   timing above. */
+   the row quieter, which reads as disabled, not as picked up.
+   Deliberately no `transform` and no `transition: none` here, however tempting.
+   TransitionGroup decides whether to run FLIP at all by cloning the *first*
+   previous child, applying `.row-move` to it and checking the resolved
+   `transition-property` for `transform`. `.list-row.dragging` outranks
+   `.row-move`, so either declaration on this rule makes that probe report "no
+   transform" whenever the lifted row sits at the top of the list — silently
+   disabling the move animation for every row. A transform here would also be
+   overwritten by FLIP's own translate mid-move. The lift is colour and shadow
+   only, and the dragged row animates with the rest. */
 .list-row.dragging {
   opacity: 1;
-  transform: scale(1.02);
   border-color: var(--pc-ember);
   background: var(--pc-surface);
   box-shadow: var(--shadow-modal);
-  transition: none;
 }
 
 .list-row.dragging .grip {
@@ -403,10 +408,6 @@ function onRowClick(cardId: number) {
   .row-enter-active,
   .row-leave-active {
     transition: none;
-  }
-
-  .list-row.dragging {
-    transform: none;
   }
 }
 </style>

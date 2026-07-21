@@ -550,6 +550,12 @@ export const useBoardStore = defineStore('board', () => {
   // again now", but keeping one in Wöchentlich has to mean "due again in a
   // week" — stamping today there would make the column's own interval a lie
   // and bounce the card straight back out on the next sweep.
+  //
+  // An undated card in a column with no rule stays undated. Those are the
+  // parking columns — Library und Backlog, Ziele — and a card sitting there
+  // is deliberately outside spaced repetition. Stamping it today would enrol
+  // it without being asked and sweep it into the due column tomorrow. The
+  // practice date is still recorded: that happened, whatever the schedule says.
   async function recordPracticeInPlace(cardId: number) {
     const card = cards.value.find((c) => c.id === cardId)
     if (!card) return
@@ -560,7 +566,8 @@ export const useBoardStore = defineStore('board', () => {
     }
     const today = localToday()
     const offset = columns.value.find((c) => c.id === card.column_id)?.due_offset_days ?? null
-    card.due_date = offset === null ? today : addDays(today, offset)
+    if (offset !== null) card.due_date = addDays(today, offset)
+    else if (card.due_date !== null) card.due_date = today
     card.last_scheduled_column_id = card.column_id
     card.last_practiced_on = today
     const { error: err } = await supabase
