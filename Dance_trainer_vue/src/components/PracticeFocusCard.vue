@@ -2,7 +2,7 @@
 import { ref, computed, onBeforeUnmount, nextTick } from 'vue'
 import type { Card } from '@/stores/boardStore'
 import { useBoardStore } from '@/stores/boardStore'
-import { renderMarkdownWithLinkChips, blockSourceOffset } from '@/lib/markdown'
+import { renderMarkdownWithLinkChips, caretOffsetFromClick } from '@/lib/markdown'
 import { dueStatus, dueLabel } from '@/lib/dates'
 
 const props = defineProps<{
@@ -33,30 +33,21 @@ onBeforeUnmount(() => {
   if (editing.value) saveNote()
 })
 
-// The caret lands in the block that was tapped rather than at the end of the
-// note — editing a line halfway down a month-old note meant scrolling back up
-// to it every time. Straight port of CardModal.startEditDescription(); the
-// height-preservation half of that function doesn't apply here, since this
-// textarea sizes itself. Falls back to the end of the source when the tap
-// didn't resolve to a rendered block (the placeholder, or padding).
+// The caret lands on the word that was tapped rather than at the end of the
+// note — editing a line halfway down a month-old note meant hunting for it
+// again in the raw markdown every time. Falls back to the end of the source
+// when the tap didn't resolve to rendered text (the placeholder, or padding).
 async function startEdit(e: MouseEvent) {
   noteDraft.value = props.card.description ?? ''
 
   const body = (e.currentTarget as HTMLElement).querySelector('.md-body')
-  let blockIndex = -1
-  if (body) {
-    let node = e.target as HTMLElement | null
-    while (node && node.parentElement !== body) node = node.parentElement
-    if (node) blockIndex = Array.prototype.indexOf.call(body.children, node)
-  }
+  const offset = body ? caretOffsetFromClick(body, e, noteDraft.value) : noteDraft.value.length
 
   editing.value = true
   await nextTick()
   const el = textareaEl.value
   if (!el) return
   el.focus()
-  const offset =
-    blockIndex >= 0 ? blockSourceOffset(noteDraft.value, blockIndex) : noteDraft.value.length
   el.setSelectionRange(offset, offset)
 }
 

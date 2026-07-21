@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
-import { blockSourceOffset, renderMarkdownWithLinkChips } from '@/lib/markdown'
+import { caretOffsetFromClick, renderMarkdownWithLinkChips } from '@/lib/markdown'
 import { LABEL_COLORS, LABEL_TEXT_COLORS } from '@/lib/labelColors'
 import { useBackButtonClose } from '@/lib/useBackButtonClose'
 
@@ -53,8 +53,8 @@ watch(
 
 // Entering edit mode must not move the text under the pointer: the textarea
 // adopts the height the preview just had (both are border-box, so offsetHeight
-// transfers directly), and the caret lands in the block that was clicked rather
-// than at the top of the source.
+// transfers directly), and the caret lands on the word that was clicked rather
+// than at the top or the end of the source.
 async function startEditDescription(e: MouseEvent) {
   const preview = descPreviewEl.value
   // Only override when the preview was taller than the textarea's own floor —
@@ -63,23 +63,18 @@ async function startEditDescription(e: MouseEvent) {
   const measured = preview?.offsetHeight ?? 0
   editHeight.value = measured > DESC_MIN_EDIT_HEIGHT ? measured : 0
 
+  // Resolved before the preview is torn down — it reads the rendered layout.
   const body = preview?.querySelector('.md-body')
-  let blockIndex = -1
-  if (body) {
-    let node = e.target as HTMLElement | null
-    while (node && node.parentElement !== body) node = node.parentElement
-    if (node) blockIndex = Array.prototype.indexOf.call(body.children, node)
-  }
+  const offset = body
+    ? caretOffsetFromClick(body, e, descriptionDraft.value)
+    : descriptionDraft.value.length
 
   editingDescription.value = true
   await nextTick()
   const el = descTextareaEl.value
   if (!el) return
   el.focus()
-  if (blockIndex >= 0) {
-    const offset = blockSourceOffset(descriptionDraft.value, blockIndex)
-    el.setSelectionRange(offset, offset)
-  }
+  el.setSelectionRange(offset, offset)
 }
 
 function saveDescription() {
