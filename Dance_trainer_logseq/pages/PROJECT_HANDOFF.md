@@ -1,5 +1,16 @@
 # Modern Jive Skill Tracker — Rebuild Brief
 
+> **SUPERSEDED SPEC — read this before trusting anything below.** This is the *original* v1→v2
+> brief, kept as the record of what was designed and considered. **The build deliberately diverged
+> from it.** None of the 5-status system, SM2, quality ratings, focus XP or the `skills` table was
+> built, and as of 2026-07-21 there is no intention to build them. What actually ships is a Leitner
+> box: `cards` (id, column_id, name, description, position, due_date) plus per-column
+> `due_offset_days` / `is_due_column` / `due_clear_on_enter` / `is_quick_target`, with the user
+> choosing the destination column after practising. See [[Tables]] for the real schema,
+> [[Practice Companion View]] for the practice loop, and [[UX Backlog]] for the decision — SM2 was
+> explicitly declined because the algorithm picking the interval would replace the manual choice of
+> column that is the whole point of Session Review.
+
 Rebuild target: Vue + Supabase (Auth + Postgres + RLS + Realtime), multiuser. Focus: Modern Jive
 training + documentation tool. v1 was Vue 3 / TS / Pinia / localStorage PWA. This doc = the raw spec.
 

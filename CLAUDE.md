@@ -3,7 +3,9 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 # Goal
-Powerful Skill tracker for dance training, that documents progress for individual skills and keeps track of what skills need to be practiced when using spaced recognition.
+Powerful Skill tracker for dance training, that documents progress for individual skills and keeps track of what skills need to be practiced when using spaced repetition.
+
+Scheduling is a **Leitner box, not SM2** — per-column `due_offset_days` + `sweepDueCards()`, with the user picking the destination column after practising. There is no ease factor, interval or repetition count anywhere, and adding SM2 was explicitly declined on 2026-07-21. `Dance_trainer_logseq/pages/PROJECT_HANDOFF.md` is a superseded spec that describes an SM2 system which was never built — don't implement from it.
 
 ## Functionality
 - Clean, intuitive, and unrestrictive design

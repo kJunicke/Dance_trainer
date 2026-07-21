@@ -1,5 +1,5 @@
 - ## Spec
-	- [[PROJECT_HANDOFF]] — Core rebuild brief: 5-status system, spaced-repetition algorithm, data model, v1→v2 architecture decisions
+	- [[PROJECT_HANDOFF]] — **Superseded** v1→v2 brief: 5-status system, SM2, focus XP — none of it built. Kept as the record of what was designed; don't implement from it
 - ## Schema
 	- [[Tables]] — DB schema: profiles, boards/columns/cards, labels, ownership, RLS policies, import/export formats
 - ## Backend
@@ -9,4 +9,4 @@
 	- [[Practice Companion View]] — Mobile practice-session companion screen (design + spec, in progress)
 	- [[Card Notes]] — The card `description` field: markdown render pipeline, per-surface treatments, click-to-edit and save model
 - ## Review
-	- [[UX Backlog]] — Prioritised UX findings from the 2026-07-21 critique (17/40): small bugs, Practice Companion flow, contrast/keyboard access, SM2-vs-Leitner doc divergence
+	- [[UX Backlog]] — The agreed eight-batch plan from the 2026-07-21 critique (17/40) and its follow-up interview: what's being built, what was decided against, and where the critique was factually wrong

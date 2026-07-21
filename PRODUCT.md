@@ -18,9 +18,12 @@ the tool getting in the way of an actual practice session.
 ## Product Purpose
 
 A skill tracker for dance training that documents progress on individual skills and tells the
-user what needs practice today via spaced repetition (a 5-status learning system: backlog →
-acquisition → maintenance/focus → archived, with SM2-based scheduling). Built on a Kanban board
-metaphor. Success looks like: opening the board and immediately knowing what's due, logging a
+user what needs practice today via spaced repetition. The scheduling is a **Leitner box, not
+SM2**: each board column carries a fixed interval (`due_offset_days`), moving a card into a
+column stamps its due date to today + that interval, and a sweep pulls every card whose date has
+arrived into the designated due column. The user chooses the destination column after practising,
+so the interval is a deliberate decision rather than an algorithm's output — see the Practice
+Companion View page in the Logseq wiki. Built on a Kanban board metaphor. Success looks like: opening the board and immediately knowing what's due, logging a
 practice session in a few taps, and having a durable record of how a skill progressed over months.
 
 ## Brand Personality

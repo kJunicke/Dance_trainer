@@ -22,6 +22,11 @@
 			- description (markdown, rendered client-side via `marked` + `DOMPurify`)
 			- position
 			- due_date (nullable `date`)
+			- TODO last_scheduled_column_id (nullable `bigint references columns(id) on delete set null`) — the column whose on-enter rule last stamped this card's due date. **Not yet migrated**; agreed 2026-07-21, see [[UX Backlog]]
+			- TODO last_practiced_on (nullable `date`) — written at the same moment, by the same rule
+				- Both are written in `moveCard` only when the on-enter rule fires, so they survive `sweepDueCards()` moving the card into the due column. That's the point: every card in Session Review has been swept into Today, whose `due_offset_days` is `null`, so deriving the entry date as `due_date − due_offset_days` fails precisely where [[Practice Companion View]] wants to show it. Storing the column as well as the date also keeps old cards honest when a column's interval is later edited.
+				- `ALTER TABLE` on an existing table, so the [[Supabase]] "grant `anon`/`authenticated` on new tables" rule does not apply — grants are already in place.
+				- TODO decide whether `boardFormat.ts` (the app's own full-fidelity export) should round-trip these two fields alongside the column-automation flags
 			-
 	- Columns
 		- values
