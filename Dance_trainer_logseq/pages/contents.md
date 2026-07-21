@@ -7,3 +7,4 @@
 	- [[Authentification]] — Supabase auth table vs profiles table
 - ## Feature
 	- [[Practice Companion View]] — Mobile practice-session companion screen (design + spec, in progress)
+	- [[Card Notes]] — The card `description` field: markdown render pipeline, per-surface treatments, click-to-edit and save model

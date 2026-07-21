@@ -226,6 +226,14 @@ onUnmounted(() => {
   padding-left: 16px;
 }
 
+/* On the board face a link is preview text, not a target — clicking anywhere on
+   the card should open it, never navigate away mid-scan. */
+.task-description :deep(a) {
+  pointer-events: none;
+  color: inherit;
+  text-decoration: none;
+}
+
 .label-row {
   display: flex;
   flex-wrap: wrap;

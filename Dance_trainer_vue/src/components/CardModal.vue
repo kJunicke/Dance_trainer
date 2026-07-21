@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
-import { renderMarkdown } from '@/lib/markdown'
+import { blockSourceOffset, renderMarkdownWithLinkChips } from '@/lib/markdown'
 import { LABEL_COLORS } from '@/lib/labelColors'
 import { useBackButtonClose } from '@/lib/useBackButtonClose'
 
@@ -32,6 +32,11 @@ const cardLabelIds = computed(
 
 const descriptionDraft = ref('')
 const editingDescription = ref(false)
+// Keep in sync with .desc-textarea's min-height in this file's styles.
+const DESC_MIN_EDIT_HEIGHT = 180
+const descPreviewEl = ref<HTMLElement | null>(null)
+const descTextareaEl = ref<HTMLTextAreaElement | null>(null)
+const editHeight = ref(0)
 const titleDraft = ref('')
 const editingTitle = ref(false)
 const titleInputEl = ref<HTMLInputElement | null>(null)
@@ -45,9 +50,44 @@ watch(
   { immediate: true },
 )
 
+// Entering edit mode must not move the text under the pointer: the textarea
+// adopts the height the preview just had (both are border-box, so offsetHeight
+// transfers directly), and the caret lands in the block that was clicked rather
+// than at the top of the source.
+async function startEditDescription(e: MouseEvent) {
+  const preview = descPreviewEl.value
+  // Only override when the preview was taller than the textarea's own floor —
+  // a short or empty description would otherwise inline a min-height *below*
+  // the CSS one and shrink the writing surface.
+  const measured = preview?.offsetHeight ?? 0
+  editHeight.value = measured > DESC_MIN_EDIT_HEIGHT ? measured : 0
+
+  const body = preview?.querySelector('.md-body')
+  let blockIndex = -1
+  if (body) {
+    let node = e.target as HTMLElement | null
+    while (node && node.parentElement !== body) node = node.parentElement
+    if (node) blockIndex = Array.prototype.indexOf.call(body.children, node)
+  }
+
+  editingDescription.value = true
+  await nextTick()
+  const el = descTextareaEl.value
+  if (!el) return
+  el.focus()
+  if (blockIndex >= 0) {
+    const offset = blockSourceOffset(descriptionDraft.value, blockIndex)
+    el.setSelectionRange(offset, offset)
+  }
+}
+
 function saveDescription() {
   store.updateCardDescription(props.cardId, descriptionDraft.value)
-  editingDescription.value = false
+  // Deferred a tick: this also fires on blur, which happens as soon as the user's
+  // click lands on the next element (e.g. the Save button itself, or Delete card).
+  // Collapsing the textarea synchronously here would shift that element out from
+  // under the pointer before its own click completed, silently swallowing the tap.
+  setTimeout(() => { editingDescription.value = false }, 0)
 }
 
 function onDescriptionKeydown(e: KeyboardEvent) {
@@ -280,23 +320,25 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         </div>
       </section>
 
-      <section class="field">
+      <section class="field desc-field">
         <label class="field-label">Description</label>
         <div v-if="editingDescription">
           <textarea
+            ref="descTextareaEl"
+            class="desc-textarea"
+            :style="editHeight ? { minHeight: editHeight + 'px' } : undefined"
             v-model="descriptionDraft"
-            rows="8"
             placeholder="Markdown supported"
             @keydown="onDescriptionKeydown"
+            @blur="saveDescription"
           />
           <div class="desc-actions">
             <button @click="saveDescription">Save</button>
-            <button @click="editingDescription = false">Cancel</button>
           </div>
         </div>
-        <div v-else class="desc-preview" @click="editingDescription = true">
+        <div v-else ref="descPreviewEl" class="desc-preview" @click="startEditDescription">
           <p v-if="!card.description" class="placeholder">Click to add a description…</p>
-          <div v-else v-html="renderMarkdown(card.description)" />
+          <div v-else class="md-body" v-html="renderMarkdownWithLinkChips(card.description)" />
         </div>
       </section>
 
@@ -587,10 +629,13 @@ input[type='date'] {
   color: var(--color-ink-dim);
 }
 
-textarea {
+.desc-textarea {
   width: 100%;
-  font: inherit;
-  padding: 8px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 180px;
+  padding: 12px;
   box-sizing: border-box;
   resize: vertical;
   border: 1px solid var(--color-border);
@@ -615,16 +660,18 @@ textarea {
   cursor: pointer;
 }
 
-.desc-actions button:last-child {
-  background: transparent;
-  color: var(--color-ink);
-}
-
 .desc-preview {
   min-height: 40px;
-  padding: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 12px;
   border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-ink-dim);
   cursor: pointer;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 .desc-preview:hover {
@@ -638,12 +685,73 @@ textarea {
 
 .desc-preview :deep(p) {
   margin: 0 0 8px;
+  color: var(--color-ink);
 }
 
 .desc-preview :deep(ul),
 .desc-preview :deep(ol) {
   margin: 0 0 8px;
   padding-left: 20px;
+  color: var(--color-ink);
+}
+
+.desc-preview :deep(h1),
+.desc-preview :deep(h2),
+.desc-preview :deep(h3) {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.desc-preview :deep(h1) {
+  font-size: 16px;
+}
+
+.desc-preview :deep(h2) {
+  font-size: 15px;
+}
+
+.desc-preview :deep(h3) {
+  font-size: 14px;
+}
+
+.desc-preview :deep(code) {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+}
+
+.desc-preview :deep(.md-link-chip) {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 40vw;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-ember) 18%, transparent);
+  color: var(--color-ember);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.desc-preview :deep(.md-link-chip::before) {
+  content: '▶';
+  flex-shrink: 0;
+  font-size: 8px;
+}
+
+.desc-field {
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .delete-card-btn {
