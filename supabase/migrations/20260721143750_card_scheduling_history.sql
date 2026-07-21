@@ -13,6 +13,13 @@
 -- carries the anon/authenticated grants from its own creation migration.
 -- `if not exists` because this was applied to the live project during
 -- development; the push-to-main run must be a no-op rather than an error.
+--
+-- The 20260721143750 stamp is deliberate and must not be "tidied" to a round
+-- number. That is the version the development apply recorded in the remote
+-- migration history, and `supabase db push` refuses to insert a local file
+-- that sorts *before* the last applied migration. Naming the file anything
+-- earlier makes the GitHub deploy fail on every subsequent push, not just this
+-- one.
 alter table cards
   add column if not exists last_scheduled_column_id bigint references columns(id) on delete set null,
   add column if not exists last_practiced_on date;

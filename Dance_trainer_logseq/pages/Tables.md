@@ -22,7 +22,7 @@
 			- description (markdown, rendered client-side via `marked` + `DOMPurify`)
 			- position
 			- due_date (nullable `date`)
-			- last_scheduled_column_id (nullable `bigint references columns(id) on delete set null`) — the column whose on-enter rule last stamped this card's due date. Migrated 2026-07-21 (`20260721000000_card_scheduling_history.sql`), see [[UX Backlog]]
+			- last_scheduled_column_id (nullable `bigint references columns(id) on delete set null`) — the column whose on-enter rule last stamped this card's due date. Migrated 2026-07-21 (`20260721143750_card_scheduling_history.sql`), see [[UX Backlog]]
 			- last_practiced_on (nullable `date`) — written at the same moment, by the same rule
 				- Both are written in `moveCard` only when the on-enter rule fires, so they survive `sweepDueCards()` moving the card into the due column. That's the point: every card in Session Review has been swept into Today, whose `due_offset_days` is `null`, so deriving the entry date as `due_date − due_offset_days` fails precisely where [[Practice Companion View]] wants to show it. Storing the column as well as the date also keeps old cards honest when a column's interval is later edited.
 				- Also written by `recordPracticeInPlace()`, Session Review's "keep this card where it is" path — practising a card without moving it is still a scheduling event, and no column rule can fire for a move that doesn't happen. That path applies the card's *own* column's `due_offset_days` when it has one, so keeping a card in Wöchentlich means "due again in a week", not "due now".
