@@ -35,7 +35,7 @@ function blockAt(source: string, blockIndex: number): { start: number; raw: stri
   return null
 }
 
-// Source offset for a click that landed `renderedPrefix` characters into the
+// Offset into `raw` for a click that landed `renderedPrefix` characters into the
 // block's *rendered* text. Walks source and prefix together, consuming a prefix
 // character on every match, so markup the reader never sees (`**`, `# `, `- `,
 // a link's `](url)`) is stepped over without being counted.
@@ -49,23 +49,29 @@ function blockAt(source: string, blockIndex: number): { start: number; raw: stri
 // equal the next visible character can consume it early — `*` in `**a*b**` and
 // the like. The caret then sits a character or two off inside the right word,
 // which is a far smaller miss than the block-start approximation this replaces.
-function sourceOffsetAt(source: string, blockIndex: number, renderedPrefix: string): number {
-  const block = blockAt(source, blockIndex)
-  if (!block) return source.length
+function offsetInRaw(raw: string, renderedPrefix: string): number {
   const wanted = renderedPrefix.replace(/\s+/g, '')
   // Clicked before the first visible character — the leading `## ` or `- ` is
   // markup, so the block's own start is the honest answer.
-  if (!wanted) return block.start
+  if (!wanted) return 0
   let matched = 0
-  for (let i = 0; i < block.raw.length; i++) {
-    const ch = block.raw.charAt(i)
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw.charAt(i)
     if (/\s/.test(ch)) continue
     if (ch === wanted[matched]) {
       matched++
-      if (matched === wanted.length) return block.start + i + 1
+      if (matched === wanted.length) return i + 1
     }
   }
-  return block.start + block.raw.length
+  return raw.length
+}
+
+// Source offset for a click that landed `renderedPrefix` characters into the
+// nth rendered block's text.
+function sourceOffsetAt(source: string, blockIndex: number, renderedPrefix: string): number {
+  const block = blockAt(source, blockIndex)
+  if (!block) return source.length
+  return block.start + offsetInRaw(block.raw, renderedPrefix)
 }
 
 // Chrome shipped caretPositionFromPoint only in 128; caretRangeFromPoint is the
@@ -149,6 +155,42 @@ export function focusAtOffset(el: HTMLTextAreaElement, offset: number): void {
   el.focus({ preventScroll: true })
   el.setSelectionRange(offset, offset)
   scrollCaretIntoView(el, offset)
+}
+
+// One top-level markdown block: where its source starts, its raw source, and
+// the HTML it renders to on its own. Splitting the note this way is what lets a
+// single block be swapped for a textarea while every other block stays rendered
+// — the reader keeps their visual anchor instead of the whole note flipping to
+// raw source on every small edit.
+export interface MarkdownBlock {
+  start: number
+  raw: string
+  html: string
+}
+
+export function splitBlocks(source: string): MarkdownBlock[] {
+  const out: MarkdownBlock[] = []
+  let offset = 0
+  // `space` tokens carry source length but render to nothing, so they advance
+  // the offset only — same rule blockAt() uses to keep the mapping in step.
+  for (const token of marked.lexer(source)) {
+    if (token.type === 'space') {
+      offset += token.raw.length
+      continue
+    }
+    out.push({ start: offset, raw: token.raw, html: renderMarkdownWithLinkChips(token.raw) })
+    offset += token.raw.length
+  }
+  return out
+}
+
+// Caret offset within `raw` for a click inside that block's rendered element.
+// The block-scoped twin of caretOffsetFromClick(): the caller already knows
+// which block was hit, so there's no block index to resolve.
+export function caretOffsetInBlock(blockEl: Element, e: MouseEvent, raw: string): number {
+  const pos = caretPositionFromPoint(e.clientX, e.clientY)
+  if (!pos || !blockEl.contains(pos.node)) return raw.length
+  return offsetInRaw(raw, textBefore(blockEl, pos.node, pos.offset))
 }
 
 // Same markdown, but links keep their href and every one gets a distinct

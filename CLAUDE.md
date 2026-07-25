@@ -79,6 +79,7 @@ layer on top, so it answers "why/how does X work" without re-deriving it from a 
 - Before every commit update all relevant docs in logseq
 
 # Testing
+- **Always use "Test board" for browser testing** — never the real boards (JuKi practise, NeKi). Their cards are real training data.
 - I've installed a phone simulator browser extension. I can open it up when you have browser access to let you test it on a proper screen
 
 # General guidelines

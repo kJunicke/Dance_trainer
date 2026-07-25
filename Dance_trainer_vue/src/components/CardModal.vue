@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
-import { caretOffsetFromClick, focusAtOffset, renderMarkdownWithLinkChips } from '@/lib/markdown'
+import MarkdownNote from './MarkdownNote.vue'
 import { LABEL_COLORS, LABEL_TEXT_COLORS } from '@/lib/labelColors'
 import { useBackButtonClose } from '@/lib/useBackButtonClose'
 
@@ -18,7 +18,7 @@ const store = useBoardStore()
 // Any close path (X, backdrop, Escape, phone back-gesture) flushes an in-progress
 // description edit instead of discarding it.
 function closeModal() {
-  if (editingDescription.value) saveDescription()
+  noteEl.value?.flush()
   emit('close')
 }
 
@@ -31,13 +31,7 @@ const cardLabelIds = computed(
   () => new Set(store.labelsForCard(props.cardId).map((l) => l.id)),
 )
 
-const descriptionDraft = ref('')
-const editingDescription = ref(false)
-// Keep in sync with .desc-textarea's min-height in this file's styles.
-const DESC_MIN_EDIT_HEIGHT = 180
-const descPreviewEl = ref<HTMLElement | null>(null)
-const descTextareaEl = ref<HTMLTextAreaElement | null>(null)
-const editHeight = ref(0)
+const noteEl = ref<{ flush: () => void } | null>(null)
 const titleDraft = ref('')
 const editingTitle = ref(false)
 const titleInputEl = ref<HTMLInputElement | null>(null)
@@ -45,56 +39,10 @@ watch(
   card,
   (c) => {
     if (!c) { emit('close'); return }
-    descriptionDraft.value = c.description ?? ''
     if (!editingTitle.value) titleDraft.value = c.name
   },
   { immediate: true },
 )
-
-// Entering edit mode must not move the text under the pointer: the textarea
-// adopts the height the preview just had (both are border-box, so offsetHeight
-// transfers directly), and the caret lands on the word that was clicked rather
-// than at the top or the end of the source.
-async function startEditDescription(e: MouseEvent) {
-  const preview = descPreviewEl.value
-  // Only override when the preview was taller than the textarea's own floor —
-  // a short or empty description would otherwise inline a min-height *below*
-  // the CSS one and shrink the writing surface.
-  const measured = preview?.offsetHeight ?? 0
-  editHeight.value = measured > DESC_MIN_EDIT_HEIGHT ? measured : 0
-
-  // Resolved before the preview is torn down — it reads the rendered layout.
-  const body = preview?.querySelector('.md-body')
-  const offset = body
-    ? caretOffsetFromClick(body, e, descriptionDraft.value)
-    : descriptionDraft.value.length
-
-  editingDescription.value = true
-  await nextTick()
-  const el = descTextareaEl.value
-  if (!el) return
-  focusAtOffset(el, offset)
-}
-
-function saveDescription() {
-  store.updateCardDescription(props.cardId, descriptionDraft.value)
-  // Deferred a tick: this also fires on blur, which happens as soon as the user's
-  // click lands on the next element (e.g. the Save button itself, or Delete card).
-  // Collapsing the textarea synchronously here would shift that element out from
-  // under the pointer before its own click completed, silently swallowing the tap.
-  setTimeout(() => { editingDescription.value = false }, 0)
-}
-
-function onDescriptionKeydown(e: KeyboardEvent) {
-  if (e.key !== 'Tab') return
-  e.preventDefault()
-  const el = e.target as HTMLTextAreaElement
-  const { selectionStart, selectionEnd, value } = el
-  descriptionDraft.value = value.slice(0, selectionStart) + '\t' + value.slice(selectionEnd)
-  nextTick(() => {
-    el.selectionStart = el.selectionEnd = selectionStart + 1
-  })
-}
 
 async function startEditTitle() {
   titleDraft.value = card.value?.name ?? ''
@@ -325,23 +273,12 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 
       <section class="field desc-field">
         <label class="field-label">Description</label>
-        <div v-if="editingDescription">
-          <textarea
-            ref="descTextareaEl"
-            class="desc-textarea"
-            :style="editHeight ? { minHeight: editHeight + 'px' } : undefined"
-            v-model="descriptionDraft"
-            placeholder="Markdown supported"
-            @keydown="onDescriptionKeydown"
-            @blur="saveDescription"
+        <div class="desc-preview">
+          <MarkdownNote
+            ref="noteEl"
+            :source="card.description ?? ''"
+            @update:source="(v: string) => store.updateCardDescription(props.cardId, v)"
           />
-          <div class="desc-actions">
-            <button @click="saveDescription">Save</button>
-          </div>
-        </div>
-        <div v-else ref="descPreviewEl" class="desc-preview" @click="startEditDescription">
-          <p v-if="!card.description" class="placeholder">Click to add a description…</p>
-          <div v-else class="md-body" v-html="renderMarkdownWithLinkChips(card.description)" />
         </div>
       </section>
 
@@ -645,37 +582,6 @@ input[type='date'] {
   color: var(--color-ink-dim);
 }
 
-.desc-textarea {
-  width: 100%;
-  font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.5;
-  min-height: 180px;
-  padding: 12px;
-  box-sizing: border-box;
-  resize: vertical;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  color: var(--color-ink);
-}
-
-.desc-actions {
-  margin-top: 8px;
-  display: flex;
-  gap: 8px;
-}
-
-.desc-actions button {
-  padding: 6px 14px;
-  border: 1px solid var(--color-ember);
-  border-radius: var(--radius-sm);
-  background: var(--color-ember);
-  color: var(--color-text-on-ember);
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .desc-preview {
   min-height: 40px;
   max-height: 280px;
@@ -687,18 +593,8 @@ input[type='date'] {
   /* Base is full ink so blockquotes, tables and bare text nodes inherit a
      readable colour; the dim treatment is the exception, not the default. */
   color: var(--color-ink);
-  cursor: pointer;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
-}
-
-.desc-preview:hover {
-  background: var(--color-surface-light);
-}
-
-.desc-preview :deep(.placeholder) {
-  color: var(--color-ink-dim);
-  margin: 0;
 }
 
 .desc-preview :deep(p) {
@@ -790,8 +686,7 @@ input[type='date'] {
 
 /* Desktop has vertical room to spare, so let the notes — the field people
    actually work in — use more of it before the internal scrollbar kicks in.
-   Editing inherits this via the preview-height transfer in startEditDescription,
-   so the textarea grows to match. The phone sheet keeps the tighter 280px cap. */
+   The phone sheet keeps the tighter 280px cap. */
 @media (min-width: 641px) {
   .desc-preview {
     max-height: 440px;

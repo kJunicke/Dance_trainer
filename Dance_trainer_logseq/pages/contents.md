@@ -7,6 +7,6 @@
 	- [[Authentification]] — Supabase auth table vs profiles table
 - ## Feature
 	- [[Practice Companion View]] — Mobile practice-session companion screen (design + spec, in progress)
-	- [[Card Notes]] — The card `description` field: markdown render pipeline, per-surface treatments, click-to-edit and save model
+	- [[Card Notes]] — The card `description` field: markdown render pipeline, per-surface treatments, per-block inline editing and save model
 - ## Review
 	- [[UX Backlog]] — The agreed eight-batch plan from the 2026-07-21 critique (17/40) and its follow-up interview: what's being built, what was decided against, and where the critique was factually wrong
