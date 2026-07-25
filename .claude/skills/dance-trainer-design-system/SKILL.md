@@ -13,7 +13,10 @@ The values below are a snapshot for orientation. **The code is authoritative** �
 - `Dance_trainer_vue/src/assets/tokens.css` — every color/font/radius/shadow token
 - `Dance_trainer_vue/src/components/TaskCard.vue` — the fullest example of the tokens in use, plus the status-rail signature
 - `Dance_trainer_vue/src/lib/dates.ts` — `dueStatus`/`dueLabel`, which drive the card status colors
+- `Dance_trainer_vue/src/lib/labelColors.ts` — the six label fills and their per-fill text colors
 - `Dance_trainer_vue/index.html` — Google Fonts loading
+
+The *reasoning* behind the current values (contrast measurements, what was tried and rejected) lives in the Logseq wiki — start at `Dance_trainer_logseq/pages/contents.md`.
 
 ## The through-line: "training console," not "dance-school marketing site"
 
@@ -32,18 +35,23 @@ Lightness climbs `bg → surface → surface-light` so columns lift off the boar
 | Card surface + hover highlight | `--color-surface-light` | `#ffffff` |
 | Borders (hairline) | `--color-border` | `#d8cfbf` |
 | Primary text | `--color-ink` | `#2a2420` (near-black, warm) |
-| Secondary text | `--color-ink-dim` | `#7c7367` |
-| Primary accent (CTAs, focus, active) | `--color-ember` | `#e06d0a` |
-| Accent hover | `--color-ember-light` | `#f2842a` |
+| Secondary text | `--color-ink-dim` | `#6a6156` (5.11 on surface, 4.62 on bg) |
+| Accent **fills and borders** | `--color-ember` | `#e06d0a` |
+| Accent **as text**, and the focus ring | `--color-ember-text` | `#a04c00` (5.01 / 5.95 / 4.53) |
+| Accent hover fill | `--color-ember-light` | `#f2842a` |
 | Status: on track / scheduled | `--color-good` | `#3e9b6e` |
 | Status: due today | `--color-due` | `#c98a16` |
 | Status: overdue | `--color-overdue` | `#cb4242` |
 
 Use these tokens rather than raw hex in components, so a future palette change stays a one-file edit. If a new element needs a color the system doesn't have, prefer adding a token over hardcoding.
 
-**Contrast trap to remember:** the accent is only safe as small text when it's the deep `--color-ember`. `--color-ember-light` is a hover/fill color — using it as text on light surfaces (invite-code text, modal field-labels) produced pale, unreadable text that had to be fixed. For accent-colored text on a light surface, use `--color-ember`.
+**Contrast trap to remember — this one has been got wrong twice.** The ember accent has *three* tokens and only one of them is legible as text. `--color-ember-light` is a hover fill; `--color-ember` is fills and borders only — as text it is 2.78 on surface and 3.30 on white, i.e. below even the 3.0 non-text floor. Anything that paints ember *as ink* — field-label eyebrows, link chips, the focus ring — uses `--color-ember-text`. The first fix for this replaced ember-light with ember and was recorded as solved; it had only picked the less-bad of two failing options, which is why the token exists now.
 
-The good/due/overdue trio **is wired into cards** via the due date (`dueStatus`/`dueLabel` in `src/lib/dates.ts` → the status rail below). When the fuller skill-tracking model lands (backlog/acquisition/maintenance/focus/archived statuses, SM2, per [PROJECT_HANDOFF.md](../../../Dance_trainer_logseq/pages/PROJECT_HANDOFF.md)), these same three colors are the home for richer "on track / due / overdue" state — extend this system rather than inventing a second one.
+Label chips get their text color **per label color**, from `LABEL_TEXT_COLORS` in `src/lib/labelColors.ts` — no single value clears all six fills (white passes on rose/denim/plum, fails on brass/ochre/sage, which take ink instead), and `sage` needed its fill lightened to `#7d9a7a` on top of that. Don't collapse those back to one color.
+
+Before changing any color, read the contrast pass in `Dance_trainer_logseq/pages/archive/UX Batches 2026-07.md` (Batch 6) — every value above was measured there, and the reasoning for the ones that were *rejected* is recorded too.
+
+The good/due/overdue trio **is wired into cards** via the due date (`dueStatus`/`dueLabel` in `src/lib/dates.ts` → the status rail below). If richer training state is ever surfaced, these three colors are its home — extend this system rather than inventing a second one. Note the scheduling model is a **Leitner box**: a card's state is the column it sits in plus a due date, and there are no levels, ease factors or SM2 anywhere. The 5-status / SM2 / focus-XP model in `pages/archive/PROJECT_HANDOFF.md` was designed and then explicitly declined — don't design indicators for it.
 
 **Type**: `Space Grotesk` (600–700) for display/headlines *and card titles* — a technical geometric sans, deliberately not the rounder Poppins/friendly-marketing feel. `Work Sans` for body/UI text. `Space Mono` for anything data-shaped: dates, invite codes, counts.
 

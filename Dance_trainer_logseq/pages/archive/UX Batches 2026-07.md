@@ -1,3 +1,4 @@
+- **Archived record of the 2026-07 UX pass — all eight batches shipped (v0.7.0, 2026-07-21).** Kept for the reasoning: what was decided against and why, where the critique was factually wrong, and what shipped short of plan. It is not a work list — anything still open from this pass was moved to [[Open Work]] on 2026-07-25.
 - Prioritised UX backlog from the 2026-07-21 `/impeccable critique` run over three surfaces: the board view, the [[Practice Companion View]] and the card modal ([[Card Notes]]). Scored **17/40** on Nielsen's heuristics.
 - Full report with measurements, persona walkthroughs and the heuristic table lives at `.impeccable/critique/2026-07-21T10-38-37Z__dance-trainer-vue-src.md`. This page is the actionable subset; re-run the critique after fixes to see the score move.
 - **All eight batches shipped 2026-07-21 (v0.7.0)**, on branch `ux-batch-implementation`. Deviations from the agreed plan and defects found while building it are in "## Found while implementing" below.
@@ -89,8 +90,7 @@
 	- ### Shipped short of the plan
 		- **Toasts got no recovery action.** Dismiss, a 10s hold for errors, variants, and demoting the raw Supabase string below a headline all shipped. A retry action needs the failed operation as a callback at each of the 28 `show()` call sites, and was not built.
 		- **Error copy is still generic.** Every error reads "That didn't go through" with the raw Supabase string as detail underneath. Per-action copy (`Could not rename that column`) means editing all 28 call sites in `boardStore.ts` / `authStore.ts` — mechanical, not done.
-		- TODO Per-action error copy at the 28 `show()` call sites, and retry actions on the operations where a retry is meaningful.
-		- TODO Board name still truncates at phone width. Needs `.mode-switch` to shrink (icons, or a narrower control) — the only remaining candidate.
+		- Both carried to [[Open Work]] (2026-07-25): per-action error copy + retry actions, and the board name truncating at phone width.
 - ## Decided against
 	- CANCELED **Auto-seeding the session.** The critique wanted a primary "Start with today's due cards" that seeds the queue in one tap. Rejected outright: *"I just want to see what's due and be able to quickly choose stuff that I want to practise. I don't want any automatic seeding."* This is why Batch 2 (the drawer) is the real P0 rather than the empty state.
 	- CANCELED **Midnight session expiry.** Superseded by the continuous work model above.
@@ -119,9 +119,8 @@
 	- DONE Add-drawer list shifted under the finger on every tap. `.added-section` is now always rendered at `height: clamp(200px, 30vh, 270px)` instead of appearing on first add, and the browse list is a `TransitionGroup` — the leaving row goes `position: absolute` and fades over 120ms while the rows below slide up via FLIP over 180ms. The 48px distance is unchanged; it's now trackable. See [[Practice Companion View]].
 		- Rejected: marking rows added in place (zero movement, but duplicates each card into both the panel and the list).
 - ## Not scheduled
-	- Empty columns render as `0` + `+ Add Card`. *"Nothing due today"* is arguably the single most valuable message this app can display, and it currently shows as blank space.
-	- The Practice surfaces have no desktop treatment — `position: fixed; inset: 0` with top-left content, so at 1440px they're a full-viewport black rectangle with a 40px badge in the corner. Either constrain to a centred column above ~700px, or hide the mode toggle on desktop. Batch 1's mode persistence makes this reachable more often.
-	- All contextual help lives in `title=` attributes, which do nothing on the touch device this is built for.
+	- Three items were noted and left unscheduled — empty columns showing a bare `0`, the Practice surfaces having no desktop treatment, and contextual help living only in `title=` attributes. All three moved to [[Open Work]] on 2026-07-25.
 - ## Coverage gaps in the critique itself
+	- Both gaps below are still open as of 2026-07-25 and are tracked in [[Open Work]] under "Verification debt".
 	- `resize_window` doesn't work in this environment (the tiling WM ignores it), so all mobile measurement ran inside a same-origin 390px iframe. Media queries and layout evaluate faithfully — but **real touch behaviour was never verified**: long-press-to-drag, `navigator.vibrate` haptics, `env(safe-area-inset-*)` padding, iOS Safari's 16px zoom guard, and the PWA install/resume path are all unreviewed.
 	- No Delete control was clicked anywhere, because native `window.confirm()` freezes the CDP connection for 30s+ per call. No destructive-flow copy or confirm wording was reviewed. Worth a manual pass — deleting a board is the app's most destructive action and has no undo and no type-the-name step.

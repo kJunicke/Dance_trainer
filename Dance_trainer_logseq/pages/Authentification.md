@@ -1,2 +1,0 @@
-- Supabase creates a auth table on it's own [[Tables]]
--
