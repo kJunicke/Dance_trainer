@@ -168,13 +168,24 @@ export interface MarkdownBlock {
   html: string
 }
 
+// Zero-width and non-breaking characters render as nothing but survive trim(),
+// so a paragraph made only of them looks like an empty block that can't be got
+// rid of. Notes pasted out of Confluence are full of them.
+const INVISIBLE = /[\s\u00a0\u200b-\u200d\u2060\ufeff]/g
+
+export function hasVisibleContent(text: string): boolean {
+  return text.replace(INVISIBLE, '') !== ''
+}
+
 export function splitBlocks(source: string): MarkdownBlock[] {
   const out: MarkdownBlock[] = []
   let offset = 0
   // `space` tokens carry source length but render to nothing, so they advance
-  // the offset only — same rule blockAt() uses to keep the mapping in step.
+  // the offset only — same rule blockAt() uses to keep the mapping in step. A
+  // token with nothing visible in it is treated the same way: it would render
+  // as a blank, unremovable block with an invisible character inside.
   for (const token of marked.lexer(source)) {
-    if (token.type === 'space') {
+    if (token.type === 'space' || !hasVisibleContent(token.raw)) {
       offset += token.raw.length
       continue
     }
@@ -182,6 +193,24 @@ export function splitBlocks(source: string): MarkdownBlock[] {
     offset += token.raw.length
   }
   return out
+}
+
+// The separator that has to follow `body` for it to stay its own block once
+// `after` is spliced back on, given the `trailing` newlines the block already
+// owned. marked keeps the blank lines *between* blocks in their own `space`
+// tokens, so a block's raw usually stops at its last character and re-adding a
+// separator unconditionally stacks another blank line into the gap on every
+// save — hence preferring what's already there.
+//
+// But a single newline ends a heading or a list and not a paragraph, so
+// rewriting `### Head` into plain text with the next line glued underneath
+// would swallow that line into the same block. The lexer is the authority on
+// which constructs self-terminate, so ask it rather than keeping a list here.
+export function blockSeparator(body: string, after: string, trailing: string): string {
+  const sep = trailing || (after.startsWith('\n') ? '' : after ? '\n\n' : '\n')
+  if (!after) return sep
+  const first = marked.lexer(body + sep + after)[0]
+  return first && first.raw.length <= body.length + sep.length ? sep : '\n\n'
 }
 
 // Caret offset within `raw` for a click inside that block's rendered element.

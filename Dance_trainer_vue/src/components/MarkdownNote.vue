@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
-import { splitBlocks, caretOffsetInBlock, focusAtOffset } from '@/lib/markdown'
+import {
+  splitBlocks,
+  caretOffsetInBlock,
+  focusAtOffset,
+  hasVisibleContent,
+  blockSeparator,
+} from '@/lib/markdown'
 
 const props = defineProps<{
   source: string
@@ -17,10 +23,6 @@ const blocks = computed(() => splitBlocks(props.source))
 // block — how a new paragraph gets appended to a note that's already long.
 const editingIndex = ref<number | null>(null)
 const draft = ref('')
-// Newlines marked stored on the block's raw. They're structure, not content, so
-// they're held back from the textarea and restored on save — otherwise editing
-// a paragraph eats the blank line after it and welds it onto the next block.
-const draftTrailing = ref('')
 const editHeight = ref(0)
 // Plain function refs rather than `ref="…"`: a template ref registered inside
 // v-for is collected into an array, and only ever one editor is open.
@@ -65,8 +67,8 @@ function targetAt(index: number): { start: number; raw: string } {
 // the wrong block or nothing at all.
 //
 // So the click is resolved here, against the layout as it still stands, and
-// carried across the reflow as a source offset: pixel coordinates and block
-// indices both go stale when the note reflows, a source offset doesn't.
+// carried across the reflow as the target block's *start offset* rather than
+// its index or its pixels — both of which go stale when the note reflows.
 async function startEdit(index: number, e: MouseEvent) {
   const el = e.currentTarget as HTMLElement
   const block = blocks.value[index]
@@ -78,26 +80,32 @@ async function startEdit(index: number, e: MouseEvent) {
   // gesture that opened it. It also keeps the previous editor focused until
   // we've read the layout below, since blur is what commits it.
   e.preventDefault()
-  let offset = block.start + caretOffsetInBlock(el, e, block.raw)
+  const caret = caretOffsetInBlock(el, e, block.raw)
+  let start = block.start
 
   if (editingIndex.value !== null) {
     const open = targetAt(editingIndex.value)
     // Text before the edited block keeps its offsets; text after it shifts by
     // however much that block grew or shrank.
-    if (open.start < block.start) offset += pendingReplacement().length - open.raw.length
+    if (open.start < start) start += pendingReplacement().length - open.raw.length
     saveEdit()
     await nextTick()
   }
-  openAt(offset)
+  openAt(start, caret)
 }
 
-// Open the block containing `sourceOffset`, caret at that offset. Resolving the
-// block by offset rather than by index keeps this correct even when the save
-// that just ran changed how many blocks there are.
-async function openAt(sourceOffset: number) {
+// Open the block starting at `start`, caret `caret` characters into its raw
+// source. Matching on the start offset — not on "the block containing this
+// offset" — is what keeps a click on a block's last word from opening the block
+// below: a caret at the very end of a block is also the first offset of the
+// next one, and a click in the slack to the right of a short line resolves
+// there every time.
+async function openAt(start: number, caret: number) {
   const list = blocks.value
-  let index = list.findIndex((b) => sourceOffset < b.start + b.raw.length)
-  if (index < 0) index = list.length - 1
+  let index = list.findIndex((b) => b.start === start)
+  // The save that just ran can re-lex the text around it, so if the block no
+  // longer starts exactly there, take whichever one now covers that offset.
+  if (index < 0) index = list.findIndex((b) => start < b.start + b.raw.length)
   const block = list[index]
   if (!block) return
   const trailing = block.raw.match(/\n*$/)?.[0] ?? ''
@@ -105,19 +113,15 @@ async function openAt(sourceOffset: number) {
 
   editHeight.value = blockElAt(index)?.offsetHeight ?? 0
   draft.value = body
-  draftTrailing.value = trailing
   editingIndex.value = index
   await nextTick()
   autosize()
-  if (editorEl.value) {
-    focusAtOffset(editorEl.value, Math.min(Math.max(sourceOffset - block.start, 0), body.length))
-  }
+  if (editorEl.value) focusAtOffset(editorEl.value, Math.min(caret, body.length))
 }
 
 async function startAppend() {
   if (editingIndex.value !== null) saveEdit()
   draft.value = ''
-  draftTrailing.value = ''
   editHeight.value = 0
   editingIndex.value = blocks.value.length
   await nextTick()
@@ -125,16 +129,28 @@ async function startAppend() {
   editorEl.value?.focus()
 }
 
+// The text the open editor will splice in over its block's raw source —
+// separator included, since what follows the block has to keep lexing as its
+// own block. Empty when the block has been emptied, which deletes it.
 function pendingReplacement(): string {
+  const index = editingIndex.value
+  if (index === null || !hasVisibleContent(draft.value)) return ''
+  const { start, raw } = targetAt(index)
   const body = draft.value.trim()
-  if (!body) return ''
-  const replacement = body + (draftTrailing.value || '\n\n')
+  const sep = blockSeparator(
+    body,
+    props.source.slice(start + raw.length),
+    raw.match(/\n*$/)?.[0] ?? '',
+  )
   // Appending onto a note whose last block has no trailing blank line: add the
   // separator so the new text lexes as its own block instead of merging.
-  if (isAppending.value && props.source.length && !props.source.endsWith('\n\n')) {
-    return (props.source.endsWith('\n') ? '\n' : '\n\n') + replacement
-  }
-  return replacement
+  const prefix =
+    isAppending.value && props.source.length && !props.source.endsWith('\n\n')
+      ? props.source.endsWith('\n')
+        ? '\n'
+        : '\n\n'
+      : ''
+  return prefix + body + sep
 }
 
 function saveEdit() {
