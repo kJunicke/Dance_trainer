@@ -1,12 +1,28 @@
-- ## Spec
-	- [[PROJECT_HANDOFF]] — **Superseded** v1→v2 brief: 5-status system, SM2, focus XP — none of it built. Kept as the record of what was designed; don't implement from it
+- The index. Read this first, then open only the page(s) a summary points you at.
+- ## Work
+	- [[Open Work]] — the single list of everything deferred: known-wrong behaviour, unconfirmed findings, deferred features, verification debt. Anything you defer goes here, not as a `TODO` on a feature page
 - ## Schema
-	- [[Tables]] — DB schema: profiles, boards/columns/cards, labels, ownership, RLS policies, import/export formats
+	- [[Tables]] — DB schema: profiles, boards/columns/cards, labels, ownership, RLS policies, the column-automation fields, import/export formats
 - ## Backend
-	- [[Supabase]] — Migration gotchas (grants, constraint ordering), RLS/grant patterns, GitHub auto-deploy caveats
-	- [[Authentification]] — Supabase auth table vs profiles table
+	- [[Supabase]] — Migration gotchas (grants, constraint ordering, filename versions), RLS/grant patterns, GitHub auto-deploy caveats
 - ## Feature
-	- [[Practice Companion View]] — Mobile practice-session companion screen (design + spec, in progress)
-	- [[Card Notes]] — The card `description` field: markdown render pipeline, per-surface treatments, click-to-edit and save model
-- ## Review
-	- [[UX Backlog]] — The agreed eight-batch plan from the 2026-07-21 critique (17/40) and its follow-up interview: what's being built, what was decided against, and where the critique was factually wrong
+	- [[Board View]] — the Kanban surface: the two drag systems and why touch is hand-rolled, hit-testing, edge auto-scroll, the quick-move bar, the store's optimistic/revert and per-card write queue, what `moveCard` does to the schedule, board select and joining, toasts
+	- [[Practice Companion View]] — mobile practice-session companion: the continuous session model, add drawer, Session Review
+	- [[Card Notes]] — the card `description` field: markdown render pipeline, the shared `MarkdownNote.vue` component and its `--note-*` theming API, per-block inline editing and save model
+- ## Archive — superseded, never build from these
+	- [[PROJECT_HANDOFF]] — v1→v2 brief: 5-status system, SM2, focus XP. None of it built, and SM2 was explicitly declined. Kept as the record of what was designed
+	- [[UX Batches 2026-07]] — the eight-batch UX pass of 2026-07-21, all shipped. Valuable for what was *decided against* and where the critique was factually wrong; its open items moved to [[Open Work]]
+- ## Code map — which page owns which source
+	- Route by the file you're about to touch. `none yet` is honest, not an oversight: it means the reasoning lives only in the code and git history, and a page is worth writing if you go deep there.
+	- `views/BoardView.vue`, `components/KanbanColumn.vue`, `components/TaskCard.vue`, `components/ColumnSettingsModal.vue` → [[Board View]] — except `TaskCard`'s description rendering, which is [[Card Notes]] (it renders the shared `MarkdownNote` component read-only)
+	- `stores/boardStore.ts` → [[Board View]] for the persistence model and move behaviour, [[Tables]] for what the fields mean
+	- `views/BoardSelectView.vue` + the invite/join flow → [[Board View]] ("Board select and joining"), [[Supabase]] for the RLS behind it
+	- `views/PracticeView.vue`, `components/Practice*.vue`, `stores/practiceSessionStore.ts` → [[Practice Companion View]] — except `PracticeFocusCard`'s description editing, which is [[Card Notes]] (it renders the shared `MarkdownNote` component, same as the card modal)
+	- `components/CardModal.vue`, `components/MarkdownNote.vue`, `lib/markdown.ts` → [[Card Notes]]
+	- `lib/boardFormat.ts`, `lib/trelloFormat.ts` → [[Tables]] ("Board import/export")
+	- `lib/dates.ts` → [[Tables]] for the scheduling fields it reads, [[Board View]] for `sweepDueCards` and the on-enter rules
+	- `stores/toastStore.ts`, `components/ToastStack.vue` → [[Board View]] ("Toasts")
+	- `supabase/migrations/` → [[Supabase]] for the rules a migration must follow, [[Tables]] for what each one added
+	- `assets/tokens.css`, `lib/labelColors.ts`, and anything visual → **not in this wiki**: `.claude/skills/dance-trainer-design-system/` holds the conventions, `PRODUCT.md` the principles and rejected directions. The contrast measurements behind the current values are in [[UX Batches 2026-07]] Batch 6
+	- `views/LoginView.vue`, `stores/authStore.ts` → none yet
+	- `router/index.ts`, `lib/useBackButtonClose.ts`, PWA / `vite.config.ts` → none yet; the deployment constraint is in `CLAUDE.md`

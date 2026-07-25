@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useBoardStore } from '@/stores/boardStore'
-import { caretOffsetFromClick, focusAtOffset, renderMarkdownWithLinkChips } from '@/lib/markdown'
+import MarkdownNote from './MarkdownNote.vue'
 import { LABEL_COLORS, LABEL_TEXT_COLORS } from '@/lib/labelColors'
 import { useBackButtonClose } from '@/lib/useBackButtonClose'
 
@@ -18,7 +18,7 @@ const store = useBoardStore()
 // Any close path (X, backdrop, Escape, phone back-gesture) flushes an in-progress
 // description edit instead of discarding it.
 function closeModal() {
-  if (editingDescription.value) saveDescription()
+  noteEl.value?.flush()
   emit('close')
 }
 
@@ -31,13 +31,10 @@ const cardLabelIds = computed(
   () => new Set(store.labelsForCard(props.cardId).map((l) => l.id)),
 )
 
-const descriptionDraft = ref('')
-const editingDescription = ref(false)
-// Keep in sync with .desc-textarea's min-height in this file's styles.
-const DESC_MIN_EDIT_HEIGHT = 180
-const descPreviewEl = ref<HTMLElement | null>(null)
-const descTextareaEl = ref<HTMLTextAreaElement | null>(null)
-const editHeight = ref(0)
+const noteEl = ref<{ flush: () => void } | null>(null)
+// Delete lives behind a ⋯ menu so destroying a card takes two deliberate taps.
+const menuOpen = ref(false)
+const modalActionsEl = ref<HTMLElement | null>(null)
 const titleDraft = ref('')
 const editingTitle = ref(false)
 const titleInputEl = ref<HTMLInputElement | null>(null)
@@ -45,56 +42,10 @@ watch(
   card,
   (c) => {
     if (!c) { emit('close'); return }
-    descriptionDraft.value = c.description ?? ''
     if (!editingTitle.value) titleDraft.value = c.name
   },
   { immediate: true },
 )
-
-// Entering edit mode must not move the text under the pointer: the textarea
-// adopts the height the preview just had (both are border-box, so offsetHeight
-// transfers directly), and the caret lands on the word that was clicked rather
-// than at the top or the end of the source.
-async function startEditDescription(e: MouseEvent) {
-  const preview = descPreviewEl.value
-  // Only override when the preview was taller than the textarea's own floor —
-  // a short or empty description would otherwise inline a min-height *below*
-  // the CSS one and shrink the writing surface.
-  const measured = preview?.offsetHeight ?? 0
-  editHeight.value = measured > DESC_MIN_EDIT_HEIGHT ? measured : 0
-
-  // Resolved before the preview is torn down — it reads the rendered layout.
-  const body = preview?.querySelector('.md-body')
-  const offset = body
-    ? caretOffsetFromClick(body, e, descriptionDraft.value)
-    : descriptionDraft.value.length
-
-  editingDescription.value = true
-  await nextTick()
-  const el = descTextareaEl.value
-  if (!el) return
-  focusAtOffset(el, offset)
-}
-
-function saveDescription() {
-  store.updateCardDescription(props.cardId, descriptionDraft.value)
-  // Deferred a tick: this also fires on blur, which happens as soon as the user's
-  // click lands on the next element (e.g. the Save button itself, or Delete card).
-  // Collapsing the textarea synchronously here would shift that element out from
-  // under the pointer before its own click completed, silently swallowing the tap.
-  setTimeout(() => { editingDescription.value = false }, 0)
-}
-
-function onDescriptionKeydown(e: KeyboardEvent) {
-  if (e.key !== 'Tab') return
-  e.preventDefault()
-  const el = e.target as HTMLTextAreaElement
-  const { selectionStart, selectionEnd, value } = el
-  descriptionDraft.value = value.slice(0, selectionStart) + '\t' + value.slice(selectionEnd)
-  nextTick(() => {
-    el.selectionStart = el.selectionEnd = selectionStart + 1
-  })
-}
 
 async function startEditTitle() {
   titleDraft.value = card.value?.name ?? ''
@@ -144,8 +95,15 @@ const labelInputEl = ref<HTMLInputElement | null>(null)
 const labelFieldEl = ref<HTMLElement | null>(null)
 
 // Click anywhere outside the labels field while the adder is open closes it —
-// it's an inline popover, not a modal of its own.
+// it's an inline popover, not a modal of its own. Same for the ⋯ menu.
 function onDocumentClick(e: MouseEvent) {
+  if (
+    menuOpen.value &&
+    modalActionsEl.value &&
+    !modalActionsEl.value.contains(e.target as Node)
+  ) {
+    menuOpen.value = false
+  }
   if (!addingLabel.value) return
   if (labelFieldEl.value && !labelFieldEl.value.contains(e.target as Node)) {
     addingLabel.value = false
@@ -204,7 +162,14 @@ function onBackdropClick(event: MouseEvent) {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') closeModal()
+  if (event.key !== 'Escape') return
+  // Backing out of the ⋯ menu shouldn't also throw away the card you were
+  // looking at — Escape dismisses the menu first, the modal only after.
+  if (menuOpen.value) {
+    menuOpen.value = false
+    return
+  }
+  closeModal()
 }
 
 // Escape only reaches the backdrop's keydown handler if something inside the
@@ -220,7 +185,13 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 <template>
   <div ref="backdropEl" class="backdrop" @click="onBackdropClick" @keydown="onKeydown" tabindex="-1">
     <div v-if="card" class="modal">
-      <button class="close-btn" title="Close" @click="closeModal">×</button>
+      <div ref="modalActionsEl" class="modal-actions">
+        <button class="menu-btn" title="More actions" @click="menuOpen = !menuOpen">⋯</button>
+        <button class="close-btn" title="Close" @click="closeModal">×</button>
+        <div v-if="menuOpen" class="overflow-menu">
+          <button class="menu-item danger" @click="menuOpen = false; deleteCard()">Delete card</button>
+        </div>
+      </div>
       <input
         v-if="editingTitle"
         ref="titleInputEl"
@@ -323,29 +294,16 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         </div>
       </section>
 
-      <section class="field desc-field">
+      <section class="field">
         <label class="field-label">Description</label>
-        <div v-if="editingDescription">
-          <textarea
-            ref="descTextareaEl"
-            class="desc-textarea"
-            :style="editHeight ? { minHeight: editHeight + 'px' } : undefined"
-            v-model="descriptionDraft"
-            placeholder="Markdown supported"
-            @keydown="onDescriptionKeydown"
-            @blur="saveDescription"
+        <div class="desc-preview">
+          <MarkdownNote
+            ref="noteEl"
+            :source="card.description ?? ''"
+            @update:source="(v: string) => store.updateCardDescription(props.cardId, v)"
           />
-          <div class="desc-actions">
-            <button @click="saveDescription">Save</button>
-          </div>
-        </div>
-        <div v-else ref="descPreviewEl" class="desc-preview" @click="startEditDescription">
-          <p v-if="!card.description" class="placeholder">Click to add a description…</p>
-          <div v-else class="md-body" v-html="renderMarkdownWithLinkChips(card.description)" />
         </div>
       </section>
-
-      <button class="delete-card-btn" @click="deleteCard">Delete card</button>
     </div>
   </div>
 </template>
@@ -374,10 +332,17 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
   max-width: 720px;
 }
 
-.close-btn {
+.modal-actions {
   position: absolute;
   top: 12px;
   right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.close-btn,
+.menu-btn {
   width: 28px;
   height: 28px;
   border: none;
@@ -388,12 +353,55 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
   opacity: 0.5;
 }
 
-.close-btn:hover {
+.close-btn:hover,
+.menu-btn:hover {
   opacity: 1;
 }
 
+/* Anchored to the actions row's RIGHT edge so it grows leftward, into the
+   modal. Anchoring it left grows it rightward instead: the row is only as wide
+   as its two buttons and sits 12px from the modal's right edge, so on a
+   full-bleed phone sheet a third of the menu rendered past the viewport and
+   got clipped by .backdrop's overflow — with Delete now only reachable here,
+   that made the card undeletable. */
+.overflow-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 140px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-modal);
+  z-index: 1;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.menu-item.danger {
+  color: var(--color-overdue);
+}
+
+.menu-item.danger:hover {
+  background: color-mix(in srgb, var(--color-overdue) 12%, transparent);
+}
+
+/* Right margin clears the header button row (⋯ + ×), which grows on the phone
+   breakpoint — see the override there. Without it the title's first line runs
+   under the buttons and a tap meant for the title opens the menu. */
 .title {
-  margin: 0 32px 20px 0;
+  margin: 0 68px 20px 0;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 22px;
@@ -408,10 +416,15 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
   background: var(--color-surface-light);
 }
 
+/* Same header clearance as .title, but taken out of the width rather than as a
+   right margin: with width:100% the box is over-constrained and LTR silently
+   drops margin-right, so the field spanned the full content box and ran under
+   the buttons painted on top of it — the caret at the end of a long title sat
+   behind the ⋯, and a tap there opened the menu instead of placing it. */
 .title-input {
   display: block;
-  width: 100%;
-  margin: 0 32px 20px 0;
+  width: calc(100% - 68px);
+  margin: 0 0 20px;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 22px;
@@ -645,157 +658,38 @@ input[type='date'] {
   color: var(--color-ink-dim);
 }
 
-.desc-textarea {
-  width: 100%;
-  font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.5;
-  min-height: 180px;
-  padding: 12px;
-  box-sizing: border-box;
-  resize: vertical;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  color: var(--color-ink);
-}
+/* MarkdownNote ships the markdown typography itself; what stays here is the
+   palette it themes off, in the modal's light --color-* tokens.
 
-.desc-actions {
-  margin-top: 8px;
-  display: flex;
-  gap: 8px;
-}
+   --note-ink is full ink rather than dim so blockquotes, tables and bare text
+   nodes inherit a readable colour; the dim treatment is the exception (the
+   placeholder / + add row), never the default.
 
-.desc-actions button {
-  padding: 6px 14px;
-  border: 1px solid var(--color-ember);
-  border-radius: var(--radius-sm);
-  background: var(--color-ember);
-  color: var(--color-text-on-ember);
-  font-weight: 600;
-  cursor: pointer;
-}
+   The chip is --color-ember-text on a *10%* ember fill, not --color-ember on
+   18%: ember-as-text is only 3.30:1 on white, and ember-text on the heavier
+   tint is 4.17:1 — both under the floor these 10px chips need, where the
+   lighter tint clears it at 4.52:1. The chip's head-truncation (and why it
+   truncates from the head at all) travels with the chip rule into
+   MarkdownNote.vue; --note-chip-max is the width it clips at.
 
+   No max-height any more: the notes field grows to its natural height and the
+   modal itself scrolls (the backdrop on desktop, the full-screen sheet on a
+   phone). The old 280/440px cap existed only to keep the destructive Delete
+   button reachable below it, and Delete now lives in the header's ⋯ menu. */
 .desc-preview {
+  --note-font-size: 14px;
+  --note-ink: var(--color-ink);
+  --note-ink-dim: var(--color-ink-dim);
+  --note-accent: var(--color-ember-text);
+  --note-accent-bg: color-mix(in srgb, var(--color-ember) 10%, transparent);
+  --note-hover-bg: var(--color-surface-light);
+  --note-editor-bg: var(--color-bg);
+  --note-editor-border: var(--color-ember);
+  --note-chip-max: 40vw;
   min-height: 40px;
-  max-height: 280px;
-  overflow-y: auto;
   padding: 12px;
   border-radius: var(--radius-sm);
-  font-size: 14px;
   line-height: 1.5;
-  /* Base is full ink so blockquotes, tables and bare text nodes inherit a
-     readable colour; the dim treatment is the exception, not the default. */
-  color: var(--color-ink);
-  cursor: pointer;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
-}
-
-.desc-preview:hover {
-  background: var(--color-surface-light);
-}
-
-.desc-preview :deep(.placeholder) {
-  color: var(--color-ink-dim);
-  margin: 0;
-}
-
-.desc-preview :deep(p) {
-  margin: 0 0 8px;
-}
-
-.desc-preview :deep(ul),
-.desc-preview :deep(ol) {
-  margin: 0 0 8px;
-  padding-left: 20px;
-}
-
-/* Heading sizing/weight is the shared em-relative block in assets/tokens.css,
-   which keys off .desc-preview. The 14px base above is what it scales from. */
-
-.desc-preview :deep(code) {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  background: color-mix(in srgb, var(--color-ink) 8%, transparent);
-  padding: 1px 4px;
-  border-radius: var(--radius-sm);
-}
-
-/* Truncated from the HEAD, not the tail. A Nextcloud share URL is ~280px wide
-   and its first 156px are the same host on every link, so clipping the tail
-   rendered six different links as six identical `https://team.jive.berli`
-   pills. `direction: rtl` puts the overflow edge — and the ellipsis — at the
-   start, so the distinguishing `…/s/k7jWymo` is what survives; `text-align:
-   left` keeps a short URL flush against the ▶ instead of drifting right. A URL
-   is one strong-LTR run, so the RTL paragraph direction reorders nothing inside
-   it (a trailing `/` is the one neutral that would move, and it lands in the
-   clipped head).
-
-   inline-block, not inline-flex: text-overflow only applies to block
-   containers, so on the old flex container the text was an anonymous flex item
-   and the ellipsis never rendered — it was a hard clip. The ▶ is taken out of
-   the inline flow so the RTL direction can't pull it to the far side.
-
-   The fill is 10% ember rather than 18%: --color-ember-text is 4.52:1 on the
-   lighter tint but only 4.17:1 on the heavier one, i.e. still short of the text
-   floor these 10px chips need. */
-.desc-preview :deep(.md-link-chip) {
-  display: inline-block;
-  position: relative;
-  max-width: 40vw;
-  padding: 2px 8px 2px 19px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-ember) 10%, transparent);
-  color: var(--color-ember-text);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: middle;
-  direction: rtl;
-  text-align: left;
-}
-
-.desc-preview :deep(.md-link-chip::before) {
-  content: '▶';
-  position: absolute;
-  top: 50%;
-  left: 8px;
-  transform: translateY(-50%);
-  font-size: 8px;
-}
-
-.desc-field {
-  padding-bottom: 16px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.delete-card-btn {
-  padding: 8px 14px;
-  border: 1px solid var(--color-overdue);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-overdue);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.delete-card-btn:hover {
-  background: color-mix(in srgb, var(--color-overdue) 12%, transparent);
-}
-
-/* Desktop has vertical room to spare, so let the notes — the field people
-   actually work in — use more of it before the internal scrollbar kicks in.
-   Editing inherits this via the preview-height transfer in startEditDescription,
-   so the textarea grows to match. The phone sheet keeps the tighter 280px cap. */
-@media (min-width: 641px) {
-  .desc-preview {
-    max-height: 440px;
-  }
 }
 
 /* On a phone the modal becomes a full-screen sheet. */
@@ -813,10 +707,21 @@ input[type='date'] {
     padding: 20px 16px;
   }
 
-  .close-btn {
+  .close-btn,
+  .menu-btn {
     width: 40px;
     height: 40px;
     font-size: 24px;
+  }
+
+  /* Two 40px targets plus the row's own inset, measured from the sheet's
+     narrower 16px padding. */
+  .title {
+    margin-right: 84px;
+  }
+
+  .title-input {
+    width: calc(100% - 84px);
   }
 
   .label-chip {

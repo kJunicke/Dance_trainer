@@ -15,27 +15,7 @@ export function renderMarkdown(source: string): string {
   })
 }
 
-// Where the nth rendered block starts in `source`, and its raw text. Uses
-// marked's own lexer rather than splitting on blank lines: a run of headings
-// with no blank line between them is one blank-line chunk but three rendered
-// elements, which would knock the mapping out of step. `space` tokens carry
-// source length but render to nothing, so they advance the offset only.
-function blockAt(source: string, blockIndex: number): { start: number; raw: string } | null {
-  let offset = 0
-  let rendered = 0
-  for (const token of marked.lexer(source)) {
-    if (token.type === 'space') {
-      offset += token.raw.length
-      continue
-    }
-    if (rendered === blockIndex) return { start: offset, raw: token.raw }
-    rendered++
-    offset += token.raw.length
-  }
-  return null
-}
-
-// Source offset for a click that landed `renderedPrefix` characters into the
+// Offset into `raw` for a click that landed `renderedPrefix` characters into the
 // block's *rendered* text. Walks source and prefix together, consuming a prefix
 // character on every match, so markup the reader never sees (`**`, `# `, `- `,
 // a link's `](url)`) is stepped over without being counted.
@@ -49,23 +29,21 @@ function blockAt(source: string, blockIndex: number): { start: number; raw: stri
 // equal the next visible character can consume it early — `*` in `**a*b**` and
 // the like. The caret then sits a character or two off inside the right word,
 // which is a far smaller miss than the block-start approximation this replaces.
-function sourceOffsetAt(source: string, blockIndex: number, renderedPrefix: string): number {
-  const block = blockAt(source, blockIndex)
-  if (!block) return source.length
+function offsetInRaw(raw: string, renderedPrefix: string): number {
   const wanted = renderedPrefix.replace(/\s+/g, '')
   // Clicked before the first visible character — the leading `## ` or `- ` is
   // markup, so the block's own start is the honest answer.
-  if (!wanted) return block.start
+  if (!wanted) return 0
   let matched = 0
-  for (let i = 0; i < block.raw.length; i++) {
-    const ch = block.raw.charAt(i)
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw.charAt(i)
     if (/\s/.test(ch)) continue
     if (ch === wanted[matched]) {
       matched++
-      if (matched === wanted.length) return block.start + i + 1
+      if (matched === wanted.length) return i + 1
     }
   }
-  return block.start + block.raw.length
+  return raw.length
 }
 
 // Chrome shipped caretPositionFromPoint only in 128; caretRangeFromPoint is the
@@ -96,59 +74,107 @@ function textBefore(block: Node, target: Node, offset: number): string {
   return out
 }
 
-// Caret offset in the markdown source for a click at the pointer's position
-// inside the rendered `body`. This is what makes the preview editable in place:
-// tap a word in a month-old note and the editor opens with the caret on that
-// word, instead of at the end of the source with the word to be hunted down
-// again among the markup.
-export function caretOffsetFromClick(body: Element, e: MouseEvent, source: string): number {
-  const pos = caretPositionFromPoint(e.clientX, e.clientY)
-  if (!pos || !body.contains(pos.node)) return source.length
-  // Up to the top-level block: nested inline nodes (<strong>, an <a> chip, a
-  // <li>) are all inside one lexer token, and it's the token index we need.
-  let node: Node | null = pos.node
-  while (node && node.parentNode !== body) node = node.parentNode
-  if (!node) return source.length
-  const blockIndex = Array.prototype.indexOf.call(body.children, node)
-  if (blockIndex < 0) return source.length
-  return sourceOffsetAt(source, blockIndex, textBefore(node, pos.node, pos.offset))
-}
-
-// Where the caret at `offset` sits vertically in `el`, measured with an
-// off-screen mirror that wraps text exactly as the textarea does (same width,
-// font metrics and tab size). Needed because Blink's setSelectionRange places
-// the caret but never scrolls it into view, and v-model parks a freshly-mounted
-// textarea scrolled to its bottom — so clicking near the top of a long note
-// opened the editor showing the note's *end* with the caret stranded off-screen
-// above. We centre the caret's line in the field instead.
-function scrollCaretIntoView(el: HTMLTextAreaElement, offset: number): void {
-  const s = getComputedStyle(el)
-  const mirror = document.createElement('div')
-  mirror.style.cssText =
-    'position:absolute;top:0;left:-9999px;visibility:hidden;white-space:pre-wrap;overflow-wrap:break-word;box-sizing:content-box'
-  mirror.style.width = `${el.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight)}px`
-  for (const p of ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize'] as const) {
-    mirror.style[p] = s[p]
-  }
-  mirror.textContent = el.value.slice(0, offset)
-  const marker = mirror.appendChild(document.createElement('span'))
-  marker.textContent = '​'
-  document.body.appendChild(mirror)
-  const caretTop = marker.offsetTop
-  mirror.remove()
-  const max = el.scrollHeight - el.clientHeight
-  el.scrollTop = Math.max(0, Math.min(caretTop - el.clientHeight / 2, max))
-}
-
-// Focus the note textarea with the caret at `offset` and that line centred.
-// `preventScroll` stops the browser from scrolling the surrounding modal to
-// reach the field — the field is already where the user just clicked; only the
-// textarea's own scroll needs adjusting, which scrollCaretIntoView handles.
-// Shared verbatim by both note surfaces (card modal, Practice Companion).
+// Focus the note textarea with the caret at `offset`.
+//
+// Nothing here scrolls, by explicit decision. The editor autosizes to its own
+// scrollHeight and the note field no longer caps its height, so the textarea
+// has no internal scroll left to adjust — which is why the mirror-measuring
+// scrollCaretIntoView() that used to live here is gone. Focus is deliberately
+// *not* `preventScroll`, so the browser's own focus-scrolling brings the field
+// into view: try the default first.
+//
+// Known risk, accepted for now rather than solved: the browser only guarantees
+// the *element* is scrolled into view, not the caret's line within it. A tall
+// block autosizes past the visual viewport, so a caret near its bottom can
+// still land off-screen — or behind the virtual keyboard on a phone. If that
+// bites, the fix is to scroll the caret's line in the *page*, not the textarea.
 export function focusAtOffset(el: HTMLTextAreaElement, offset: number): void {
-  el.focus({ preventScroll: true })
+  el.focus()
   el.setSelectionRange(offset, offset)
-  scrollCaretIntoView(el, offset)
+}
+
+// One top-level markdown block: where its source starts, its raw source, and
+// the HTML it renders to on its own. Splitting the note this way is what lets a
+// single block be swapped for a textarea while every other block stays rendered
+// — the reader keeps their visual anchor instead of the whole note flipping to
+// raw source on every small edit.
+export interface MarkdownBlock {
+  start: number
+  raw: string
+  html: string
+}
+
+// Zero-width and non-breaking characters render as nothing but survive trim(),
+// so a paragraph made only of them looks like an empty block that can't be got
+// rid of. Notes pasted out of Confluence are full of them.
+const INVISIBLE = /[\s\u00a0\u200b-\u200d\u2060\ufeff]/g
+
+export function hasVisibleContent(text: string): boolean {
+  return text.replace(INVISIBLE, '') !== ''
+}
+
+export function splitBlocks(source: string): MarkdownBlock[] {
+  const out: MarkdownBlock[] = []
+  let offset = 0
+  // marked's own lexer, not a split on blank lines: a run of headings with no
+  // blank line between them is one blank-line chunk but three rendered
+  // elements, which knocks the offset mapping out of step. `space` tokens carry
+  // source length but render to nothing, so they advance the offset only. A
+  // token with nothing visible in it is treated the same way: it would render
+  // as a blank, unremovable block with an invisible character inside.
+  for (const token of marked.lexer(source)) {
+    if (token.type === 'space' || !hasVisibleContent(token.raw)) {
+      offset += token.raw.length
+      continue
+    }
+    out.push({ start: offset, raw: token.raw, html: renderMarkdownWithLinkChips(token.raw) })
+    offset += token.raw.length
+  }
+  return out
+}
+
+// The separator that has to follow `body` for it to stay its own block once
+// `after` is spliced back on, given the `trailing` newlines the block already
+// owned. marked keeps the blank lines *between* blocks in their own `space`
+// tokens, so a block's raw usually stops at its last character and re-adding a
+// separator unconditionally stacks another blank line into the gap on every
+// save — hence preferring what's already there.
+//
+// But a single newline ends a heading or a list and not a paragraph, so
+// rewriting `### Head` into plain text with the next line glued underneath
+// would swallow that line into the same block. The lexer is the authority on
+// which constructs self-terminate, so ask it rather than keeping a list here.
+// That glued-heading case is what the escalation to '\n\n' below is for, and it
+// genuinely fixes it.
+//
+// What it cannot fix is a block rewritten into a list item next to an existing
+// list of the same marker: CommonMark dropped the old "a blank line ends a
+// list" rule, so 1, 2, 5 or 10 blank lines all lex as one list and no
+// separator this function can return will keep them apart. The consequence is
+// that the two merge into a single lexer token, i.e. a single editable block.
+// Deliberate: typing a bullet beside a list *means* joining it, it renders
+// correctly, and no bytes are lost — the alternative is injecting `<!-- -->`
+// separators, permanent noise in notes that are kept for years. Note also that
+// this function only ever inspects what *follows* the block, so the mirror case
+// — a block rewritten as a bullet with a list *above* it — isn't even detected.
+// Same accepted outcome.
+export function blockSeparator(body: string, after: string, trailing: string): string {
+  // Nothing follows: the block ends the note, so it needs no separator at all.
+  // Returning '\n' here appended one on the first no-op save of a source that
+  // didn't end in a newline.
+  const sep = trailing || (after.startsWith('\n') ? '' : after ? '\n\n' : '')
+  if (!after) return sep
+  const first = marked.lexer(body + sep + after)[0]
+  return first && first.raw.length <= body.length + sep.length ? sep : '\n\n'
+}
+
+// Caret offset within `raw` for a click inside that block's rendered element.
+// The caller already knows which block was hit, so there's no lexer index to
+// resolve — only the walk from rendered text back to source markup.
+export function caretOffsetInBlock(blockEl: Element, e: MouseEvent, raw: string): number {
+  const pos = caretPositionFromPoint(e.clientX, e.clientY)
+  if (!pos || !blockEl.contains(pos.node)) return raw.length
+  return offsetInRaw(raw, textBefore(blockEl, pos.node, pos.offset))
 }
 
 // Same markdown, but links keep their href and every one gets a distinct

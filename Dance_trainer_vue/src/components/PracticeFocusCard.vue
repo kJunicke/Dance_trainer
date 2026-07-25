@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import type { Card } from '@/stores/boardStore'
 import { useBoardStore } from '@/stores/boardStore'
-import { renderMarkdownWithLinkChips, caretOffsetFromClick, focusAtOffset } from '@/lib/markdown'
+import MarkdownNote from './MarkdownNote.vue'
 import { dueStatus, dueLabel } from '@/lib/dates'
 
 const props = defineProps<{
@@ -17,48 +17,15 @@ const dueText = computed(() => dueLabel(props.card.due_date))
 // above the bucket buttons, so this line is the evidence for the choice being
 // made there — "it was weekly and it went well, move it up a rung".
 const historyText = computed(() => store.cardHistoryLabel(props.card))
-const renderedNotes = computed(() =>
-  props.card.description ? renderMarkdownWithLinkChips(props.card.description) : '',
-)
 
-const editing = ref(false)
-const noteDraft = ref('')
-const textareaEl = ref<HTMLTextAreaElement | null>(null)
+const noteEl = ref<{ flush: () => void } | null>(null)
 
 // The parent keys this component by card.id (PracticeView.vue's focus-swap
 // transition), so a card change unmounts this instance rather than patching
 // its props — a mid-edit note would otherwise be silently dropped when that
-// happens. Flush it to the card it belonged to before teardown.
-onBeforeUnmount(() => {
-  if (editing.value) saveNote()
-})
-
-// The caret lands on the word that was tapped rather than at the end of the
-// note — editing a line halfway down a month-old note meant hunting for it
-// again in the raw markdown every time. Falls back to the end of the source
-// when the tap didn't resolve to rendered text (the placeholder, or padding).
-async function startEdit(e: MouseEvent) {
-  noteDraft.value = props.card.description ?? ''
-
-  const body = (e.currentTarget as HTMLElement).querySelector('.md-body')
-  const offset = body ? caretOffsetFromClick(body, e, noteDraft.value) : noteDraft.value.length
-
-  editing.value = true
-  await nextTick()
-  const el = textareaEl.value
-  if (!el) return
-  focusAtOffset(el, offset)
-}
-
-function saveNote(cardId = props.card.id) {
-  store.updateCardDescription(cardId, noteDraft.value)
-  // Deferred a tick: this fires on blur, which happens as soon as the user's
-  // tap lands on the *next* element (e.g. a Session Review bucket button).
-  // Collapsing the textarea synchronously here would shift that element out
-  // from under the pointer before its own click completed, silently
-  // swallowing the tap. The timeout lets that click land first.
-  setTimeout(() => { editing.value = false }, 0)
-}
+// happens. Flush it to the card it belonged to before teardown: the update
+// handler below still closes over the outgoing card while we're unmounting.
+onBeforeUnmount(() => noteEl.value?.flush())
 </script>
 
 <template>
@@ -74,19 +41,13 @@ function saveNote(cardId = props.card.id) {
     <h2 class="focus-title">{{ card.name }}</h2>
     <p v-if="historyText" class="focus-history">{{ historyText }}</p>
 
-    <div v-if="editing" class="note-edit">
-      <textarea
-        ref="textareaEl"
-        v-model="noteDraft"
-        placeholder="Notes, references, quick thoughts… markdown supported"
-        @blur="saveNote()"
+    <div class="note-field">
+      <MarkdownNote
+        ref="noteEl"
+        :source="card.description ?? ''"
+        placeholder="Tap to add notes or a reference link…"
+        @update:source="(v: string) => store.updateCardDescription(card.id, v)"
       />
-    </div>
-    <div v-else class="note-preview" @click="startEdit">
-      <p v-if="!card.description" class="placeholder">Tap to add notes or a reference link…</p>
-      <!-- .md-body is what startEdit walks up to, to identify which top-level
-           rendered block was tapped. -->
-      <div v-else class="md-body" v-html="renderedNotes" />
     </div>
   </div>
 </template>
@@ -163,102 +124,35 @@ function saveNote(cardId = props.card.id) {
    (Session Review's bucket buttons) further down the page, not have those
    buttons overlap the overflow. Natural block sizing plus the page's own
    scroll (practice-body / review) handles long content correctly; flex:1
-   here caused exactly that overlap. */
-/* Base is --pc-ink with .placeholder as the one dim exception. It was the
-   other way round — base dim, with p/ul/ol overridden back — which left
-   headings, blockquotes, tables and bare text nodes inheriting the dim colour,
-   so a markdown heading rendered quieter than the body under it. Same
-   inversion, same fix as .desc-preview in CardModal.vue: exceptions are opted
-   into, never out of. */
-.note-preview {
+   here caused exactly that overlap. The editor doesn't need the leftover room
+   any more either: editing is per-block now and the textarea autosizes to its
+   raw source rather than filling the card.
+
+   MarkdownNote ships the markdown typography; what stays here is the dark
+   --pc-* palette it themes off. --note-ink is full ink with the dim tone kept
+   for the placeholder / + add row. It was the other way round once — base dim,
+   with p/ul/ol overridden back — which left headings, blockquotes, tables and
+   bare text nodes inheriting the dim colour, so a markdown heading rendered
+   quieter than the body under it. Exceptions are opted into, never out of.
+
+   Chip colours stay on --pc-*, which already clears the text floor
+   (--pc-ember-light is 7.84:1 on the 18% tinted pill) — this palette never had
+   the modal's contrast problem. The head truncation that made six identical
+   share links tell each other apart travels with the chip rule into
+   MarkdownNote.vue; this is the surface where it mattered most, since those
+   links filled 60% of the focus card with the same clipped host. */
+.note-field {
+  --note-font-size: 14px;
+  --note-ink: var(--pc-ink);
+  --note-ink-dim: var(--pc-ink-dim);
+  --note-accent: var(--pc-ember-light);
+  --note-accent-bg: color-mix(in srgb, var(--pc-ember) 18%, transparent);
+  --note-hover-bg: var(--pc-surface);
+  --note-editor-bg: var(--pc-bg);
+  --note-editor-border: var(--pc-ember);
+  --note-chip-max: 40vw;
   min-height: 44px;
   padding: 4px 0;
-  color: var(--pc-ink);
-  font-size: 14px;
   line-height: 1.5;
-  cursor: pointer;
-}
-
-.note-preview .placeholder {
-  margin: 0;
-  color: var(--pc-ink-dim);
-  font-style: italic;
-}
-
-.note-preview :deep(p) {
-  margin: 0 0 8px;
-}
-
-.note-preview :deep(p:last-child) {
-  margin-bottom: 0;
-}
-
-.note-preview :deep(ul),
-.note-preview :deep(ol) {
-  margin: 0 0 8px;
-  padding-left: 18px;
-}
-
-/* Head truncation, same technique and same reasoning as the card modal's chip —
-   see the long comment on `.desc-preview :deep(.md-link-chip)` in CardModal.vue.
-   This is the surface where it mattered most: six share links filled 60% of the
-   focus card with the same clipped host. Colors stay on the dark --pc-* palette,
-   which already clears the text floor (--pc-ember-light is 7.84:1 on the tinted
-   pill), so only the truncation changes here. */
-.note-preview :deep(.md-link-chip) {
-  display: inline-block;
-  position: relative;
-  max-width: 40vw;
-  padding: 2px 8px 2px 19px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--pc-ember) 18%, transparent);
-  color: var(--pc-ember-light);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: middle;
-  direction: rtl;
-  text-align: left;
-}
-
-.note-preview :deep(.md-link-chip::before) {
-  content: '▶';
-  position: absolute;
-  top: 50%;
-  left: 8px;
-  transform: translateY(-50%);
-  font-size: 8px;
-}
-
-/* Editing fills whatever room the card has, rather than a small fixed box —
-   this is the primary thing done here, it should feel like a real writing
-   surface, not a cramped comment field. */
-.note-edit {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
-
-.note-edit textarea {
-  flex: 1;
-  min-height: 160px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px;
-  border: 2px solid var(--pc-ember);
-  border-radius: var(--radius-sm);
-  background: var(--pc-bg);
-  color: var(--pc-ink);
-  font-size: 15px;
-  line-height: 1.5;
-  font-family: var(--font-body);
-  resize: none;
-}
-
-.note-edit textarea:focus {
-  outline: none;
 }
 </style>

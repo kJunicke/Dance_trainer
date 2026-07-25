@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import { renderMarkdown } from '@/lib/markdown'
+import MarkdownNote from './MarkdownNote.vue'
 import { LABEL_COLORS, LABEL_TEXT_COLORS } from '@/lib/labelColors'
 import { dueStatus, dueLabel } from '@/lib/dates'
 
@@ -18,10 +18,6 @@ const emit = defineEmits<{
   'drag-move': [x: number, y: number]
   'drag-end': [x: number, y: number]
 }>()
-
-const descriptionHtml = computed(() =>
-  props.description ? renderMarkdown(props.description) : '',
-)
 
 const status = computed(() => dueStatus(props.dueDate))
 const dueText = computed(() => dueLabel(props.dueDate))
@@ -150,7 +146,12 @@ onUnmounted(() => {
       >{{ label.name }}</span>
     </div>
     <p class="task-title">{{ name }}</p>
-    <div v-if="description" class="task-description" v-html="descriptionHtml" />
+    <MarkdownNote
+      v-if="description"
+      class="task-description"
+      :source="description ?? ''"
+      :editable="false"
+    />
     <div v-if="dueText" class="meta">
       <span class="status-dot" />
       <span class="due-text">{{ dueText }}</span>
@@ -211,7 +212,19 @@ onUnmounted(() => {
   overflow-wrap: anywhere;
 }
 
+/* This class lands on MarkdownNote's own root (a single-root component inherits
+   the parent's scoped-style attribute), so these rules still reach the note.
+   The --note-* vars are what the component themes its markdown off: the board
+   face reads at 12px in dim ink because it's a scanning aid under the title,
+   not a reading surface. The block gap tightens to 4px for the same reason —
+   at the component's 8px default a three-paragraph note spends half a line of
+   the 4.5em clamp below on gaps instead of text. Nothing else needs setting:
+   editable:false renders one non-interactive block with no chips, editor or
+   + add row. */
 .task-description {
+  --note-font-size: 12px;
+  --note-ink: var(--color-ink-dim);
+  --note-block-gap: 4px;
   margin: 6px 0 0;
   font-size: 12px;
   color: var(--color-ink-dim);
@@ -220,16 +233,6 @@ onUnmounted(() => {
   /* A pasted share URL is one unbreakable token; without this it runs straight
      out past the card's right edge instead of wrapping into the preview. */
   overflow-wrap: anywhere;
-}
-
-.task-description :deep(p) {
-  margin: 0 0 4px;
-}
-
-.task-description :deep(ul),
-.task-description :deep(ol) {
-  margin: 0 0 4px;
-  padding-left: 16px;
 }
 
 /* On the board face a link is preview text, not a target — clicking anywhere on
