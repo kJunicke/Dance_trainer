@@ -25,7 +25,14 @@ const editHeight = ref(0)
 // Plain function refs rather than `ref="…"`: a template ref registered inside
 // v-for is collected into an array, and only ever one editor is open.
 const editorEl = ref<HTMLTextAreaElement | null>(null)
-const blockEls: (HTMLElement | null)[] = []
+const rootEl = ref<HTMLElement | null>(null)
+
+// Queried on demand rather than kept in a template-ref array, which would need
+// to stay in step with a list that re-renders on every save. Only ever called
+// while all blocks are rendered, so DOM order matches block order.
+function blockElAt(index: number): HTMLElement | null {
+  return rootEl.value?.querySelectorAll<HTMLElement>(':scope > .md-block')[index] ?? null
+}
 
 function setEditor(el: unknown) {
   editorEl.value = (el as HTMLTextAreaElement | null) ?? null
@@ -51,24 +58,60 @@ function targetAt(index: number): { start: number; raw: string } {
   return block ? { start: block.start, raw: block.raw } : { start: props.source.length, raw: '' }
 }
 
+// Handled on mousedown, not click. Committing the open editor reflows the note
+// — the raw block collapses back to its rendered height — and that reflow lands
+// *between* mousedown and click, so by the time a click handler ran, the block
+// aimed at had already slid out from under the pointer and the tap either hit
+// the wrong block or nothing at all.
+//
+// So the click is resolved here, against the layout as it still stands, and
+// carried across the reflow as a source offset: pixel coordinates and block
+// indices both go stale when the note reflows, a source offset doesn't.
 async function startEdit(index: number, e: MouseEvent) {
-  if (editingIndex.value !== null) saveEdit()
-  const el = blockEls[index]
-  const { raw } = targetAt(index)
-  const trailing = raw.match(/\n*$/)?.[0] ?? ''
-  const body = raw.slice(0, raw.length - trailing.length)
+  const el = e.currentTarget as HTMLElement
+  const block = blocks.value[index]
+  if (!block) return
+  // Suppress mousedown's default focus change. Vue flushes `nextTick` at the
+  // microtask checkpoint *before* that default action runs, so without this we
+  // mount the editor and focus it, and the browser then moves focus to the
+  // backdrop — blurring the editor, which saves and closes it in the same
+  // gesture that opened it. It also keeps the previous editor focused until
+  // we've read the layout below, since blur is what commits it.
+  e.preventDefault()
+  let offset = block.start + caretOffsetInBlock(el, e, block.raw)
 
-  // The textarea adopts the height the block just had so nothing below it
-  // jumps — the whole point is that the surrounding note doesn't move.
-  editHeight.value = el?.offsetHeight ?? 0
-  const offset = el ? Math.min(caretOffsetInBlock(el, e, raw), body.length) : body.length
+  if (editingIndex.value !== null) {
+    const open = targetAt(editingIndex.value)
+    // Text before the edited block keeps its offsets; text after it shifts by
+    // however much that block grew or shrank.
+    if (open.start < block.start) offset += pendingReplacement().length - open.raw.length
+    saveEdit()
+    await nextTick()
+  }
+  openAt(offset)
+}
 
+// Open the block containing `sourceOffset`, caret at that offset. Resolving the
+// block by offset rather than by index keeps this correct even when the save
+// that just ran changed how many blocks there are.
+async function openAt(sourceOffset: number) {
+  const list = blocks.value
+  let index = list.findIndex((b) => sourceOffset < b.start + b.raw.length)
+  if (index < 0) index = list.length - 1
+  const block = list[index]
+  if (!block) return
+  const trailing = block.raw.match(/\n*$/)?.[0] ?? ''
+  const body = block.raw.slice(0, block.raw.length - trailing.length)
+
+  editHeight.value = blockElAt(index)?.offsetHeight ?? 0
   draft.value = body
   draftTrailing.value = trailing
   editingIndex.value = index
   await nextTick()
   autosize()
-  if (editorEl.value) focusAtOffset(editorEl.value, offset)
+  if (editorEl.value) {
+    focusAtOffset(editorEl.value, Math.min(Math.max(sourceOffset - block.start, 0), body.length))
+  }
 }
 
 async function startAppend() {
@@ -82,18 +125,23 @@ async function startAppend() {
   editorEl.value?.focus()
 }
 
+function pendingReplacement(): string {
+  const body = draft.value.trim()
+  if (!body) return ''
+  const replacement = body + (draftTrailing.value || '\n\n')
+  // Appending onto a note whose last block has no trailing blank line: add the
+  // separator so the new text lexes as its own block instead of merging.
+  if (isAppending.value && props.source.length && !props.source.endsWith('\n\n')) {
+    return (props.source.endsWith('\n') ? '\n' : '\n\n') + replacement
+  }
+  return replacement
+}
+
 function saveEdit() {
   const index = editingIndex.value
   if (index === null) return
   const { start, raw } = targetAt(index)
-  const body = draft.value.trim()
-  let replacement = body ? body + (draftTrailing.value || '\n\n') : ''
-  // Appending onto a note whose last block has no trailing blank line: add the
-  // separator so the new text lexes as its own block instead of merging.
-  if (isAppending.value && body && props.source.length && !props.source.endsWith('\n\n')) {
-    replacement = (props.source.endsWith('\n') ? '\n' : '\n\n') + replacement
-  }
-  const next = props.source.slice(0, start) + replacement + props.source.slice(start + raw.length)
+  const next = props.source.slice(0, start) + pendingReplacement() + props.source.slice(start + raw.length)
 
   editingIndex.value = null
   if (next !== props.source) emit('update:source', next)
@@ -134,7 +182,7 @@ defineExpose({ flush: saveEdit })
 </script>
 
 <template>
-  <div class="md-note">
+  <div ref="rootEl" class="md-note">
     <template v-for="(block, i) in blocks" :key="block.start">
       <textarea
         v-if="editingIndex === i"
@@ -148,10 +196,9 @@ defineExpose({ flush: saveEdit })
       />
       <div
         v-else
-        :ref="(el) => (blockEls[i] = el as HTMLElement | null)"
         class="md-block"
         v-html="block.html"
-        @click="startEdit(i, $event)"
+        @mousedown="startEdit(i, $event)"
       />
     </template>
 
