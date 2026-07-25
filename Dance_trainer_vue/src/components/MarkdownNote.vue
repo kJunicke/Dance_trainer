@@ -73,6 +73,12 @@ async function startEdit(index: number, e: MouseEvent) {
   const el = e.currentTarget as HTMLElement
   const block = blocks.value[index]
   if (!block) return
+  // A click on a link chip is a click on the link. Bail before preventDefault()
+  // below, which would otherwise kill the navigation — these notes are mostly
+  // reference videos, so following them is the commonest thing done here. The
+  // block stays editable from the slack beside the chip, which is most of its
+  // width (chips cap at 40vw).
+  if ((e.target as HTMLElement).closest('a')) return
   // Suppress mousedown's default focus change. Vue flushes `nextTick` at the
   // microtask checkpoint *before* that default action runs, so without this we
   // mount the editor and focus it, and the browser then moves focus to the
