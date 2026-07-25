@@ -313,6 +313,40 @@ function restoreFocus() {
   lastFocus = null
 }
 
+// indent, marker, gap, content. Ordered markers included so continuation can
+// count on, and so the bullet button recognises one as already-a-list-item.
+const LIST_ITEM = /^([ \t]*)([-*+]|\d+[.)])([ \t]+)(.*)$/
+
+// Enter inside a list item starts the next one at the same indentation with the
+// same marker. Enter on an *empty* item ends the list instead, by clearing the
+// marker — that's the only way out of a list from a phone keyboard, which has
+// no Tab and no Escape. Returns whether it handled the key; anything else (a
+// paragraph, a heading, a selection spanning text) keeps the plain newline.
+function continueList(el: HTMLTextAreaElement): boolean {
+  const { selectionStart, selectionEnd, value } = el
+  if (selectionStart !== selectionEnd) return false
+  const from = value.lastIndexOf('\n', selectionStart - 1) + 1
+  const end = value.indexOf('\n', selectionStart)
+  const line = value.slice(from, end < 0 ? value.length : end)
+  const match = LIST_ITEM.exec(line)
+  if (!match) return false
+  // Defaulted only to satisfy noUncheckedIndexedAccess — none of the four
+  // groups is optional, so a match always fills all of them.
+  const [, indent = '', marker = '', gap = '', content = ''] = match
+
+  if (!content.trim()) {
+    applyToDraft(value.slice(0, from) + value.slice(from + line.length), from, from)
+    return true
+  }
+  // `2.` after `1.` — markdown renumbers on render either way, but a raw block
+  // full of `1.` is the thing you're looking at while editing.
+  const next = /^\d/.test(marker) ? `${parseInt(marker, 10) + 1}${marker.slice(-1)}` : marker
+  const insert = `\n${indent}${next}${gap}`
+  const caret = selectionStart + insert.length
+  applyToDraft(value.slice(0, selectionStart) + insert + value.slice(selectionStart), caret, caret)
+  return true
+}
+
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     e.preventDefault()
@@ -328,6 +362,10 @@ function onKeydown(e: KeyboardEvent) {
     e.preventDefault()
     saveEdit()
     restoreFocus()
+    return
+  }
+  if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+    if (continueList(e.target as HTMLTextAreaElement)) e.preventDefault()
     return
   }
   if (e.key !== 'Tab') return
@@ -419,6 +457,45 @@ function shiftLines(indent: boolean) {
   )
 }
 
+// Bullet every line the selection touches, or strip them if they're all already
+// list items — a mixed selection bullets, which is what makes the button
+// predictable when you drag across a paragraph and a stray bullet. Each line
+// keeps its own indentation, so bulleting inside a nested block stays nested.
+function toggleBullet() {
+  const el = editorEl.value
+  if (!el) return
+  const { selectionStart, selectionEnd } = el
+  const value = draft.value
+  const from = value.lastIndexOf('\n', selectionStart - 1) + 1
+  const end = value.indexOf('\n', selectionEnd)
+  const to = end < 0 ? value.length : end
+  const lines = value.slice(from, to).split('\n')
+  const strip = lines.every((line) => LIST_ITEM.test(line))
+
+  let headDelta = 0
+  let totalDelta = 0
+  const next = lines
+    .map((line, i) => {
+      const match = LIST_ITEM.exec(line)
+      const out = match
+        ? strip
+          ? `${match[1]}${match[4]}`
+          : line
+        : line.replace(/^[ \t]*/, (indent) => `${indent}- `)
+      const delta = out.length - line.length
+      if (i === 0) headDelta = delta
+      totalDelta += delta
+      return out
+    })
+    .join('\n')
+
+  applyToDraft(
+    value.slice(0, from) + next + value.slice(to),
+    Math.max(from, selectionStart + headDelta),
+    Math.max(from, selectionEnd + totalDelta),
+  )
+}
+
 // Wrap the selection; with nothing selected, drop the pair in and sit between.
 function wrapSelection(marker: string) {
   const el = editorEl.value
@@ -505,6 +582,7 @@ defineExpose({ flush: saveEdit })
     <div v-if="showFormatBar" class="md-format-bar" :style="{ bottom: `${barBottom}px` }">
       <button title="Outdent" @pointerdown.prevent="shiftLines(false)">⇤</button>
       <button title="Indent" @pointerdown.prevent="shiftLines(true)">⇥</button>
+      <button title="Bullet list" class="fmt-bullet" @pointerdown.prevent="toggleBullet()">•</button>
       <button title="Bold" class="fmt-bold" @pointerdown.prevent="wrapSelection('**')">B</button>
       <button title="Italic" class="fmt-italic" @pointerdown.prevent="wrapSelection('*')">I</button>
       <button title="Heading" @pointerdown.prevent="cycleHeading()">H</button>
@@ -703,6 +781,13 @@ defineExpose({ flush: saveEdit })
 
 .md-format-bar button:active {
   background: var(--note-hover-bg, #ffffff);
+}
+
+/* A bullet at the row's 15px is a speck. Line-height pinned to what the other
+   glyphs occupy so the bigger dot doesn't make the bar taller. */
+.fmt-bullet {
+  font-size: 20px;
+  line-height: 18px;
 }
 
 .fmt-bold {
