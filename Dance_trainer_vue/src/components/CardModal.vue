@@ -1167,9 +1167,14 @@ input[type='date'] {
 @media (max-width: 640px) {
   .backdrop {
     padding: 0;
-    align-items: stretch;
   }
 
+  /* Keeps the flex-start from the base rule. `align-items: stretch` here sized
+     the modal to the backdrop's own height — one viewport — so a card taller
+     than the screen painted its surface for the first 100dvh only and the rest
+     of the content scrolled over the bare dark backdrop. `min-height` can't
+     rescue that: it equals the stretched height, so nothing grows. Sizing to
+     content instead, with min-height keeping a short card full-screen. */
   .modal {
     max-width: none;
     min-height: 100dvh;

@@ -797,9 +797,21 @@ export const useBoardStore = defineStore('board', () => {
   ): Promise<Card | null> {
     const parent = cards.value.find((c) => c.id === parentId)
     if (!parent) return null
+    // A new part goes to the inbox: naming it is the moment it exists, and where
+    // it belongs in the ladder is a separate judgement the user makes in Session
+    // Review. It also stops a split quietly enrolling a raw part at the parent's
+    // interval — a part just cut out is exactly the thing not yet worth
+    // reviewing monthly because its parent is.
+    //
+    // With no inbox column set it stays in the parent's column. Never silently
+    // pick one: that's the same rule quick-add follows, and the reason
+    // inboxColumn has no fallback.
+    const target =
+      inboxColumn.value ?? columns.value.find((c) => c.id === parent.column_id) ?? null
+    const targetId = target?.id ?? parent.column_id
     // A bare `#` is a legal heading with no text, and an explicit '' would slip
     // past addCard's default and make a nameless card.
-    const child = await addCard(parent.column_id, title.trim() || 'Untitled part')
+    const child = await addCard(targetId, title.trim() || 'Untitled part')
     if (!child) return null
     await updateCardField(child.id, 'description', extracted)
     if (cards.value.find((c) => c.id === child.id)?.description !== extracted) {
@@ -811,17 +823,20 @@ export const useBoardStore = defineStore('board', () => {
     // on-enter rule stamps its due date. `addCard` fires no rule (nothing
     // entered from anywhere) and `moveCard` won't either within one column, so
     // apply it here rather than inventing a scheduling path only splits use.
-    const column = columns.value.find((c) => c.id === parent.column_id)
-    if (column?.due_offset_days != null) {
-      await updateCardField(child.id, 'due_date', addDays(localToday(), column.due_offset_days))
+    // An inbox with no offset therefore leaves the part undated — outside
+    // spaced repetition until it's triaged, which is what an inbox is for.
+    if (target?.due_offset_days != null) {
+      await updateCardField(child.id, 'due_date', addDays(localToday(), target.due_offset_days))
     }
-    // Near its parent, so a family reads together down the column. Lands one
-    // slot lower than asked: the new card is last in `cards.value`, and
-    // moveCard's same-column branch assigns the position then re-sorts, so it
-    // ties with the incumbent and the stable sort puts the incumbent first.
-    // That's the pre-existing tie-break in moveCard already logged in Open
-    // Work, not something split can fix locally.
-    await moveCard(child.id, parent.column_id, parent.position + 1, false)
+    // Only worth placing when it stayed in the parent's column — in the inbox it
+    // just goes on the end, where triage picks it up. Lands one slot lower than
+    // asked: the new card is last in `cards.value`, and moveCard's same-column
+    // branch assigns the position then re-sorts, so it ties with the incumbent
+    // and the stable sort puts the incumbent first. That's the pre-existing
+    // tie-break in moveCard already logged in Open Work.
+    if (targetId === parent.column_id) {
+      await moveCard(child.id, parent.column_id, parent.position + 1, false)
+    }
     // Only now touch the parent, and only if it still says what it said when
     // the section was picked. If it changed under us the part is already safe
     // on its own card — leaving the duplicate text behind beats deleting an

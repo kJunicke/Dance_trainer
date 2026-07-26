@@ -42,7 +42,7 @@
 			- due_offset_days (`int`, nullable) — on-enter rule: stamp a card's due date to today + this many days when it's moved in; mutually exclusive with `is_due_column` (check constraint) and with `due_clear_on_enter`
 			- due_clear_on_enter (`bool`) — on-enter rule variant: clear the card's due date instead of setting one; migration `20260703000001_column_due_clear_on_enter`
 			- is_quick_target (`bool`) — column shows as a one-tap "quick move" drop bucket while dragging a card on the board
-			- is_inbox_column (`bool`) — where [[Practice Companion View]]'s quick-add drops a card it creates; migration `20260726102352_column_inbox`. One per board, enforced in the store (`setColumnInbox` unsets the previous), **not** by a unique index the way `is_due_column` is — nothing breaks if two are ever set, `inboxColumn` just takes the first. Unset by default and with no fallback column: quick-add offers to create a card only once a board has named one, because a card landing in an unasked-for column would silently enter or dodge the schedule
+			- is_inbox_column (`bool`) — where a newly named card lands: [[Practice Companion View]]'s quick-add, and a card split out of a note ([[Card Relationships]]). Migration `20260726102352_column_inbox`. One per board, enforced in the store (`setColumnInbox` unsets the previous), **not** by a unique index the way `is_due_column` is — nothing breaks if two are ever set, `inboxColumn` just takes the first. Unset by default and with no fallback column: quick-add offers to create a card only once a board has named one, because a card landing in an unasked-for column would silently enter or dodge the schedule
 	-
 	- Board
 		- values
