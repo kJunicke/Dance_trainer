@@ -3,6 +3,7 @@ import { ref, computed, onBeforeUnmount } from 'vue'
 import type { Card } from '@/stores/boardStore'
 import { useBoardStore } from '@/stores/boardStore'
 import MarkdownNote from './MarkdownNote.vue'
+import LabelBar from './LabelBar.vue'
 import { dueStatus, dueLabel } from '@/lib/dates'
 
 const props = withDefaults(
@@ -53,6 +54,7 @@ onBeforeUnmount(() => noteEl.value?.flush())
          for space on one line is what produced the awkward "due text floats
          next to only the first line" layout. -->
     <div v-if="head !== 'none'" class="focus-head" :class="{ sticky: head === 'sticky' }">
+      <LabelBar class="focus-labels" :card-id="card.id" />
       <div v-if="status || dueText" class="focus-meta">
         <span v-if="status" class="status-dot" :class="`status-${status}`" />
         <span v-if="dueText" class="due-text" :class="{ overdue: status === 'overdue' }">{{ dueText }}</span>
@@ -97,6 +99,14 @@ onBeforeUnmount(() => noteEl.value?.flush())
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+/* Labels go above the status line, not below the title: mid-session they answer
+   "is this the warm-up or the performance set" before the due date is worth
+   reading. The dark palette for the picker it opens comes from the --lp-* block
+   on .practice-view in tokens.css, not from here. */
+.focus-labels {
+  flex-shrink: 0;
 }
 
 /* Pinned so the card's identity survives a long note. Without this the title

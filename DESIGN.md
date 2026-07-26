@@ -305,6 +305,14 @@ is the informative end, and render no trailing `›` — a bidi-neutral separato
 the wrong side of an RTL run. The board face is the one surface still unresolved; see
 `Dance_trainer_logseq/pages/Open Work.md`.
 
+**The Host-Themed Component Rule.** A component serving more than one palette takes its colours
+from the host through CSS custom properties, never through props and never by branching on a
+class. `MarkdownNote` uses `--note-*`; `LabelBar`/`LabelPicker` use `--lp-*` (`--lp-surface`,
+`--lp-field-bg`, `--lp-border`, `--lp-ink`, `--lp-ink-dim`, `--lp-accent`, `--lp-scrim`). Defaults
+are the light board, declared in the component; the dark mapping is declared once on
+`.practice-view` in `tokens.css`. Properties inherit down the DOM, so a `position: fixed` overlay
+still wears the palette of the surface that opened it.
+
 **The Measured-Value Rule.** If a number was counted, dated, or generated, it is Space Mono. If
 it is prose, a label, or a heading, it is not. There is no third case.
 

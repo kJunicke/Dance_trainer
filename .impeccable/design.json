@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-26T09:55:14.469Z",
+  "generatedAt": "2026-07-26T22:17:38.000Z",
   "title": "Design System: Dance Trainer",
   "extensions": {
     "colorMeta": {
@@ -453,6 +453,21 @@
           "oklch(83% 0.113 80.3)",
           "oklch(95% 0.108 80.3)"
         ]
+      },
+      "practice-focus": {
+        "role": "primary",
+        "displayName": "Practice Focus Ring",
+        "canonical": "oklch(74.8% 0.166 47.4)",
+        "tonalRamp": [
+          "oklch(15% 0.136 47.4)",
+          "oklch(26% 0.142 47.4)",
+          "oklch(37% 0.149 47.4)",
+          "oklch(48% 0.155 47.4)",
+          "oklch(59% 0.162 47.4)",
+          "oklch(70% 0.166 47.4)",
+          "oklch(83% 0.158 47.4)",
+          "oklch(95% 0.150 47.4)"
+        ]
       }
     },
     "typographyMeta": {
@@ -462,7 +477,7 @@
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Card modal title (22px) and practice focus card title (20px)."
+        "purpose": "Card modal title, practice focus card title and Session Review's head title — all 22px. The practice pair sat at 20px until the note heading ramp put h1 at 21px on a 14px base, which would have let an in-note heading outrank the card's own name."
       },
       "title": {
         "displayName": "Card Title",
@@ -478,7 +493,7 @@
       },
       "data": {
         "displayName": "Data",
-        "purpose": "Measured values only: relative due labels, practice counts, invite codes. Space Mono."
+        "purpose": "Measured values only: relative due labels, practice counts, invite codes. Space Mono. Also the 10px lineage sub-line in every list of cards — see The Lineage Is Identity Rule."
       },
       "eyebrow": {
         "displayName": "Eyebrow",
@@ -635,12 +650,12 @@
       "css": ".ds-column { display: flex; flex-direction: column; width: 264px; padding: 10px; background: var(--color-surface, #f0ebe1); border: 1px solid var(--color-border, #d8cfbf); border-radius: var(--radius-lg, 8px); } .ds-column__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-bottom: 8px; } .ds-column__name { font-family: 'Work Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--color-ink, #2a2420); } .ds-column__count { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--color-ink-dim, #6a6156); } .ds-column__body { min-height: 40px; font-family: 'Work Sans', sans-serif; font-size: 13px; color: var(--color-ink-dim, #6a6156); }"
     },
     {
-      "name": "Segmented Toggle",
+      "name": "Mode Switch",
       "kind": "nav",
       "refersTo": "button-outline",
-      "description": "Board/list view switch. One of only two pill shapes in the system, and it is a track, not a button.",
-      "html": "<div class=\"ds-seg\"><button class=\"ds-seg__btn ds-seg__btn--active\">Board</button><button class=\"ds-seg__btn\">List</button></div>",
-      "css": ".ds-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; background: var(--color-bg, #e6e0d4); } .ds-seg__btn { padding: 4px 12px; border: none; border-radius: 999px; background: transparent; color: var(--color-ink-dim, #6a6156); font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1), color 150ms; } .ds-seg__btn--active { background: var(--color-ember, #e06d0a); color: var(--color-text-on-ember, #1f1404); } .ds-seg__btn:focus-visible { outline: 2px solid var(--color-ember-text, #a04c00); outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-seg__btn { transition: none; } }"
+      "description": "Board/Practice view switch. One of only two pill shapes in the system, and it is a track, not a button. A single role=\"switch\" element — a press anywhere on the pill flips it, including the lit half and the padding between halves; the two halves are inert spans.",
+      "html": "<button class=\"ds-seg\" role=\"switch\" aria-checked=\"false\" aria-label=\"Practice mode\"><span class=\"ds-seg__half ds-seg__half--active\">Board</span><span class=\"ds-seg__half\">Practice</span></button>",
+      "css": ".ds-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--color-border, #d8cfbf); border-radius: 999px; background: var(--color-bg, #e6e0d4); font-family: inherit; cursor: pointer; } .ds-seg__half { display: flex; align-items: center; min-height: 32px; padding: 6px 14px; border-radius: 999px; color: var(--color-ink-dim, #6a6156); font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1), color 150ms; } .ds-seg__half--active { background: var(--color-ember, #e06d0a); color: var(--color-text-on-ember, #1f1404); } .ds-seg:focus-visible { outline: 2px solid var(--color-ember-text, #a04c00); outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-seg__half { transition: none; } }"
     },
     {
       "name": "Toast",
@@ -654,9 +669,17 @@
       "name": "Practice Focus Card",
       "kind": "custom",
       "refersTo": "card-task",
-      "description": "The mid-practice companion surface. Deliberately chrome-less — no border, background, or radius — sitting straight on the scoped dark palette. Documents the second room.",
-      "html": "<div class=\"ds-practice\"><div class=\"ds-practice__focus\"><div class=\"ds-practice__meta\"><span class=\"ds-practice__dot\"></span><span class=\"ds-practice__due\">today</span></div><h2 class=\"ds-practice__title\">Yo-yo into comb</h2><p class=\"ds-practice__history\">last practised 12d ago · 4 sessions</p></div></div>",
-      "css": ".ds-practice { padding: 16px; background: #14100c; border-radius: var(--radius-lg, 8px); } .ds-practice__focus { display: flex; flex-direction: column; gap: 10px; } .ds-practice__meta { display: flex; align-items: center; gap: 6px; } .ds-practice__dot { width: 8px; height: 8px; border-radius: 50%; background: #e0a83d; } .ds-practice__due { font-family: 'Space Mono', monospace; font-size: 12px; color: #b7a693; } .ds-practice__title { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; color: #f5ede2; } .ds-practice__history { margin: 6px 0 0; font-family: 'Space Mono', monospace; font-size: 12px; color: #b7a693; }"
+      "description": "The mid-practice companion surface. Deliberately chrome-less — no border, background or radius — sitting straight on the scoped dark palette. Labels sit above the status line; the parent chain is the title's first line, because the stored name is leaf-only and two drills can share it.",
+      "html": "<div class=\"ds-practice\"><div class=\"ds-practice__focus\"><div class=\"ds-practice__labels\"><span class=\"ds-practice__chip\">drills</span><button class=\"ds-practice__addlabel\">+</button></div><div class=\"ds-practice__meta\"><span class=\"ds-practice__dot\"></span><span class=\"ds-practice__due\">today</span></div><p class=\"ds-practice__lineage\">Hammers ›</p><h2 class=\"ds-practice__title\">Posture</h2><p class=\"ds-practice__history\">last practised 12d ago · 4 sessions</p></div></div>",
+      "css": ".ds-practice { padding: 16px; background: #14100c; border-radius: var(--radius-lg, 8px); } .ds-practice__focus { display: flex; flex-direction: column; gap: 6px; } .ds-practice__labels { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; } .ds-practice__chip { border-radius: 999px; padding: 2px 9px; background: #c1495a; color: #ffffff; font-family: 'Work Sans', sans-serif; font-size: 11px; font-weight: 600; line-height: 1.5; } .ds-practice__addlabel { min-height: 24px; padding: 2px 9px; border: 1px dashed #4a3320; border-radius: 999px; background: transparent; color: #b7a693; font-family: 'Work Sans', sans-serif; font-size: 11px; font-weight: 600; line-height: 1.5; cursor: pointer; } .ds-practice__meta { display: flex; align-items: center; gap: 6px; } .ds-practice__dot { width: 8px; height: 8px; border-radius: 50%; background: #e0a83d; } .ds-practice__due { font-family: 'Space Mono', monospace; font-size: 12px; color: #b7a693; } .ds-practice__lineage { margin: 0 0 -4px; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; line-height: 1.25; color: #b7a693; } .ds-practice__title { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; color: #f5ede2; } .ds-practice__history { margin: 0; font-family: 'Space Mono', monospace; font-size: 12px; color: #b7a693; }"
+    },
+    {
+      "name": "Label Picker Row",
+      "kind": "custom",
+      "refersTo": "chip-label",
+      "description": "One row of the shared LabelPicker, which serves the card modal and both practice heads. Every label is listed with a checkbox — one panel adds and removes — and checked rows sort to the top over a 14% accent wash. Colours come from the host via --lp-*, defaulting to the light board.",
+      "html": "<div class=\"ds-lp\"><button class=\"ds-lp__row ds-lp__row--checked\"><span class=\"ds-lp__box\">✓</span><span class=\"ds-lp__swatch\" style=\"background:#c1495a\"></span><span class=\"ds-lp__name\">drills</span></button><button class=\"ds-lp__row\"><span class=\"ds-lp__box\"></span><span class=\"ds-lp__swatch\" style=\"background:#5c7a99\"></span><span class=\"ds-lp__name\">footwork</span></button></div>",
+      "css": ".ds-lp { padding: 10px; border-radius: var(--radius-lg, 8px); background: var(--lp-surface, var(--color-surface, #f0ebe1)); } .ds-lp__row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 6px; border: none; border-bottom: 1px solid var(--lp-border, var(--color-border, #d8cfbf)); border-radius: 4px; background: transparent; color: var(--lp-ink, var(--color-ink, #2a2420)); font-family: 'Work Sans', sans-serif; font-size: 14px; text-align: left; cursor: pointer; } .ds-lp__row--checked { background: color-mix(in srgb, var(--lp-accent, #e06d0a) 14%, transparent); } .ds-lp__box { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border: 1px solid var(--lp-ink-dim, var(--color-ink-dim, #6a6156)); border-radius: 4px; color: var(--lp-accent, #e06d0a); font-size: 13px; font-weight: 700; } .ds-lp__row--checked .ds-lp__box { border-color: var(--lp-accent, #e06d0a); } .ds-lp__swatch { flex-shrink: 0; width: 12px; height: 12px; border-radius: 3px; } .ds-lp__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-lp__row:focus-visible { outline: 2px solid var(--color-ember-text, #a04c00); outline-offset: -2px; }"
     }
   ],
   "narrative": {
@@ -688,7 +711,7 @@
       },
       {
         "name": "The Card Title Wins Rule",
-        "body": "On the board face, nothing renders larger than the 15px card title — including markdown headings inside the note preview. The note component's --note-heading-scale is set to 0 there for exactly this reason: it flattens h1–h6 onto the 12px base so headings stay marked by weight and ink but never out-size the title. The modal (22px title vs 14px base) and practice card (20px vs 14px) already satisfy the rule and keep the full scale.",
+        "body": "On the board face, nothing renders larger than the 15px card title — including markdown headings inside the note preview. The note component's `--note-heading-scale` is set to `0` there for exactly this reason: it flattens h1–h6 onto the 12px base so headings stay marked by weight and ink but never out-size the title. The modal and the practice surfaces keep the full scale and satisfy the rule by title size instead: at a 14px base the ramp puts h1 at 21px, so a 22px title clears it and the practice pair's former 20px did not. Any surface that hosts a note at 14px is committed to a 22px title.",
         "section": "typography"
       },
       {
@@ -705,6 +728,16 @@
         "name": "The Tonal-Climb Rule",
         "body": "New surfaces pick a step on the existing ladder rather than inventing a shadow. If something needs to feel raised, move it toward white; only add elevation if it genuinely floats over content the user can still see.",
         "section": "elevation"
+      },
+      {
+        "name": "The Lineage Is Identity Rule",
+        "section": "typography",
+        "body": "A card stores its leaf name only, so `Hammers › Posture` and `Drops › Posture` are the same string. Wherever a card is named, its parent chain is named with it, in one of two registers: as the title's **first line** (Lineage, 13px display 600, trailing `›`, negative margin so it hugs the title) on single-card surfaces, or as a **10px mono sub-line** above the name in lists. List lineages head-truncate (`direction: rtl`) because the nearest parent is the informative end, and render no trailing `›` — a bidi-neutral separator gets reordered to the wrong side of an RTL run. The board face is the one surface still unresolved."
+      },
+      {
+        "name": "The Host-Themed Component Rule",
+        "section": "typography",
+        "body": "A component serving more than one palette takes its colours from the host through CSS custom properties, never through props and never by branching on a class. `MarkdownNote` uses `--note-*`; `LabelBar`/`LabelPicker` use `--lp-*`. Defaults are the light board, declared in the component; the dark mapping is declared once on `.practice-view` in `tokens.css`. Properties inherit down the DOM, so a `position: fixed` overlay still wears the palette of the surface that opened it."
       }
     ],
     "dos": [

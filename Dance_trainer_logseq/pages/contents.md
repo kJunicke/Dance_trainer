@@ -21,6 +21,7 @@
 	- `views/PracticeView.vue`, `components/Practice*.vue`, `stores/practiceSessionStore.ts` → [[Practice Companion View]] — except `PracticeFocusCard`'s description editing, which is [[Card Notes]] (it renders the shared `MarkdownNote` component, same as the card modal)
 	- `components/CardModal.vue`, `components/MarkdownNote.vue`, `lib/markdown.ts` → [[Card Notes]] — except `markdown.ts`'s `noteSections`/`splitSection`/`demoteHeadings`/`mergeNote` and the modal's breadcrumb, pickers and Family section, which are [[Card Relationships]]
 	- `lib/cardTree.ts`, `components/CardFamilyTree.vue` → [[Card Relationships]]
+	- `components/LabelBar.vue`, `components/LabelPicker.vue` → [[Board View]] ("Labels") — one control shared by the card modal and the practice surfaces, wearing either palette through the `--lp-*` host contract
 	- `lib/boardFormat.ts`, `lib/trelloFormat.ts` → [[Tables]] ("Board import/export")
 	- `lib/dates.ts` → [[Tables]] for the scheduling fields it reads, [[Board View]] for `sweepDueCards` and the on-enter rules
 	- `stores/toastStore.ts`, `components/ToastStack.vue` → [[Board View]] ("Toasts")

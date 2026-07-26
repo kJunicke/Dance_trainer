@@ -515,22 +515,21 @@ function onBoardPointerUp(e: PointerEvent) {
       </button>
       <h1 class="board-name">{{ store.board?.name }}</h1>
 
-      <div class="mode-switch" role="tablist" aria-label="View">
-        <button
-          role="tab"
-          :aria-selected="viewMode === 'board'"
-          class="mode-btn"
-          :class="{ active: viewMode === 'board' }"
-          @click="setViewMode('board')"
-        >Board</button>
-        <button
-          role="tab"
-          :aria-selected="viewMode === 'practice'"
-          class="mode-btn"
-          :class="{ active: viewMode === 'practice' }"
-          @click="setViewMode('practice')"
-        >Practice</button>
-      </div>
+      <!-- One button, not two tabs: this is a two-state switch, so a press
+           anywhere on it — including on the half that's already active, and on
+           the padding between the halves — flips it. As a tablist, tapping the
+           lit half did nothing, which on a 32px-tall control read as a missed
+           tap rather than as a no-op. -->
+      <button
+        class="mode-switch"
+        role="switch"
+        :aria-checked="viewMode === 'practice'"
+        aria-label="Practice mode"
+        @click="setViewMode(viewMode === 'practice' ? 'board' : 'practice')"
+      >
+        <span class="mode-half" :class="{ active: viewMode === 'board' }">Board</span>
+        <span class="mode-half" :class="{ active: viewMode === 'practice' }">Practice</span>
+      </button>
 
       <span v-if="viewMode === 'practice'" class="practice-actions">
         <button class="bar-btn" @click="showAddDrawer = true">+ Add</button>
@@ -745,11 +744,11 @@ function onBoardPointerUp(e: PointerEvent) {
   border-color: var(--pc-border);
 }
 
-.topbar.practice-view .mode-btn {
+.topbar.practice-view .mode-half {
   color: var(--pc-ink-dim);
 }
 
-.topbar.practice-view .mode-btn.active {
+.topbar.practice-view .mode-half.active {
   background: var(--pc-ember);
   color: #1f1404;
 }
@@ -811,6 +810,8 @@ function onBoardPointerUp(e: PointerEvent) {
   text-overflow: ellipsis;
 }
 
+/* The whole pill is the button; the two halves are inert spans that only carry
+   the label and the lit state. */
 .mode-switch {
   flex-shrink: 0;
   display: flex;
@@ -819,28 +820,29 @@ function onBoardPointerUp(e: PointerEvent) {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 999px;
+  font-family: inherit;
+  cursor: pointer;
 }
 
-.mode-btn {
+.mode-half {
   min-height: 32px;
+  display: flex;
+  align-items: center;
   padding: 6px 14px;
-  border: none;
   border-radius: 999px;
-  background: transparent;
   color: var(--color-ink-dim);
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
   transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1), color 150ms;
 }
 
-.mode-btn.active {
+.mode-half.active {
   background: var(--color-ember);
   color: var(--color-text-on-ember);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mode-btn {
+  .mode-half {
     transition: none;
   }
 }

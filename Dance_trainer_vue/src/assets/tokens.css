@@ -61,4 +61,18 @@
      *less* selected than the active one. Three components had each patched it
      locally; this is that patch, made once. */
   --pc-focus: #ff8a3d;
+
+  /* LabelPicker/LabelBar are shared with the card modal and take their palette
+     from the host through --lp-*, defaulting to the light board (see
+     LabelPicker.vue). The mapping onto this view's colours lives here, once,
+     rather than on each of the two practice surfaces that mount a LabelBar —
+     custom properties inherit, so anything rendered inside .practice-view picks
+     it up without being told. */
+  --lp-surface: var(--pc-surface);
+  --lp-field-bg: var(--pc-bg);
+  --lp-border: var(--pc-border);
+  --lp-ink: var(--pc-ink);
+  --lp-ink-dim: var(--pc-ink-dim);
+  --lp-accent: var(--pc-ember);
+  --lp-scrim: rgba(0, 0, 0, 0.72);
 }

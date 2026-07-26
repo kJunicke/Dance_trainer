@@ -5,6 +5,7 @@ import { usePracticeSessionStore } from '@/stores/practiceSessionStore'
 import { useBackButtonClose } from '@/lib/useBackButtonClose'
 import { dueStatus, dueLabel } from '@/lib/dates'
 import PracticeFocusCard from './PracticeFocusCard.vue'
+import LabelBar from './LabelBar.vue'
 
 const emit = defineEmits<{
   close: []
@@ -126,6 +127,7 @@ function onOtherColumnPick(e: Event) {
         <button class="close-btn" aria-label="Close review" @click="emit('close')">✕</button>
       </div>
       <template v-if="currentCard">
+        <LabelBar :card-id="currentCard.id" />
         <div v-if="status || dueText" class="focus-meta">
           <span v-if="status" class="status-dot" :class="`status-${status}`" />
           <span v-if="dueText" class="due-text" :class="{ overdue: status === 'overdue' }">{{ dueText }}</span>
