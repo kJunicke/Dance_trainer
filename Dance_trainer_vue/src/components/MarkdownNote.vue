@@ -20,6 +20,11 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:source': [string]
+  // Whether a block editor is open. Session Review listens for this so its
+  // fixed bucket tray can get out of the way: the format bar below is also
+  // position:fixed and pinned above the on-screen keyboard, and two stacked
+  // bars over a keyboard leave almost nothing of the note you're editing.
+  'update:editing': [boolean]
 }>()
 
 // Read-only is the board card face, which renders one of these per card for a
@@ -36,6 +41,9 @@ const blocks = computed(() => splitBlocks(props.source))
 // Index of the block being edited. `blocks.length` is the virtual trailing
 // block — how a new paragraph gets appended to a note that's already long.
 const editingIndex = ref<number | null>(null)
+watch(editingIndex, (i, prev) => {
+  if ((i !== null) !== (prev !== null)) emit('update:editing', i !== null)
+})
 const draft = ref('')
 const editHeight = ref(0)
 // Plain function refs rather than `ref="…"`: a template ref registered inside
@@ -627,27 +635,58 @@ defineExpose({ flush: saveEdit })
    See Dance_trainer_logseq/pages/Card Notes.md.
 
    --note-heading-scale scales only the *step above* the base, not the whole
-   size: at 1 (default) h1/h2 keep their 1.15/1.08em, at 0 every level collapses
+   size: at 1 (default) the ramp is 1.5/1.25/1.05em, at 0 every level collapses
    to the host's base size and headings are told apart by weight and ink alone.
    Multiplying the whole em value instead would need a different factor per
    level to land them all on the base, and any factor that flattened h1 would
-   push h2 *below* body text. */
+   push h2 *below* body text.
+
+   The steps used to be 0.15/0.08em, which at the modal's 14px base put h1 at
+   16.1px and h2 at 15.1px — a 1.07× ratio, indistinguishable at a glance, with
+   h3 and below sitting exactly on body size. Every markdown editor worth
+   copying runs ~1.2–1.3× per level *and* pairs size with a second channel
+   (weight, space above, a rule); size alone at 1.07× is not a hierarchy. At the
+   14px base the ramp is now 21 / 17.5 / 14.7px, which still leaves h1 under the
+   card modal's 22px title so a note can't outrank the card it belongs to. */
 .md-block :deep(:is(h1, h2, h3, h4, h5, h6)) {
-  margin: 0 0 6px;
+  /* Space above is the channel size can't provide on its own — it's what says
+     "new section" rather than "bigger line". Scaled too, so the flattened board
+     face doesn't gain gaps it has no room for. */
+  margin: calc(0.9em * var(--note-heading-scale, 1)) 0 6px;
   font-family: var(--font-display);
   font-weight: 700;
   line-height: 1.25;
 }
 
+/* Read-only renders the whole note as one .md-block, so the leading heading is
+   a real :first-child. Editable puts every block in its own element, where the
+   heading is always first — hence the sibling rule on the blocks themselves. */
+.md-note:not(.editable) .md-block :deep(:is(h1, h2, h3, h4, h5, h6):first-child),
+.editable > .md-block:first-child :deep(:is(h1, h2, h3, h4, h5, h6)) {
+  margin-top: 0;
+}
+
+/* Hairline under h1 only, GitHub-style: the top level gets a third channel so a
+   long multi-section drill note reads as sections rather than as one column of
+   bold lines. Width is scaled rather than the colour, because that's the only
+   way to make it vanish on the flattened board face. currentColor keeps it
+   working across all three palettes without another --note-* variable. */
 .md-block :deep(h1) {
-  font-size: calc(1em + 0.15em * var(--note-heading-scale, 1));
+  font-size: calc(1em + 0.5em * var(--note-heading-scale, 1));
+  padding-bottom: calc(0.22em * var(--note-heading-scale, 1));
+  border-bottom: solid color-mix(in srgb, currentColor 20%, transparent);
+  border-bottom-width: calc(1px * var(--note-heading-scale, 1));
 }
 
 .md-block :deep(h2) {
-  font-size: calc(1em + 0.08em * var(--note-heading-scale, 1));
+  font-size: calc(1em + 0.25em * var(--note-heading-scale, 1));
 }
 
-.md-block :deep(:is(h3, h4, h5, h6)) {
+.md-block :deep(h3) {
+  font-size: calc(1em + 0.05em * var(--note-heading-scale, 1));
+}
+
+.md-block :deep(:is(h4, h5, h6)) {
   font-size: 1em;
 }
 

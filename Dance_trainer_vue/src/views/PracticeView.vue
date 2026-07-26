@@ -93,7 +93,12 @@ function onUndo(cardId: number) {
            instantly, and this is the single highest-frequency action in the
            view — an abrupt jump-cut every rep reads as broken, not snappy. -->
       <Transition v-else name="focus-swap" mode="out-in">
-        <PracticeFocusCard v-if="focusedCard" :key="focusedCard.id" :card="focusedCard" />
+        <PracticeFocusCard
+          v-if="focusedCard"
+          :key="focusedCard.id"
+          :card="focusedCard"
+          head="sticky"
+        />
       </Transition>
     </div>
 
@@ -130,8 +135,11 @@ function onUndo(cardId: number) {
 <style scoped>
 .practice-view {
   /* Shared with PracticeSessionList's own height so the Done FAB below can
-     anchor exactly to the card/timeline seam without duplicating the value. */
-  --session-list-height: clamp(200px, 34vh, 340px);
+     anchor exactly to the card/timeline seam without duplicating the value.
+     dvh because the container this divides up (`.board-view`) is 100dvh — sized
+     against vh the list claimed 34% of a *taller* viewport than it lives in and
+     pushed its own last row below the fold. */
+  --session-list-height: clamp(200px, 34dvh, 340px);
   flex: 1;
   min-height: 0;
   display: flex;
@@ -260,6 +268,16 @@ function onUndo(cardId: number) {
   transform: translateY(-6px);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .receipt-enter-active,
+  .receipt-leave-active {
+    transition: none;
+  }
+}
+
+/* The one place the scoped --pc-focus ring can't be used: this button's fill IS
+   --pc-ember, the same value, so the ring would vanish into it. Lightened to
+   sit on the accent rather than on the background. */
 .done-fab:focus-visible {
   outline: 2px solid var(--pc-ember-light);
   outline-offset: 2px;

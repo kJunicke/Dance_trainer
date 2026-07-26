@@ -5,8 +5,22 @@ import { useBoardStore } from '@/stores/boardStore'
 import MarkdownNote from './MarkdownNote.vue'
 import { dueStatus, dueLabel } from '@/lib/dates'
 
-const props = defineProps<{
-  card: Card
+const props = withDefaults(
+  defineProps<{
+    card: Card
+    // Where the card's identity (status, title, history) is drawn.
+    //  inline — in flow, scrolls away with the note. The board-like default.
+    //  sticky — pinned to the top of the scroller, so the title survives a long
+    //           note. The live practice surface uses this.
+    //  none   — not drawn at all, because the host already shows it. Session
+    //           Review lifts the identity into its own fixed header.
+    head?: 'inline' | 'sticky' | 'none'
+  }>(),
+  { head: 'inline' },
+)
+
+const emit = defineEmits<{
+  'update:editing': [boolean]
 }>()
 
 const store = useBoardStore()
@@ -17,6 +31,10 @@ const dueText = computed(() => dueLabel(props.card.due_date))
 // above the bucket buttons, so this line is the evidence for the choice being
 // made there — "it was weekly and it went well, move it up a rung".
 const historyText = computed(() => store.cardHistoryLabel(props.card))
+// Names are stored leaf-only, so mid-session "Posture" alone doesn't say which
+// drill this is — Hammers › Posture and Drops › Posture render identically.
+// This is the surface where getting it wrong means practising the wrong thing.
+const ancestors = computed(() => store.ancestorNamesForCard(props.card.id))
 
 const noteEl = ref<{ flush: () => void } | null>(null)
 
@@ -34,12 +52,15 @@ onBeforeUnmount(() => noteEl.value?.flush())
          wrapping title never has to share a row with it — the two fighting
          for space on one line is what produced the awkward "due text floats
          next to only the first line" layout. -->
-    <div v-if="status || dueText" class="focus-meta">
-      <span v-if="status" class="status-dot" :class="`status-${status}`" />
-      <span v-if="dueText" class="due-text" :class="{ overdue: status === 'overdue' }">{{ dueText }}</span>
+    <div v-if="head !== 'none'" class="focus-head" :class="{ sticky: head === 'sticky' }">
+      <div v-if="status || dueText" class="focus-meta">
+        <span v-if="status" class="status-dot" :class="`status-${status}`" />
+        <span v-if="dueText" class="due-text" :class="{ overdue: status === 'overdue' }">{{ dueText }}</span>
+      </div>
+      <p v-if="ancestors.length" class="focus-lineage">{{ ancestors.join(' › ') }} ›</p>
+      <h2 class="focus-title">{{ card.name }}</h2>
+      <p v-if="historyText" class="focus-history">{{ historyText }}</p>
     </div>
-    <h2 class="focus-title">{{ card.name }}</h2>
-    <p v-if="historyText" class="focus-history">{{ historyText }}</p>
 
     <div class="note-field">
       <MarkdownNote
@@ -47,6 +68,7 @@ onBeforeUnmount(() => noteEl.value?.flush())
         :source="card.description ?? ''"
         placeholder="Tap to add notes or a reference link…"
         @update:source="(v: string) => store.updateCardDescription(card.id, v)"
+        @update:editing="(v: boolean) => emit('update:editing', v)"
       />
     </div>
   </div>
@@ -68,6 +90,25 @@ onBeforeUnmount(() => noteEl.value?.flush())
      containers (practice-body / review) to grow and scroll instead. */
   flex: 1 0 auto;
   gap: 10px;
+}
+
+.focus-head {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Pinned so the card's identity survives a long note. Without this the title
+   and the "practiced 8d ago" line — the two things you actually need while
+   deciding — scroll off the top and you're reading an anonymous note. Opaque
+   background because the note scrolls underneath it. */
+.focus-head.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--pc-bg);
+  padding-bottom: 8px;
 }
 
 .focus-meta {
@@ -100,12 +141,34 @@ onBeforeUnmount(() => noteEl.value?.flush())
   font-weight: 700;
 }
 
+/* The display face and 600 weight are what make this read as the title's first
+   line rather than as a third caption stacked under the due row. The negative
+   margin cancels most of .focus-head's 6px gap for this pair only: at the full
+   gap the lineage sat equidistant from the meta line above and the title below,
+   which is exactly how you make two lines look unrelated. Trailing `›` in the
+   template, not here, so it can't be selected out of a copied name. */
+.focus-lineage {
+  flex-shrink: 0;
+  margin: 0 0 -4px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--pc-ink-dim);
+  overflow-wrap: anywhere;
+}
+
+/* 22px, matching the card modal's title. It was 20px until the note heading
+   ramp widened h1 to 21px at this surface's 14px base — which put an in-note
+   `# Heading` *above* the name of the card it belongs to. The card title has to
+   stay the largest thing on the card (see pages/Card Notes.md); this is the
+   surface with the most room to satisfy that, so it pays rather than the note. */
 .focus-title {
   flex-shrink: 0;
   margin: 0;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.25;
   letter-spacing: -0.01em;
   color: var(--pc-ink);
@@ -114,7 +177,8 @@ onBeforeUnmount(() => noteEl.value?.flush())
 
 .focus-history {
   flex-shrink: 0;
-  margin: 6px 0 0;
+  /* No margin — .focus-head's gap owns the spacing now. */
+  margin: 0;
   color: var(--pc-ink-dim);
   font-family: var(--font-mono);
   font-size: 12px;

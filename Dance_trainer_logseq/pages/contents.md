@@ -16,7 +16,7 @@
 - ## Code map — which page owns which source
 	- Route by the file you're about to touch. `none yet` is honest, not an oversight: it means the reasoning lives only in the code and git history, and a page is worth writing if you go deep there.
 	- `views/BoardView.vue`, `components/KanbanColumn.vue`, `components/TaskCard.vue`, `components/ColumnSettingsModal.vue` → [[Board View]] — except `TaskCard`'s description rendering, which is [[Card Notes]] (it renders the shared `MarkdownNote` component read-only)
-	- `stores/boardStore.ts` → [[Board View]] for the persistence model and move behaviour, [[Tables]] for what the fields mean
+	- `stores/boardStore.ts` → [[Board View]] for the persistence model and move behaviour, [[Tables]] for what the fields mean, [[Card Relationships]] for `ancestorNamesByCardId` (the one family walk every surface reads)
 	- `views/BoardSelectView.vue` + the invite/join flow → [[Board View]] ("Board select and joining"), [[Supabase]] for the RLS behind it
 	- `views/PracticeView.vue`, `components/Practice*.vue`, `stores/practiceSessionStore.ts` → [[Practice Companion View]] — except `PracticeFocusCard`'s description editing, which is [[Card Notes]] (it renders the shared `MarkdownNote` component, same as the card modal)
 	- `components/CardModal.vue`, `components/MarkdownNote.vue`, `lib/markdown.ts` → [[Card Notes]] — except `markdown.ts`'s `noteSections`/`splitSection`/`demoteHeadings`/`mergeNote` and the modal's breadcrumb, pickers and Family section, which are [[Card Relationships]]

@@ -25,6 +25,14 @@ function labelsFor(cardId: number) {
   return store.labelsForCard(cardId)
 }
 
+// A queue is exactly where two identically-named parts end up adjacent — names
+// are stored leaf-only, so "Posture" under Hammers and "Posture" under Drops are
+// the same string. Mono and 10px: it has to be readable, not compete with the
+// name it qualifies.
+function lineageFor(cardId: number): string {
+  return store.ancestorNamesForCard(cardId).join(' › ')
+}
+
 const listRowsEl = ref<HTMLElement | null>(null)
 const draggingId = ref<number | null>(null)
 const suppressNextClick = ref(false)
@@ -49,11 +57,17 @@ const OPEN_PX = 44
 const swipingId = ref<number | null>(null)
 const swipeDx = ref(0)
 const swipedId = ref<number | null>(null)
+// Offset the current gesture started from: 0 for a closed row, -REVEAL_PX for
+// one already held open. That second case is what lets a rightward drag push
+// the row back over its own Remove button — without it the only way to change
+// your mind was to tap elsewhere, which is not a gesture anyone guesses.
+let swipeFrom = 0
 
 function closeSwipe() {
   swipingId.value = null
   swipeDx.value = 0
   swipedId.value = null
+  swipeFrom = 0
 }
 
 // Only ever returns a transform for a row mid-swipe or held open. An always-on
@@ -63,6 +77,14 @@ function rowStyle(cardId: number) {
   if (swipingId.value === cardId) return { transform: `translateX(${swipeDx.value}px)` }
   if (swipedId.value === cardId) return { transform: `translateX(${-REVEAL_PX}px)` }
   return {}
+}
+
+// Cancels out rowStyle's translation for the title only, so the card's name
+// stays put while the rest of the row slides off it. Clamped to the reveal
+// width: past that the title would start marching rightward on its own.
+function titleStyle(cardId: number) {
+  const dx = swipingId.value === cardId ? swipeDx.value : swipedId.value === cardId ? -REVEAL_PX : 0
+  return dx === 0 ? {} : { transform: `translateX(${-dx}px)` }
 }
 
 function onRemove(cardId: number) {
@@ -121,20 +143,24 @@ function onRowPointerMove(e: PointerEvent) {
     const dx = e.clientX - pressStart.x
     const dy = e.clientY - pressStart.y
     if (swipingId.value !== null) {
-      // Rightward drag past the origin does nothing — there's nothing to
-      // reveal on that side.
-      swipeDx.value = Math.max(-REVEAL_PX, Math.min(0, dx))
+      // Clamped to the reveal band in both directions: you can't drag past the
+      // button, and you can't pull the row right of its resting position.
+      swipeDx.value = Math.max(-REVEAL_PX, Math.min(0, swipeFrom + dx))
       return
     }
     if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) {
       clearPressTimer()
-      if (Math.abs(dx) > Math.abs(dy) && dx < 0) {
+      // A closed row only opens leftward; an open one takes the gesture in
+      // either direction so it can be pushed shut again.
+      const openHere = swipedId.value === pressStart.cardId
+      if (Math.abs(dx) > Math.abs(dy) && (dx < 0 || openHere)) {
+        swipeFrom = openHere ? -REVEAL_PX : 0
         swipedId.value = null
         swipingId.value = pressStart.cardId
         ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
         // The starting move carries its own distance — a fast flick can be a
         // single event, and waiting for the next one would drop it.
-        swipeDx.value = Math.max(-REVEAL_PX, dx)
+        swipeDx.value = Math.max(-REVEAL_PX, Math.min(0, swipeFrom + dx))
       }
     }
     return
@@ -161,9 +187,12 @@ function onRowPointerUp(e: PointerEvent) {
   if (!pressStart || e.pointerId !== pressStart.pointerId) return
   clearPressTimer()
   if (swipingId.value !== null) {
+    // One threshold serves both directions: past halfway it rests open,
+    // short of it the row snaps shut.
     swipedId.value = swipeDx.value <= -OPEN_PX ? swipingId.value : null
     swipingId.value = null
     swipeDx.value = 0
+    swipeFrom = 0
     suppressNextClick.value = true
     requestAnimationFrame(() => { suppressNextClick.value = false })
     pressStart = null
@@ -184,7 +213,15 @@ function onRowClick(cardId: number) {
 <template>
   <div class="session-list" :class="{ expanded }">
     <button class="list-header" @click="emit('toggle-expand')">
-      <span>Practice queue ({{ pendingCards.length + doneCards.length }})</span>
+      <!-- Counted separately, not summed: the two groups mean different things,
+           and one number read as "N left to drill" when half of them were
+           already practised and only waiting to be sorted. -->
+      <span>
+        <template v-if="pendingCards.length">{{ pendingCards.length }} to go</template>
+        <template v-if="pendingCards.length && doneCards.length"> · </template>
+        <template v-if="doneCards.length">{{ doneCards.length }} to sort</template>
+        <template v-if="!pendingCards.length && !doneCards.length">Practice queue</template>
+      </span>
       <span class="chevron">{{ expanded ? '⌄ Collapse' : '⌃ Expand' }}</span>
     </button>
 
@@ -226,7 +263,10 @@ function onRowClick(cardId: number) {
                 @pointerdown.stop="onGripPointerDown(card.id, $event)"
               >⠿</span>
               <span class="row-dot" />
-              <span class="row-title">{{ card.name }}</span>
+              <span class="row-text" :style="titleStyle(card.id)">
+                <span v-if="lineageFor(card.id)" class="row-lineage">{{ lineageFor(card.id) }}</span>
+                <span class="row-title">{{ card.name }}</span>
+              </span>
               <span v-if="labelsFor(card.id).length" class="row-labels">
                 <span
                   v-for="l in labelsFor(card.id)"
@@ -255,7 +295,10 @@ function onRowClick(cardId: number) {
             @click="emit('undo', card.id)"
           >
             <span class="row-check">✓</span>
-            <span class="row-title">{{ card.name }}</span>
+            <span class="row-text">
+              <span v-if="lineageFor(card.id)" class="row-lineage">{{ lineageFor(card.id) }}</span>
+              <span class="row-title">{{ card.name }}</span>
+            </span>
           </button>
         </div>
       </template>
@@ -269,7 +312,7 @@ function onRowClick(cardId: number) {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: var(--session-list-height, clamp(200px, 34vh, 340px));
+  height: var(--session-list-height, clamp(200px, 34dvh, 340px));
   background: var(--pc-surface);
   border-top: 1px solid var(--pc-border);
 }
@@ -323,6 +366,10 @@ function onRowClick(cardId: number) {
 .row-slot {
   position: relative;
   flex-shrink: 0;
+  /* Clips the translated row. Without it a swiped row slides out past the
+     list's own padding and off the side of the viewport. */
+  overflow: hidden;
+  border-radius: var(--radius-sm);
 }
 
 .remove-btn {
@@ -475,9 +522,35 @@ function onRowClick(cardId: number) {
 .list-row.status-due .row-dot { background: var(--pc-due); }
 .list-row.status-overdue .row-dot { background: var(--pc-overdue); }
 
-.row-title {
+/* Counter-translated in the template (titleStyle) so the name holds still while
+   the row slides — translating the whole row pushed it off the left edge and
+   left you confirming against a blank strip. The counter-translate moved from
+   .row-title to this wrapper when the lineage line arrived: both lines are the
+   card's name and have to hold still together. */
+.row-text {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Head-truncated (direction: rtl) like the board face's ancestor line and the
+   note's link chips: the nearest parent is the informative end, so "… › Prep"
+   beats "One Footed …". No trailing separator is rendered — `›` is bidi-neutral
+   and a trailing one gets reordered to the far side of an RTL paragraph. */
+.row-lineage {
+  direction: rtl;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--pc-ink-dim);
+}
+
+.row-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -499,15 +572,21 @@ function onRowClick(cardId: number) {
   margin: 10px 4px 4px;
   padding-top: 8px;
   border-top: 1px solid var(--pc-border);
-  color: var(--pc-good);
+  /* Dim ink, not --pc-good: green means "scheduled" everywhere else in this
+     palette, and these cards are precisely the ones that aren't scheduled yet.
+     The label was saying the opposite of what it names. */
+  color: var(--pc-ink-dim);
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.list-row.done {
-  opacity: 0.5;
+/* Explicit dimmed ink rather than opacity: 0.5, which multiplied through every
+   child (title, ✓, dots) and put the title at 2.86:1 on a row whose whole job
+   is to be tapped to undo. */
+.list-row.done .row-title {
+  color: var(--pc-ink-dim);
 }
 
 .row-check {

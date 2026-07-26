@@ -89,6 +89,41 @@ export const useBoardStore = defineStore('board', () => {
 
   const labelsForCard = computed(() => (cardId: number) => labelsByCardId.value.get(cardId) ?? [])
 
+  // Root-first parent names per card, absent for a top-level card. Cards store
+  // their leaf name only (see pages/Card Relationships.md), so a part renders as
+  // "Posture" whether it belongs to Hammers or to Drops — the chain *is* the
+  // card's identity, and every surface that lists cards by name needs it.
+  //
+  // Built once per cards change rather than per card: an ancestor walk that
+  // re-indexes the whole array on every call makes a render O(n²), and moveCard
+  // rewrites `position` on every drag frame. Lives here rather than in a view
+  // because a parent can sit in any column, so a walk needs every card on the
+  // board — same reason, and same shape, as labelsByCardId above.
+  const ancestorNamesByCardId = computed(() => {
+    const byId = new Map(cards.value.map((c) => [c.id, c]))
+    const map = new Map<number, string[]>()
+    for (const card of cards.value) {
+      const names: string[] = []
+      // Guarded like every walk in cardTree.ts: a cycle from a bad import must
+      // not hang the board.
+      const seen = new Set<number>([card.id])
+      let current = card.parent_id
+      while (current !== null && !seen.has(current)) {
+        const parent = byId.get(current)
+        if (!parent) break
+        seen.add(parent.id)
+        names.unshift(parent.name)
+        current = parent.parent_id
+      }
+      if (names.length) map.set(card.id, names)
+    }
+    return map
+  })
+
+  const ancestorNamesForCard = computed(
+    () => (cardId: number) => ancestorNamesByCardId.value.get(cardId) ?? [],
+  )
+
   // Columns offered as one-tap "quick move" targets in the card modal.
   const quickTargetColumns = computed(() =>
     columns.value.filter((c) => c.is_quick_target).sort((a, b) => a.position - b.position),
@@ -1004,7 +1039,8 @@ export const useBoardStore = defineStore('board', () => {
 
   return {
     boards, board, columns, cards, labels, cardLabels, loading,
-    cardsByColumn, labelsForCard, dueColumn, quickTargetColumns, inboxColumn,
+    cardsByColumn, labelsForCard, ancestorNamesByCardId, ancestorNamesForCard,
+    dueColumn, quickTargetColumns, inboxColumn,
     loadBoards, createBoard, deleteBoard, joinBoard,
     importTrelloBoard, importTrelloIntoBoard, exportBoard,
     loadBoard,

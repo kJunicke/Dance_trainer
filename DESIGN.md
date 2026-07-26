@@ -26,6 +26,7 @@ colors:
   practice-status-on-track: "#5bc794"
   practice-status-due: "#e0a83d"
   practice-status-overdue: "#e8695f"
+  practice-focus: "#ff8a3d"
   label-rose: "#c1495a"
   label-brass: "#c68b3d"
   label-sage: "#7d9a7a"
@@ -224,11 +225,17 @@ a darker green because no ink colour cleared the original.
 - **Secondary Ink** (`#6a6156`): Metadata, placeholder, inactive, and the card's note preview.
 
 ### The Practice Companion palette (scoped, not global)
-Nine `--pc-*` tokens scoped to `.practice-view` give the mid-practice companion a fully dark
+Ten `--pc-*` tokens scoped to `.practice-view` give the mid-practice companion a fully dark
 scheme: ground `#14100c`, surface `#1d1712`, border `#4a3320`, ink `#f5ede2` / `#b7a693`, a
-brighter ember `#ff8a3d` / `#ffb073`, and a lifted status trio `#5bc794` / `#e0a83d` / `#e8695f`.
-The ember hue carries across so it still reads as the same app. It is a deliberate exception,
-justified by use: short glances under variable studio light, not long reading.
+brighter ember `#ff8a3d` / `#ffb073`, a lifted status trio `#5bc794` / `#e0a83d` / `#e8695f`, and
+`--pc-focus` `#ff8a3d` for the focus ring. The ember hue carries across so it still reads as the
+same app. It is a deliberate exception, justified by use: short glances under variable studio
+light, not long reading.
+
+The border token is a hairline, never a control edge: `#4a3320` is **1.53:1** on the surface —
+visible enough to be decoration, not enough to say "you can press this". Anything a finger acts
+on (a checkbox, a dashed create row, a drag grip) takes Secondary Ink instead. This has been got
+wrong twice, on the grip and then on the add drawer's checkbox.
 
 ### Named Rules
 
@@ -258,8 +265,12 @@ decoration: it is the tell that a value was *measured*, and it appears nowhere e
 
 ### Hierarchy
 - **Display** (Space Grotesk 700, 26px, 1.2, -0.01em): Auth screen and board-select page titles.
-- **Headline** (Space Grotesk 700, 22px, 1.25, -0.01em): Card modal title. The practice focus
-  card runs the same role one step down at 20px.
+- **Headline** (Space Grotesk 700, 22px, 1.25, -0.01em): Card modal title, practice focus card
+  title, Session Review's head title. The practice pair sat one step down at 20px until the note
+  heading ramp widened; see The Card Title Wins Rule.
+- **Lineage** (Space Grotesk 600, 13px, 1.25, `--pc-ink-dim`): The parent chain rendered as the
+  headline's *first line* on the practice focus card and Session Review. Its list-surface
+  counterpart is Data at 10px — see The Lineage Is Identity Rule.
 - **Title** (Space Grotesk 600, 15px, 1.3): The card title on the board face. This is the
   largest thing on a card, by rule.
 - **Body** (Work Sans 400, 14px, ~1.5): Note text in the modal and practice card, list rows,
@@ -279,9 +290,20 @@ decoration: it is the tell that a value was *measured*, and it appears nowhere e
 **The Card Title Wins Rule.** On the board face, nothing renders larger than the 15px card
 title — including markdown headings inside the note preview. The note component's
 `--note-heading-scale` is set to `0` there for exactly this reason: it flattens h1–h6 onto the
-12px base so headings stay marked by weight and ink but never out-size the title. The modal
-(22px title vs 14px base) and practice card (20px vs 14px) already satisfy the rule and keep the
-full scale.
+12px base so headings stay marked by weight and ink but never out-size the title. The modal and
+the practice surfaces keep the full scale and satisfy the rule by title size instead: at a 14px
+base the ramp puts h1 at 21px, so a 22px title clears it and the practice pair's former 20px did
+not — which is why they were raised rather than the note being flattened. Any surface that hosts
+a note at 14px is now committed to a 22px title.
+
+**The Lineage Is Identity Rule.** A card stores its leaf name only, so `Hammers › Posture` and
+`Drops › Posture` are the same string. Wherever a card is named, its parent chain is named with
+it, in one of two registers: as the title's **first line** (Lineage, 13px display 600, trailing
+`›`, negative margin so it hugs the title) on single-card surfaces, or as a **10px mono sub-line**
+above the name in lists. List lineages head-truncate (`direction: rtl`) because the nearest parent
+is the informative end, and render no trailing `›` — a bidi-neutral separator gets reordered to
+the wrong side of an RTL run. The board face is the one surface still unresolved; see
+`Dance_trainer_logseq/pages/Open Work.md`.
 
 **The Measured-Value Rule.** If a number was counted, dated, or generated, it is Space Mono. If
 it is prose, a label, or a heading, it is not. There is no third case.
@@ -364,7 +386,13 @@ inset** = the status rail (see Components).
   Hover swaps the border to ember and the ink to primary. This is the "add a card" affordance
   and reads as an empty slot rather than a button.
 - **Disabled:** `opacity: 0.6` and `cursor: default`. No colour change.
-- **Focus:** Global — 2px Accent Ink outline at 2px offset. There is no second focus style.
+- **Focus:** Global — 2px Accent Ink outline at 2px offset. One re-toning, not a second style:
+  `.practice-view :focus-visible` swaps only the colour to `--pc-focus`, because Accent Ink is
+  3.04–3.21:1 on the practice palette's near-black grounds — over the non-text floor, but darker
+  than the ember border a selected row already carries, so a focused row read as *less* selected
+  than the active one. The one genuine exception is the Done FAB, whose own fill is `--pc-ember`:
+  a ring in the same value would vanish into it, so it uses `--pc-ember-light`. A ring that lands
+  on an accent fill needs the lighter tone; everything else takes the scoped default.
 
 ### Chips
 - **Label chips:** Solid fill from the six label colours, ink from the matching per-fill ink

@@ -54,4 +54,11 @@
   --pc-good: #5bc794;
   --pc-due: #e0a83d;
   --pc-overdue: #e8695f;
+  /* The global focus ring is --color-ember-text, measured against the light
+     board (4.53 there, 5.95 on a white card). On these near-black grounds the
+     same value is 3.04–3.21 — over the non-text floor, but darker than the
+     ember border a selected row already carries, so focusing a row made it look
+     *less* selected than the active one. Three components had each patched it
+     locally; this is that patch, made once. */
+  --pc-focus: #ff8a3d;
 }

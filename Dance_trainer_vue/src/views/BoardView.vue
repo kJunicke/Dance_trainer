@@ -10,7 +10,7 @@ import PracticeView from './PracticeView.vue'
 import PracticeAddDrawer from '../components/PracticeAddDrawer.vue'
 import PracticeQuickAdd from '../components/PracticeQuickAdd.vue'
 import PracticeSessionReview from '../components/PracticeSessionReview.vue'
-import { useBoardStore, type Card } from '../stores/boardStore'
+import { useBoardStore } from '../stores/boardStore'
 import { useAuthStore } from '../stores/authStore'
 import { usePracticeSessionStore } from '../stores/practiceSessionStore'
 
@@ -79,38 +79,9 @@ function columnName(columnId: number): string {
   return columnNameById.value.get(columnId) ?? ''
 }
 
-// The card face is presentational, so the family walk happens here — it needs
-// every card on the board, since a parent can sit in any column, and each
-// KanbanColumn only ever sees its own.
-//
-// Built once per cards change, not per card: `ancestorsOf` indexes the whole
-// array on every call, so calling it from the render expression made a board
-// render O(n²). `moveCard` rewrites `position` on every drag frame, which
-// re-runs the render — at a few hundred cards that alone overran the frame
-// budget mid-drag. Same shape as labelsByCardId in the store, for the same
-// reason.
-function buildAncestorNames(cards: Card[]): Map<number, string[]> {
-  const byId = new Map(cards.map((c) => [c.id, c]))
-  const map = new Map<number, string[]>()
-  for (const card of cards) {
-    const names: string[] = []
-    // Guarded like every walk in cardTree.ts: a cycle from a bad import must
-    // not hang the board.
-    const seen = new Set<number>([card.id])
-    let current = card.parent_id
-    while (current !== null && !seen.has(current)) {
-      const parent = byId.get(current)
-      if (!parent) break
-      seen.add(parent.id)
-      names.unshift(parent.name)
-      current = parent.parent_id
-    }
-    if (names.length) map.set(card.id, names)
-  }
-  return map
-}
-
-const ancestorNamesById = computed(() => buildAncestorNames(store.cards))
+// The family walk lives in the store (ancestorNamesByCardId), because the
+// practice surfaces need the same map and a parent can sit in any column — so
+// every consumer needs every card on the board, which no single view owns.
 
 // Cards store their leaf name only, so a part is called "Prep", not
 // "OFS › Prep" (see [[Card Relationships]]). Searching the stored name alone
@@ -120,7 +91,7 @@ const ancestorNamesById = computed(() => buildAncestorNames(store.cards))
 const composedNames = computed(() => {
   const map = new Map<number, string>()
   for (const c of store.cards) {
-    map.set(c.id, [...(ancestorNamesById.value.get(c.id) ?? []), c.name].join(' › '))
+    map.set(c.id, [...store.ancestorNamesForCard(c.id), c.name].join(' › '))
   }
   return map
 })
@@ -684,7 +655,7 @@ function onBoardPointerUp(e: PointerEvent) {
           :cards="store.cardsByColumn(column.id).map((c) => ({
             ...c,
             labels: store.labelsForCard(c.id),
-            ancestors: ancestorNamesById.get(c.id),
+            ancestors: store.ancestorNamesByCardId.get(c.id),
             partCount: partCounts.get(c.id),
           }))"
           :touch-drag-over="touchOverColumnId === column.id"
@@ -783,7 +754,11 @@ function onBoardPointerUp(e: PointerEvent) {
   color: #1f1404;
 }
 
+/* 44px here but not on the board's own .bar-btn: this is the practice surface,
+   used one-handed mid-session, where the shared 28px board control is well under
+   the touch floor. The board keeps its denser chrome. */
 .topbar.practice-view .practice-actions .bar-btn {
+  min-height: 44px;
   border-color: var(--pc-ember);
   color: var(--pc-ink);
 }

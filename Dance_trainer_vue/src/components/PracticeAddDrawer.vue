@@ -28,6 +28,14 @@ const orderedColumns = computed(() => {
   return [...(due ? [due] : []), ...quickTargets, ...rest]
 })
 
+// Shown above every row: names are stored leaf-only, so browsing a column that
+// holds several families offers a list of "Posture" / "Posture" / "Prep" with
+// nothing to pick between them. Display only — the search still matches the
+// stored leaf name (see [[Open Work]] on composed-name matching here).
+function lineageFor(cardId: number): string {
+  return store.ancestorNamesForCard(cardId).join(' › ')
+}
+
 const activeTabId = ref<number | null>(orderedColumns.value[0]?.id ?? null)
 
 // Already-added cards stay pinned at the top regardless of which column tab
@@ -111,7 +119,7 @@ function onSearchEscape() {
   <div class="drawer practice-view">
     <div class="drawer-head">
       <h2>Add to queue</h2>
-      <button class="close-btn" @click="emit('close')">✕</button>
+      <button class="close-btn" aria-label="Close" @click="emit('close')">✕</button>
     </div>
 
     <!-- Always rendered, at a fixed height. It used to appear on the first add
@@ -131,7 +139,10 @@ function onSearchEscape() {
         >
           <span class="checkbox checked"><span>✓</span></span>
           <span v-if="dueStatus(card.due_date)" class="status-dot" :class="`status-${dueStatus(card.due_date)}`" />
-          <span class="card-name">{{ card.name }}</span>
+          <span class="card-text">
+            <span v-if="lineageFor(card.id)" class="card-lineage">{{ lineageFor(card.id) }}</span>
+            <span class="card-name">{{ card.name }}</span>
+          </span>
           <span v-if="dueLabel(card.due_date)" class="due-label" :class="`status-${dueStatus(card.due_date)}`">{{ dueLabel(card.due_date) }}</span>
         </li>
       </ul>
@@ -175,7 +186,10 @@ function onSearchEscape() {
       >
         <span class="checkbox" />
         <span v-if="dueStatus(card.due_date)" class="status-dot" :class="`status-${dueStatus(card.due_date)}`" />
-        <span class="card-name">{{ card.name }}</span>
+        <span class="card-text">
+          <span v-if="lineageFor(card.id)" class="card-lineage">{{ lineageFor(card.id) }}</span>
+          <span class="card-name">{{ card.name }}</span>
+        </span>
         <!-- In the Due tab every status dot is red, so the dot carries no
              information and the row is just a name. The text is what actually
              separates "3d late" from "56d late". -->
@@ -225,8 +239,9 @@ function onSearchEscape() {
 }
 
 .close-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
   border: none;
   background: transparent;
   color: var(--pc-ink-dim);
@@ -235,15 +250,17 @@ function onSearchEscape() {
 }
 
 /* Fixed, not max-height: the panel must reserve its space from the moment the
-   drawer opens, or the first add is a jump from nothing to full height. Sized
-   to the label plus five 48px rows, so a typical session fits without the list
-   scrolling inside it. Same clamp idiom as --session-list-height. */
+   drawer opens, or the first add is a jump from nothing to full height. The
+   floor used to be 200px — a quarter of a 390px screen held permanently for one
+   italic "nothing yet" line, while the browse list you came here to use started
+   below the midpoint. Two rows' worth is enough to stop the jump; the clamp
+   ceiling still lets it grow to five as the session fills. */
 .added-section {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: clamp(200px, 30vh, 270px);
+  height: clamp(96px, 14dvh, 270px);
   margin-bottom: 10px;
 }
 
@@ -281,8 +298,9 @@ function onSearchEscape() {
   color: var(--pc-ink-dim);
 }
 
+/* Colour comes from the scoped --pc-focus rule; only the inset offset is local,
+   because a full-bleed input's ring would otherwise clip on the panel edge. */
 .search-input:focus-visible {
-  outline: 2px solid var(--pc-ember);
   outline-offset: -1px;
 }
 
@@ -302,7 +320,7 @@ function onSearchEscape() {
 .tab {
   flex-shrink: 0;
   padding: 8px 14px;
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid var(--pc-border);
   border-radius: 999px;
   background: transparent;
@@ -399,8 +417,11 @@ function onSearchEscape() {
   justify-content: center;
   width: 22px;
   height: 22px;
-  border: 1px solid var(--pc-border);
-  border-radius: 5px;
+  /* --pc-border is 1.53:1 here — the same "visible enough to be decoration, not
+     enough to be a control" problem already fixed for the drag grip, on what is
+     this screen's primary control. */
+  border: 1px solid var(--pc-ink-dim);
+  border-radius: var(--radius-sm);
   color: #1f1404;
   font-size: 13px;
   font-weight: 700;
@@ -423,9 +444,30 @@ function onSearchEscape() {
 .status-dot.status-due { background: var(--pc-due); }
 .status-dot.status-overdue { background: var(--pc-overdue); }
 
-.card-name {
+.card-text {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Names are stored leaf-only, so this list otherwise offers two rows both
+   called "Posture" and no way to tell which one you're queueing. Head-truncated
+   like every other lineage line in the app — the nearest parent is the
+   informative end. */
+.card-lineage {
+  direction: rtl;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--pc-ink-dim);
+}
+
+.card-name {
   color: var(--pc-ink);
   font-size: 14px;
   overflow: hidden;

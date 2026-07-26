@@ -21,6 +21,9 @@ const highlight = ref(0)
 // The query clears after every add so the next name can be typed straight
 // away — without a receipt the only feedback would be the row vanishing.
 const justAdded = ref<string | null>(null)
+// Anything that isn't a successful queueing: already-there, or a create that
+// didn't land. Separate from justAdded because that one renders as a ✓ receipt.
+const notice = ref<string | null>(null)
 const creating = ref(false)
 
 onMounted(async () => {
@@ -30,6 +33,12 @@ onMounted(async () => {
 
 // Same ordering as the add drawer's browse list: most overdue first, undated
 // last. A name search can still return a dozen rows on a board this size.
+// Same reason as the add drawer's: a search for "post" returns every family's
+// Posture, and the stored name can't tell them apart.
+function lineageFor(cardId: number): string {
+  return store.ancestorNamesForCard(cardId).join(' › ')
+}
+
 function byUrgency(a: Card, b: Card): number {
   if (a.due_date === b.due_date) return 0
   if (!a.due_date) return 1
@@ -49,9 +58,14 @@ const results = computed(() => {
 
 // Already-queued cards stay in the list, dimmed. Hiding them would make the
 // skill you just typed disappear, which reads as "not found".
+// Three characters before offering to write a new card to the board. At one
+// character every prefix that isn't an exact match looked creatable, so a
+// half-typed name plus Enter filed a card called "dro".
+const MIN_CREATE_LEN = 3
+
 const canCreate = computed(() => {
   const q = query.value.trim().toLowerCase()
-  if (!q || !store.inboxColumn) return false
+  if (q.length < MIN_CREATE_LEN || !store.inboxColumn) return false
   return !results.value.some((c) => c.name.trim().toLowerCase() === q)
 })
 
@@ -66,9 +80,15 @@ const hint = computed(() => {
 })
 
 watch(query, (q) => {
-  highlight.value = 0
+  // First row you can actually act on, not row 0 — queued cards stay in the
+  // list (dimmed) so the thing you just typed doesn't vanish, but landing the
+  // highlight on one meant Enter hit a no-op.
+  highlight.value = results.value.findIndex((c) => !session.isInSession(c.id))
   // Cleared by the *next* keystroke, not by the add's own reset to ''.
-  if (q) justAdded.value = null
+  if (q) {
+    justAdded.value = null
+    notice.value = null
+  }
 })
 
 function moveHighlight(delta: number) {
@@ -78,10 +98,16 @@ function moveHighlight(delta: number) {
 }
 
 function add(card: Card) {
-  if (session.isInSession(card.id)) return
+  // Say so rather than doing nothing. The query clears on a successful add, so
+  // a silent return was indistinguishable from the keystroke not registering.
+  if (session.isInSession(card.id)) {
+    notice.value = `${card.name} is already queued`
+    return
+  }
   session.addCard(card.id)
   query.value = ''
   justAdded.value = card.name
+  notice.value = null
   inputEl.value?.focus()
 }
 
@@ -95,17 +121,35 @@ async function createCard() {
   creating.value = true
   const card = await store.addCard(inbox.id, name)
   creating.value = false
-  if (!card) return
+  // A null row means the insert failed (offline, RLS). Saying nothing left the
+  // tap indistinguishable from one that never registered.
+  if (!card) {
+    notice.value = `Couldn't create "${name}" — check your connection and try again.`
+    return
+  }
   session.addCard(card.id)
   query.value = ''
   justAdded.value = card.name
+  notice.value = null
   inputEl.value?.focus()
 }
 
 function onEnter() {
   const picked = results.value[highlight.value]
-  if (picked) add(picked)
-  else if (canCreate.value) createCard()
+  if (picked) {
+    add(picked)
+    return
+  }
+  // Enter only ever creates when nothing matched at all. It used to fall through
+  // to create whenever the highlight didn't resolve — including the case where
+  // every match was already queued — so typing a prefix of a card that was
+  // already in the session and pressing Enter filed a second, half-named card.
+  // Creating from a query that *did* match something is a deliberate tap.
+  if (results.value.length) {
+    notice.value = 'Every match is already queued.'
+    return
+  }
+  if (canCreate.value) createCard()
 }
 
 // Two-stage, matching the add drawer: Escape abandons the query first and only
@@ -136,6 +180,7 @@ function onEscape() {
       </div>
 
       <p v-if="justAdded" class="receipt">✓ {{ justAdded }} queued</p>
+      <p v-else-if="notice" class="notice" role="status">{{ notice }}</p>
 
       <div class="results">
         <button
@@ -151,7 +196,10 @@ function onEscape() {
             class="status-dot"
             :class="`status-${dueStatus(card.due_date)}`"
           />
-          <span class="name">{{ card.name }}</span>
+          <span class="text">
+            <span v-if="lineageFor(card.id)" class="lineage">{{ lineageFor(card.id) }}</span>
+            <span class="name">{{ card.name }}</span>
+          </span>
           <span
             v-if="dueLabel(card.due_date)"
             class="due-label"
@@ -186,10 +234,15 @@ function onEscape() {
   z-index: 201;
 }
 
+/* Heavier than the usual 55% scrim: this palette's background is already
+   #14100c, so a half-black wash over near-black barely reads and the panel
+   didn't feel modal — the FAB and queue rows stayed plainly legible behind it.
+   The blur does the separating work the luminance drop can't. */
 .backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
 }
 
 /* Anchored near the top rather than centred: the keyboard takes the bottom
@@ -199,7 +252,7 @@ function onEscape() {
   display: flex;
   flex-direction: column;
   width: min(560px, calc(100% - 20px));
-  max-height: min(72vh, 520px);
+  max-height: min(72dvh, 520px);
   margin: calc(10px + env(safe-area-inset-top)) auto 0;
   padding: 10px;
   border: 1px solid var(--pc-border);
@@ -245,8 +298,9 @@ function onEscape() {
   color: var(--pc-ink-dim);
 }
 
+/* Colour comes from the scoped --pc-focus rule; only the inset offset is local,
+   because a full-bleed input's ring would otherwise clip on the panel edge. */
 .search-input:focus-visible {
-  outline: 2px solid var(--pc-ember);
   outline-offset: -1px;
 }
 
@@ -269,6 +323,16 @@ function onEscape() {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* Same slot as the receipt, dim rather than green: these are "nothing
+   happened" messages, not confirmations. Sentence case because two of them are
+   full sentences. */
+.notice {
+  flex-shrink: 0;
+  margin: 8px 4px 0;
+  color: var(--pc-ink-dim);
+  font-size: 12px;
 }
 
 .results {
@@ -331,6 +395,28 @@ function onEscape() {
 .status-dot.status-scheduled { background: var(--pc-good); }
 .status-dot.status-due { background: var(--pc-due); }
 .status-dot.status-overdue { background: var(--pc-overdue); }
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Head-truncated like every other lineage line — the nearest parent is the
+   informative end. Not rendered on the create row: a card being named here has
+   no parent yet, it lands in the inbox. */
+.lineage {
+  direction: rtl;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--pc-ink-dim);
+}
 
 .name {
   flex: 1;
