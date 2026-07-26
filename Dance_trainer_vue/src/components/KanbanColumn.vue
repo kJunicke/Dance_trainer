@@ -11,6 +11,10 @@ const props = defineProps<{
     description?: string | null
     due_date?: string | null
     labels?: { id: number; name: string; color: string }[]
+    // Family link, derived by BoardView from lib/cardTree.ts — see
+    // pages/Card Relationships.md. Forwarded straight to TaskCard.
+    ancestors?: string[]
+    partCount?: number
   }[]
   touchDragOver?: boolean
   // Live insertion target while a touch drag hovers this column — native mouse
@@ -33,6 +37,7 @@ const emit = defineEmits<{
   'card-dropped': []
   'card-dropped-on-card': [targetCardId: number, position: 'before' | 'after']
   'open-card': [cardId: number]
+  'open-card-family': [cardId: number]
   'open-settings': []
   'column-drag-start': []
   'column-drag-move': [x: number, y: number]
@@ -243,7 +248,10 @@ onUnmounted(() => {
           :description="card.description"
           :due-date="card.due_date"
           :labels="card.labels"
+          :ancestors="card.ancestors"
+          :part-count="card.partCount"
           @open="emit('open-card', card.id)"
+          @open-family="emit('open-card-family', card.id)"
           @drag-start="emit('card-drag-start', $event)"
           @drag-move="(x, y) => emit('card-drag-move', x, y)"
           @drag-end="(x, y) => emit('card-drag-end', x, y)"

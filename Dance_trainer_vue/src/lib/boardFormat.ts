@@ -16,6 +16,7 @@ interface NativeColumn {
   dueOffsetDays: number | null
   dueClearOnEnter: boolean
   isQuickTarget: boolean
+  isInboxColumn: boolean
 }
 
 interface NativeLabel {
@@ -34,6 +35,10 @@ interface NativeCard {
   labelIds: string[]
   lastScheduledColumnId: string | null
   lastPracticedOn: string | null
+  // "Part of" another card in the same export, by local id. The export is
+  // offered as a backup, so dropping relations on restore would be silent data
+  // loss — the same reasoning that put the scheduling history in here.
+  parentId: string | null
 }
 
 interface NativeBoardExport {
@@ -59,6 +64,7 @@ export function buildBoardExport(
     due_offset_days: number | null
     due_clear_on_enter: boolean
     is_quick_target: boolean
+    is_inbox_column: boolean
   }[],
   cards: {
     id: number
@@ -69,6 +75,7 @@ export function buildBoardExport(
     position: number
     last_scheduled_column_id: number | null
     last_practiced_on: string | null
+    parent_id: number | null
   }[],
   labels: { id: number; name: string; color: string }[],
   cardLabels: { card_id: number; label_id: number }[],
@@ -87,6 +94,7 @@ export function buildBoardExport(
         dueOffsetDays: c.due_offset_days,
         dueClearOnEnter: c.due_clear_on_enter,
         isQuickTarget: c.is_quick_target,
+        isInboxColumn: c.is_inbox_column,
       })),
     labels: labels.map((l) => ({ id: String(l.id), name: l.name, color: l.color })),
     cards: [...cards]
@@ -102,6 +110,7 @@ export function buildBoardExport(
         lastScheduledColumnId:
           c.last_scheduled_column_id === null ? null : String(c.last_scheduled_column_id),
         lastPracticedOn: c.last_practiced_on,
+        parentId: c.parent_id === null ? null : String(c.parent_id),
       })),
   }
 }
@@ -120,6 +129,7 @@ export function parseBoardExport(raw: unknown): ParsedBoard {
     dueOffsetDays: c.dueOffsetDays ?? null,
     dueClearOnEnter: !!c.dueClearOnEnter,
     isQuickTarget: !!c.isQuickTarget,
+    isInboxColumn: !!c.isInboxColumn,
   }))
 
   const labels: ParsedBoard['labels'] = (data.labels ?? []).map((l) => ({
@@ -136,6 +146,7 @@ export function parseBoardExport(raw: unknown): ParsedBoard {
     dueDate: c.dueDate ?? null,
     lastScheduledColumnRef: c.lastScheduledColumnId ?? null,
     lastPracticedOn: c.lastPracticedOn ?? null,
+    parentRef: c.parentId ?? null,
     position: c.position,
   }))
 

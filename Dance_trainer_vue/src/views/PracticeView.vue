@@ -106,6 +106,7 @@ function onUndo(cardId: number) {
       @focus="focusedId = $event"
       @reorder="session.reorderPending"
       @undo="onUndo"
+      @remove="session.removeCard"
       @toggle-expand="listExpanded = !listExpanded"
     />
 

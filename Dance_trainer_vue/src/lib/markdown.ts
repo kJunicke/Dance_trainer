@@ -177,6 +177,213 @@ export function caretOffsetInBlock(blockEl: Element, e: MouseEvent, raw: string)
   return offsetInRaw(raw, textBefore(blockEl, pos.node, pos.offset))
 }
 
+// A heading as the lexer saw it, plus where its source lives. Only *top-level*
+// headings are collected: a `#` inside a blockquote or a list item is a heading
+// token too, but it hangs off a parent token whose own raw carries `> ` / `  `
+// prefixes, so its offset can't be mapped back to the source by adding raw
+// lengths. Sections and demotion therefore both ignore nested headings — they
+// travel with whatever block owns them and their level is left alone.
+interface RawHeading {
+  level: number
+  text: string
+  start: number
+  end: number
+  raw: string
+}
+
+// `marked.lexer()` normalises CRLF (and lone CR) to LF *before* tokenising, so
+// on a CRLF note the token `raw` lengths no longer sum to `source.length` and
+// every offset derived from them drifts one byte per `\r` seen so far. Slicing
+// with those offsets straddles the real boundaries — the header text bleeds
+// into the extracted card and a fragment of the body is left stranded under the
+// wrong heading, or dropped entirely.
+//
+// So the whole split/merge path works on LF text and says so: every public
+// function below normalises first and returns LF. A CRLF note is rewritten to
+// LF the first time it's split, which is a fix, not a loss. CRLF reaches us
+// from Trello descriptions authored on Windows (`parseTrelloExport` copies
+// `desc` verbatim) and survives editing, since commitEdit splices rather than
+// rewrites.
+function toLf(source: string): string {
+  return source.replace(/\r\n|\r/g, '\n')
+}
+
+// Takes already-LF text — callers normalise via toLf() so their own slicing
+// offsets agree with these.
+function topLevelHeadings(source: string): RawHeading[] {
+  const out: RawHeading[] = []
+  let offset = 0
+  // Same offset walk as splitBlocks(): every token's raw is a verbatim slice of
+  // the source and their lengths sum to source.length, so accumulating them
+  // gives each token's start for free.
+  for (const token of marked.lexer(source)) {
+    if (token.type === 'heading') {
+      out.push({
+        level: token.depth,
+        text: token.text,
+        start: offset,
+        end: offset + token.raw.length,
+        raw: token.raw,
+      })
+    }
+    offset += token.raw.length
+  }
+  return out
+}
+
+// One heading and everything under it. `start`/`end` are source offsets, so
+// `source.slice(start, end)` is the whole section including its header line and
+// any blank lines trailing it (the lexer parks those in `space` tokens, which
+// the walk above rolls into the *preceding* section's range — that's what keeps
+// a removal from leaving its old separator behind).
+//
+// IMPORTANT: the ranges OVERLAP. Every heading at every level is its own
+// section, in document order, and a section runs to the next heading of the
+// same or higher level — so a `##` swallows the `###`s under it, and both the
+// `##` and each of those `###`s appear in the list with nested ranges. The list
+// is a flat menu for the user to pick one entry from; it is not a partition of
+// the note, and callers must not iterate it assuming disjointness.
+export interface NoteSection {
+  level: number
+  title: string
+  start: number
+  end: number
+  body: string
+}
+
+// Every heading in `source` as a section. Content above the first heading is
+// not a section and no split can move it.
+export function noteSections(rawSource: string): NoteSection[] {
+  const source = toLf(rawSource)
+  const heads = topLevelHeadings(source)
+  return heads.map((h, i) => {
+    // The section ends where the next same-or-shallower heading begins; a
+    // deeper one is part of this section, not the end of it.
+    const next = heads.slice(i + 1).find((o) => o.level <= h.level)
+    const end = next ? next.start : source.length
+    return {
+      level: h.level,
+      title: h.text.trim(),
+      start: h.start,
+      end,
+      // The header line is consumed by the caller (it becomes the card's name),
+      // so the body starts after it. Leading newlines go because they were only
+      // the gap under the header; trailing whitespace goes because the range
+      // reaches to the next header. Leading *spaces* are kept — stripping them
+      // would turn a body that opens with an indented code block into a
+      // paragraph.
+      body: source.slice(h.end, end).replace(/^\n+/, '').replace(/\s+$/, ''),
+    }
+  })
+}
+
+// Lift a section out of a note. `extracted` is the section's body with the
+// header line dropped; `remaining` is the note with the whole range gone.
+//
+// Nothing is left behind — no stub, no back-link, no `<!-- -->` marker. That
+// last one was rejected outright for blockSeparator() above and the reason is
+// the same here: permanent noise in notes that are kept for years.
+//
+// Whitespace contract — exactly what may change, and only at the two cut edges:
+//   - the text before the cut loses any trailing whitespace it had,
+//   - the text after the cut loses any trailing whitespace it had,
+//   - they are rejoined with blockSeparator(), i.e. a single blank line,
+//   - if either side is empty the other is returned alone, so removing the only
+//     section of a note with no preamble gives '' rather than '\n\n'.
+// Everything between those edges is byte-identical to the source. `extracted`
+// is the body slice with leading newlines and trailing whitespace removed.
+export function splitSection(
+  rawSource: string,
+  section: NoteSection,
+): { remaining: string; extracted: string } {
+  // Must normalise exactly as noteSections() did, or the offsets it handed back
+  // don't address this string.
+  const source = toLf(rawSource)
+  const before = source.slice(0, section.start).replace(/\s+$/, '')
+  const after = source.slice(section.end).replace(/\s+$/, '')
+  const remaining =
+    before && after ? before + blockSeparator(before, after, '') + after : before || after
+  return { remaining, extracted: section.body }
+}
+
+// A heading indented up to three spaces is still a heading, so the indent has
+// to survive the rewrite rather than be part of the match.
+const ATX_HASHES = /^([ \t]*)#{1,6}/
+
+// `raw` rewritten to `level`, or null if it can't be rewritten and must be left
+// as it is. Setext headings (`Foo\n---`) are rewritten into ATX form, because
+// setext can only express levels 1 and 2 and demotion routinely needs 3+. The
+// one setext case that returns null is a multi-line one, which has no ATX
+// spelling at all.
+function rewriteHeadingLevel(raw: string, text: string, level: number): string | null {
+  if (ATX_HASHES.test(raw)) {
+    return raw.replace(ATX_HASHES, (_m, indent: string) => indent + '#'.repeat(level))
+  }
+  if (text.includes('\n')) return null
+  return '#'.repeat(level) + ' ' + text + (/\n*$/.exec(raw)?.[0] ?? '')
+}
+
+// Shift every heading by one uniform delta so the shallowest lands on
+// `targetShallowest`, keeping relative nesting. `##`/`###`/`##` at target 3
+// becomes `###`/`####`/`###`. A source with no headings comes back untouched.
+//
+// Clamped at 6, since markdown has no `#######`. Clamping is per-heading, so it
+// COMPRESSES nesting rather than preserving it: `##`/`######` demoted to
+// shallowest 3 gives `###`/`######`, a four-level gap squeezed to three, and
+// two headings that both land past 6 pile onto 6 together — the distinction
+// between them is gone for good, not recoverable by promoting back. Only
+// reachable by demoting a note that is already deep.
+//
+// `#` characters that aren't headings are safe: the lexer hands back only
+// heading tokens, so a `#` inside a fenced block, inside inline code, or
+// mid-line is never even looked at.
+export function demoteHeadings(rawSource: string, targetShallowest: number): string {
+  const source = toLf(rawSource)
+  const heads = topLevelHeadings(source)
+  if (!heads.length) return source
+  const delta = targetShallowest - Math.min(...heads.map((h) => h.level))
+  if (delta === 0) return source
+  let out = ''
+  let cursor = 0
+  for (const h of heads) {
+    const rewritten = rewriteHeadingLevel(h.raw, h.text, clampLevel(h.level + delta))
+    if (rewritten === null) continue
+    out += source.slice(cursor, h.start) + rewritten
+    cursor = h.end
+  }
+  return out + source.slice(cursor)
+}
+
+function clampLevel(level: number): number {
+  return Math.min(6, Math.max(1, level))
+}
+
+// Fold a child card back into its parent: the child's title becomes a heading
+// at the end of the parent's note and the child's own note follows it, demoted
+// so its shallowest heading sits one level under that title. With the default
+// `titleLevel` of 1 the child's headings start at `##`.
+//
+// A clean fold by explicit decision — no practice-history line, no metadata, no
+// marker comment. These notes stay entirely hand-written.
+export function mergeNote(
+  parentNote: string,
+  childTitle: string,
+  childNote: string,
+  titleLevel: number,
+): string {
+  const level = clampLevel(titleLevel)
+  const header = '#'.repeat(level) + ' ' + childTitle.trim()
+  const body = demoteHeadings(childNote, clampLevel(level + 1))
+    .replace(/^\n+/, '')
+    .replace(/\s+$/, '')
+  const block = body ? header + '\n\n' + body : header
+  // Normalised for the same reason as the rest of the path, and so a CRLF
+  // parent and an LF child can't produce a note with mixed line endings.
+  const parent = toLf(parentNote).replace(/\s+$/, '')
+  // An empty parent gets the block on its own, with no leading blank lines.
+  return parent ? parent + blockSeparator(parent, block, '') + block : block
+}
+
 // Same markdown, but links keep their href and every one gets a distinct
 // tappable-chip class plus target="_blank" — used where notes are read
 // mid-practice (reference videos) and a plain inline link would be too easy to

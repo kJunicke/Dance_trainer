@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+
 import KanbanColumn from '../components/KanbanColumn.vue'
 import CardModal from '../components/CardModal.vue'
 import ColumnSettingsModal from '../components/ColumnSettingsModal.vue'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import PracticeView from './PracticeView.vue'
 import PracticeAddDrawer from '../components/PracticeAddDrawer.vue'
+import PracticeQuickAdd from '../components/PracticeQuickAdd.vue'
 import PracticeSessionReview from '../components/PracticeSessionReview.vue'
-import { useBoardStore } from '../stores/boardStore'
+import { useBoardStore, type Card } from '../stores/boardStore'
 import { useAuthStore } from '../stores/authStore'
 import { usePracticeSessionStore } from '../stores/practiceSessionStore'
 
@@ -31,6 +33,7 @@ const viewMode = ref<'board' | 'practice'>(
 )
 const showAddDrawer = ref(false)
 const showReview = ref(false)
+const showQuickAdd = ref(false)
 
 // Both overlays belong to Practice. Switching modes with one open left it
 // sitting full-screen over a rendered Kanban board.
@@ -39,6 +42,7 @@ function setViewMode(mode: 'board' | 'practice') {
   localStorage.setItem(VIEW_MODE_PREFIX + boardId, mode)
   showAddDrawer.value = false
   showReview.value = false
+  showQuickAdd.value = false
 }
 
 // Re-sweep when the PWA is resumed — it may have been backgrounded past midnight.
@@ -75,10 +79,78 @@ function columnName(columnId: number): string {
   return columnNameById.value.get(columnId) ?? ''
 }
 
+// The card face is presentational, so the family walk happens here — it needs
+// every card on the board, since a parent can sit in any column, and each
+// KanbanColumn only ever sees its own.
+//
+// Built once per cards change, not per card: `ancestorsOf` indexes the whole
+// array on every call, so calling it from the render expression made a board
+// render O(n²). `moveCard` rewrites `position` on every drag frame, which
+// re-runs the render — at a few hundred cards that alone overran the frame
+// budget mid-drag. Same shape as labelsByCardId in the store, for the same
+// reason.
+function buildAncestorNames(cards: Card[]): Map<number, string[]> {
+  const byId = new Map(cards.map((c) => [c.id, c]))
+  const map = new Map<number, string[]>()
+  for (const card of cards) {
+    const names: string[] = []
+    // Guarded like every walk in cardTree.ts: a cycle from a bad import must
+    // not hang the board.
+    const seen = new Set<number>([card.id])
+    let current = card.parent_id
+    while (current !== null && !seen.has(current)) {
+      const parent = byId.get(current)
+      if (!parent) break
+      seen.add(parent.id)
+      names.unshift(parent.name)
+      current = parent.parent_id
+    }
+    if (names.length) map.set(card.id, names)
+  }
+  return map
+}
+
+const ancestorNamesById = computed(() => buildAncestorNames(store.cards))
+
+// Cards store their leaf name only, so a part is called "Prep", not
+// "OFS › Prep" (see [[Card Relationships]]). Searching the stored name alone
+// would mean typing the macro skill's name found the parent and none of its
+// parts — the opposite of what a family is for. Matched against the composed
+// chain instead, reusing the ancestor walk above rather than re-deriving it.
+const composedNames = computed(() => {
+  const map = new Map<number, string>()
+  for (const c of store.cards) {
+    map.set(c.id, [...(ancestorNamesById.value.get(c.id) ?? []), c.name].join(' › '))
+  }
+  return map
+})
+
+// Direct children only: the face says "this has parts", the modal's tree says
+// how deep they go. Counted in one pass rather than per card.
+const partCounts = computed(() => {
+  const counts = new Map<number, number>()
+  for (const c of store.cards) {
+    if (c.parent_id === null) continue
+    counts.set(c.parent_id, (counts.get(c.parent_id) ?? 0) + 1)
+  }
+  return counts
+})
+
+// The board-face family icon opens the card's own modal already scrolled to its
+// Family section — a popover would be anchored to a board that scrolls
+// horizontally under it. Reset on close so a later ordinary tap opens at the top.
+const openCardAtFamily = ref(false)
+function openCardFamily(cardId: number) {
+  openCardId.value = cardId
+  openCardAtFamily.value = true
+}
+
 const searchResults = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return []
-  return store.cards.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 12)
+  return store.cards
+    .filter((c) => (composedNames.value.get(c.id) ?? c.name).toLowerCase().includes(q))
+    .slice(0, 12)
 })
 
 // Enter used to fire on a hardcoded searchResults[0], so arrowing down and
@@ -496,7 +568,13 @@ function onBoardPointerUp(e: PointerEvent) {
         </button>
       </span>
 
-      <button v-if="viewMode === 'board'" class="search-btn" title="Search cards" @click="openSearch">
+      <!-- Same affordance in both modes, different destination: on the board a
+           hit opens the card, in practice it goes straight into the queue. -->
+      <button
+        class="search-btn"
+        :title="viewMode === 'practice' ? 'Search or create cards' : 'Search cards'"
+        @click="viewMode === 'practice' ? (showQuickAdd = true) : openSearch()"
+      >
         <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="8.5" cy="8.5" r="6" />
           <line x1="13.2" y1="13.2" x2="18" y2="18" stroke-linecap="round" />
@@ -553,7 +631,7 @@ function onBoardPointerUp(e: PointerEvent) {
           :class="{ highlighted: i === searchHighlight }"
           @click="openSearchResult(card.id)"
         >
-          <span class="search-result-name">{{ card.name }}</span>
+          <span class="search-result-name">{{ composedNames.get(card.id) ?? card.name }}</span>
           <span class="search-result-col">{{ columnName(card.column_id) }}</span>
         </li>
       </ul>
@@ -603,7 +681,12 @@ function onBoardPointerUp(e: PointerEvent) {
         <KanbanColumn
           :id="column.id"
           :name="column.name"
-          :cards="store.cardsByColumn(column.id).map((c) => ({ ...c, labels: store.labelsForCard(c.id) }))"
+          :cards="store.cardsByColumn(column.id).map((c) => ({
+            ...c,
+            labels: store.labelsForCard(c.id),
+            ancestors: ancestorNamesById.get(c.id),
+            partCount: partCounts.get(c.id),
+          }))"
           :touch-drag-over="touchOverColumnId === column.id"
           :touch-drop-indicator="
             touchDropTarget && touchDropTarget.columnId === column.id
@@ -620,6 +703,7 @@ function onBoardPointerUp(e: PointerEvent) {
           @card-dropped="onColumnDrop(column.id)"
           @card-dropped-on-card="(cardId, pos) => onCardDroppedOnCard(column.id, cardId, pos)"
           @open-card="openCardId = $event"
+          @open-card-family="openCardFamily"
           @open-settings="settingsColumnId = column.id"
           @column-drag-start="onColumnDragStart(column.id)"
           @column-drag-move="onColumnDragMove"
@@ -637,12 +721,18 @@ function onBoardPointerUp(e: PointerEvent) {
       :style="{ left: touchPoint.x + 'px', top: touchPoint.y + 'px' }"
     >{{ draggingCardName }}</div>
 
-    <CardModal v-if="openCardId !== null" :card-id="openCardId" @close="openCardId = null" />
+    <CardModal
+      v-if="openCardId !== null"
+      :card-id="openCardId"
+      :focus-family="openCardAtFamily"
+      @close="openCardId = null; openCardAtFamily = false"
+    />
     <ColumnSettingsModal
       v-if="settingsColumnId !== null"
       :column-id="settingsColumnId"
       @close="settingsColumnId = null"
     />
+    <PracticeQuickAdd v-if="showQuickAdd" @close="showQuickAdd = false" />
     <PracticeAddDrawer v-if="showAddDrawer" @close="showAddDrawer = false" />
     <PracticeSessionReview v-if="showReview" @close="showReview = false" />
   </div>
@@ -704,6 +794,18 @@ function onBoardPointerUp(e: PointerEvent) {
 
 .topbar.practice-view .practice-actions .review-btn {
   border-color: var(--pc-good);
+}
+
+/* The magnifier is board chrome that now appears in both modes — left alone it
+   painted --color-ink (#2a2420) on the dark bar, about 1.1:1. */
+.topbar.practice-view .search-btn {
+  border-color: var(--pc-border);
+  color: var(--pc-ink);
+}
+
+.topbar.practice-view .search-btn:hover {
+  background: color-mix(in srgb, var(--pc-ember) 16%, transparent);
+  border-color: var(--pc-ember);
 }
 
 .back-btn {

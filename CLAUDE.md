@@ -49,11 +49,13 @@ layer on top, so it answers "why/how does X work" without re-deriving it from a 
 - **[PRODUCT.md](PRODUCT.md)** — who the user is, what the product is for, brand personality,
   design principles, and the directions explicitly rejected. Read it before any UX or product
   judgment call; don't restate it in the wiki.
-- **`.claude/skills/dance-trainer-design-system/`** — the concrete visual conventions (tokens, type,
-  radii, the card status rail). It is a *snapshot for orientation*: `src/assets/tokens.css` is
-  authoritative for values, and the wiki holds the reasoning behind them. When a token or convention
-  changes, update the skill in the same commit — it has drifted from the code before, and because it
-  auto-loads on design work it gets read ahead of the wiki.
+- **[DESIGN.md](DESIGN.md)** — the concrete visual system: every token, the type scale, radii, the
+  card status rail, and the named rules that govern them. Read it before any styling work.
+  `src/assets/tokens.css` stays authoritative for raw values and the wiki holds the reasoning
+  behind them, so when a token or convention changes, update DESIGN.md in the same commit — it has
+  drifted from the code before. `.impeccable/design.json` is its machine-readable sidecar
+  (tonal ramps, shadows, motion, component snippets); regenerate both together via
+  `/impeccable document`.
 
 ## Ingest — before every commit (per the Github rule below), plus mid-session for undocumented decisions
 - **The page is the deliverable.** Update any `pages/` entries the change touches: schema fields,

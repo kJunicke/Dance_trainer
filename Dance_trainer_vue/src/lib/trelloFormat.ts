@@ -68,9 +68,13 @@ export interface ParsedColumn {
   dueOffsetDays: number | null
   dueClearOnEnter: boolean
   isQuickTarget: boolean
+  isInboxColumn: boolean
 }
 
 export interface ParsedCard {
+  // Local id of this card's parent card, or null. Native exports round-trip it
+  // (see boardFormat.ts); Trello has no equivalent, so its parser writes null.
+  parentRef: string | null
   localId: string
   columnRef: string
   name: string
@@ -126,6 +130,7 @@ export function parseTrelloExport(raw: unknown): ParsedBoard {
     dueOffsetDays: null,
     dueClearOnEnter: false,
     isQuickTarget: false,
+    isInboxColumn: false,
   }))
 
   const labels: ParsedLabel[] = (data.labels ?? []).map((l) => ({
@@ -150,8 +155,9 @@ export function parseTrelloExport(raw: unknown): ParsedBoard {
       description: c.desc || null,
       dueDate: c.due ? c.due.slice(0, 10) : null,
       position,
-      // Trello has no scheduling-history concept to map from.
+      // Trello has no scheduling-history or card-relationship concept to map from.
       lastScheduledColumnRef: null,
+      parentRef: null,
       lastPracticedOn: null,
     }
   })

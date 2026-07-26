@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBoardStore } from '../stores/boardStore'
 import { useAuthStore } from '../stores/authStore'
@@ -17,8 +17,21 @@ const creating = ref(false)
 const joining = ref(false)
 const importing = ref(false)
 const importInput = ref<HTMLInputElement | null>(null)
+// Delete lives behind a ⋯ menu so destroying a board takes two deliberate taps,
+// same as the card modal's.
+const menuBoardId = ref<number | null>(null)
 
-onMounted(() => store.loadBoards())
+function onDocumentClick(e: MouseEvent) {
+  if (menuBoardId.value === null) return
+  const target = e.target as HTMLElement
+  if (!target.closest('.board-actions')) menuBoardId.value = null
+}
+
+onMounted(() => {
+  store.loadBoards()
+  document.addEventListener('click', onDocumentClick)
+})
+onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 
 async function signOut() {
   await auth.signOut()
@@ -37,6 +50,7 @@ async function createBoard() {
 }
 
 function deleteBoard(id: number, name: string) {
+  menuBoardId.value = null
   if (!window.confirm(`Delete "${name}"? This also deletes all its columns and cards.`)) return
   store.deleteBoard(id)
 }
@@ -113,7 +127,20 @@ async function onImportFile(event: Event) {
     <ul v-else class="list">
       <li v-for="b in store.boards" :key="b.id">
         <button class="name" title="Open this board" @click="openBoard(b.id)">{{ b.name }}</button>
-        <button class="delete" title="Delete this board and all its columns and cards" @click="deleteBoard(b.id, b.name)">Delete</button>
+        <div class="board-actions">
+          <button
+            class="menu-btn"
+            title="More actions"
+            @click="menuBoardId = menuBoardId === b.id ? null : b.id"
+          >⋯</button>
+          <div v-if="menuBoardId === b.id" class="overflow-menu">
+            <button
+              class="menu-item danger"
+              title="Delete this board and all its columns and cards"
+              @click="deleteBoard(b.id, b.name)"
+            >Delete board</button>
+          </div>
+        </div>
       </li>
     </ul>
   </main>
@@ -244,6 +271,8 @@ h1 {
   gap: 8px;
 }
 
+/* No overflow:hidden — it would clip the ⋯ menu. The name button rounds its own
+   left corners instead so its hover fill still follows the row. */
 .list li {
   display: flex;
   align-items: center;
@@ -251,7 +280,6 @@ h1 {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  overflow: hidden;
 }
 
 .name {
@@ -259,6 +287,7 @@ h1 {
   text-align: left;
   padding: 14px 16px;
   border: none;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
   background: transparent;
   font-size: 16px;
   color: var(--color-ink);
@@ -269,18 +298,58 @@ h1 {
   background: var(--color-surface-light);
 }
 
-.delete {
+.board-actions {
+  position: relative;
   margin-right: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-overdue);
+}
+
+.menu-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-ink);
+  opacity: 0.5;
+}
+
+.menu-btn:hover {
+  opacity: 1;
+}
+
+/* Anchored right so it grows leftward into the row, clear of the viewport edge. */
+.overflow-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 140px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-modal);
+  z-index: 1;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-overdue);
+  text-align: left;
   font-size: 13px;
   cursor: pointer;
 }
 
-.delete:hover {
+.menu-item.danger {
+  color: var(--color-overdue);
+}
+
+.menu-item.danger:hover {
   background: color-mix(in srgb, var(--color-overdue) 12%, transparent);
 }
 </style>

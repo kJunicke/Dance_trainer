@@ -6,6 +6,7 @@ import { useToastStore } from './toastStore'
 import type { ParsedBoard } from '@/lib/trelloFormat'
 import { parseBoardFile, buildBoardExport } from '@/lib/boardFormat'
 import { localToday, addDays, isDue, daysBetween } from '@/lib/dates'
+import { wouldCycle } from '@/lib/cardTree'
 
 export interface Board {
   id: number
@@ -22,6 +23,7 @@ export interface Column {
   is_due_column: boolean
   due_clear_on_enter: boolean
   is_quick_target: boolean
+  is_inbox_column: boolean
 }
 
 export interface Card {
@@ -35,6 +37,9 @@ export interface Card {
   // See the 20260721000000 migration for why these are stored, not derived.
   last_scheduled_column_id: number | null
   last_practiced_on: string | null
+  // "Part of" another card — see the 20260726102400 migration and
+  // lib/cardTree.ts. `name` stays the leaf only; the ancestor chain is derived.
+  parent_id: number | null
 }
 
 export interface Label {
@@ -87,6 +92,13 @@ export const useBoardStore = defineStore('board', () => {
   // Columns offered as one-tap "quick move" targets in the card modal.
   const quickTargetColumns = computed(() =>
     columns.value.filter((c) => c.is_quick_target).sort((a, b) => a.position - b.position),
+  )
+
+  // Where the practice view's quick-add drops a newly named skill. Unset by
+  // default and deliberately not defaulted to any column: a card landing
+  // somewhere unasked would enter (or dodge) the schedule silently.
+  const inboxColumn = computed<Column | null>(
+    () => columns.value.find((c) => c.is_inbox_column) ?? null,
   )
 
   // Flagged due column, else the leftmost column collects due cards.
@@ -168,6 +180,7 @@ export const useBoardStore = defineStore('board', () => {
               due_offset_days: c.dueOffsetDays,
               due_clear_on_enter: c.dueClearOnEnter,
               is_quick_target: c.isQuickTarget,
+              is_inbox_column: c.isInboxColumn,
             })))
             .select()
         : { data: [] as Column[], error: null },
@@ -203,6 +216,22 @@ export const useBoardStore = defineStore('board', () => {
         .select()
       if (cardErr) throw cardErr
       parsed.cards.forEach((c, i) => cardIdByLocalId.set(c.localId, cardRows[i].id))
+
+      // Family links are a second pass: a card's parent may sit anywhere in the
+      // file, including after it, so the real ids only all exist once every row
+      // is inserted. A parentRef that doesn't resolve is dropped rather than
+      // failing the import — a hand-edited export, or a Trello file, which has
+      // no relations at all.
+      const parented = parsed.cards.filter(
+        (c) => c.parentRef && cardIdByLocalId.has(c.parentRef),
+      )
+      for (const c of parented) {
+        const { error: pErr } = await supabase
+          .from('cards')
+          .update({ parent_id: cardIdByLocalId.get(c.parentRef!)! })
+          .eq('id', cardIdByLocalId.get(c.localId)!)
+        if (pErr) throw pErr
+      }
     }
 
     if (parsed.cardLabels.length > 0) {
@@ -257,6 +286,7 @@ export const useBoardStore = defineStore('board', () => {
             dueOffsetDays: c.due_offset_days,
             dueClearOnEnter: c.due_clear_on_enter,
             isQuickTarget: c.is_quick_target,
+            isInboxColumn: c.is_inbox_column,
           }]),
         )
         parsed.columns = parsed.columns.map((c) => {
@@ -430,6 +460,36 @@ export const useBoardStore = defineStore('board', () => {
     if (err) { useToastStore().show(err.message); col.is_quick_target = prev }
   }
 
+  // One inbox per board: marking a column unmarks whichever held it. No unique
+  // index behind this (unlike is_due_column) — nothing breaks if two are set,
+  // inboxColumn just takes the first.
+  async function setColumnInbox(columnId: number, value: boolean) {
+    const col = columns.value.find((c) => c.id === columnId)
+    if (!col) return
+    const prevInbox = value ? columns.value.find((c) => c.is_inbox_column && c.id !== columnId) : undefined
+    const prev = col.is_inbox_column
+    if (prevInbox) prevInbox.is_inbox_column = false
+    col.is_inbox_column = value
+
+    if (prevInbox) {
+      const { error: prevErr } = await supabase
+        .from('columns')
+        .update({ is_inbox_column: false })
+        .eq('id', prevInbox.id)
+      if (prevErr) {
+        useToastStore().show(prevErr.message)
+        prevInbox.is_inbox_column = true
+        col.is_inbox_column = prev
+        return
+      }
+    }
+    const { error: err } = await supabase
+      .from('columns')
+      .update({ is_inbox_column: value })
+      .eq('id', columnId)
+    if (err) { useToastStore().show(err.message); col.is_inbox_column = prev }
+  }
+
   async function deleteColumn(columnId: number) {
     const { error: err } = await supabase.from('columns').delete().eq('id', columnId)
     if (err) { useToastStore().show(err.message); return }
@@ -486,7 +546,10 @@ export const useBoardStore = defineStore('board', () => {
     }
   }
 
-  async function addCard(columnId: number, name = 'New Card') {
+  // Returns the inserted card (null on failure) — the practice view's quick-add
+  // needs the real row id to put it straight into the session, and the temp id
+  // it renders optimistically would be persisted to localStorage.
+  async function addCard(columnId: number, name = 'New Card'): Promise<Card | null> {
     const columnCards = cardsByColumn.value(columnId)
     const position = columnCards.length
     const tempId = -Date.now()
@@ -499,6 +562,7 @@ export const useBoardStore = defineStore('board', () => {
       due_date: null,
       last_scheduled_column_id: null,
       last_practiced_on: null,
+      parent_id: null,
     })
     const { data, error: err } = await supabase
       .from('cards')
@@ -508,13 +572,14 @@ export const useBoardStore = defineStore('board', () => {
     if (err) {
       useToastStore().show(err.message)
       cards.value = cards.value.filter((c) => c.id !== tempId)
-      return
+      return null
     }
     const idx = cards.value.findIndex((c) => c.id === tempId)
     if (idx !== -1) cards.value[idx] = data
+    return data as Card
   }
 
-  async function updateCardField<K extends 'name' | 'description' | 'due_date'>(
+  async function updateCardField<K extends 'name' | 'description' | 'due_date' | 'parent_id'>(
     cardId: number,
     field: K,
     value: Card[K],
@@ -656,10 +721,134 @@ export const useBoardStore = defineStore('board', () => {
     }
   }
 
+  // Deleting a card never takes its parts with it: children move up to the
+  // grandparent (top-level when there wasn't one), keeping their own notes,
+  // columns, due dates and history. Merge follows the same rule, so a part
+  // surviving its parent is one story rather than two.
+  //
+  // Reparented *after* the delete, deliberately. The FK is `on delete set
+  // null`, so by this point the DB has already detached the children; a failed
+  // reparent then leaves them top-level, which is a coherent state the user can
+  // see and fix. Reparenting first would point them at a row that may still be
+  // there if the delete fails.
   async function deleteCard(cardId: number) {
+    const grandparentId = cards.value.find((c) => c.id === cardId)?.parent_id ?? null
+    const childIds = cards.value.filter((c) => c.parent_id === cardId).map((c) => c.id)
     const { error: err } = await supabase.from('cards').delete().eq('id', cardId)
     if (err) { useToastStore().show(err.message); return }
     cards.value = cards.value.filter((c) => c.id !== cardId)
+    if (childIds.length === 0) return
+    for (const c of cards.value) {
+      if (childIds.includes(c.id)) c.parent_id = grandparentId
+    }
+    if (grandparentId === null) return // the FK already wrote exactly this
+    const { error: reErr } = await supabase
+      .from('cards')
+      .update({ parent_id: grandparentId })
+      .in('id', childIds)
+    if (reErr) {
+      useToastStore().show(reErr.message)
+      // Fall back to what the database actually holds rather than showing a
+      // family link that isn't there.
+      for (const c of cards.value) {
+        if (childIds.includes(c.id)) c.parent_id = null
+      }
+    }
+  }
+
+  // Make `cardId` a part of `parentId`, or detach it with null. Pickers already
+  // filter out the card's own descendants, but a parent can also arrive from an
+  // import or a future drag, so the cycle check is repeated here — a cycle would
+  // hang nothing (every walk in cardTree.ts is guarded) but it would render a
+  // family that can't be navigated out of.
+  async function setCardParent(cardId: number, parentId: number | null) {
+    if (parentId !== null) {
+      // `cards` only ever holds the open board, so an unknown id means a
+      // cross-board or stale target. Relations are same-board only.
+      if (!cards.value.some((c) => c.id === parentId)) return
+      if (wouldCycle(cards.value, cardId, parentId)) {
+        useToastStore().show("A card can't be part of one of its own parts")
+        return
+      }
+    }
+    return updateCardField(cardId, 'parent_id', parentId)
+  }
+
+  // Split: a section of a card's note becomes a child card. Ordered so note text
+  // can never be lost — the child that holds the extracted section is created
+  // *and its note confirmed written* before that section is removed from the
+  // parent. Anything failing before the last step leaves the parent untouched,
+  // so the text still exists somewhere and the user can retry.
+  //
+  // The confirmations are read-backs, not return values: `updateCardField`
+  // reports failure by toasting and rolling the local value back, so the only
+  // way to know a write landed is to look at what the store now holds. Merge
+  // guards its own note write the same way.
+  async function splitCardFromNote(
+    parentId: number,
+    title: string,
+    extracted: string,
+    remaining: string,
+    // The parent's note as it was when the section offsets were computed. The
+    // split takes several round trips and the modal stays open on the parent
+    // throughout, so a note edit committed meanwhile would otherwise be
+    // clobbered by a `remaining` derived from text that is no longer there.
+    sourceAtSplit: string,
+  ): Promise<Card | null> {
+    const parent = cards.value.find((c) => c.id === parentId)
+    if (!parent) return null
+    // A bare `#` is a legal heading with no text, and an explicit '' would slip
+    // past addCard's default and make a nameless card.
+    const child = await addCard(parent.column_id, title.trim() || 'Untitled part')
+    if (!child) return null
+    await updateCardField(child.id, 'description', extracted)
+    if (cards.value.find((c) => c.id === child.id)?.description !== extracted) {
+      useToastStore().show("The part was created but its notes didn't save — nothing was removed")
+      return null
+    }
+    await updateCardField(child.id, 'parent_id', parentId)
+    // A split is just a card arriving in a column, so that column's ordinary
+    // on-enter rule stamps its due date. `addCard` fires no rule (nothing
+    // entered from anywhere) and `moveCard` won't either within one column, so
+    // apply it here rather than inventing a scheduling path only splits use.
+    const column = columns.value.find((c) => c.id === parent.column_id)
+    if (column?.due_offset_days != null) {
+      await updateCardField(child.id, 'due_date', addDays(localToday(), column.due_offset_days))
+    }
+    // Near its parent, so a family reads together down the column. Lands one
+    // slot lower than asked: the new card is last in `cards.value`, and
+    // moveCard's same-column branch assigns the position then re-sorts, so it
+    // ties with the incumbent and the stable sort puts the incumbent first.
+    // That's the pre-existing tie-break in moveCard already logged in Open
+    // Work, not something split can fix locally.
+    await moveCard(child.id, parent.column_id, parent.position + 1, false)
+    // Only now touch the parent, and only if it still says what it said when
+    // the section was picked. If it changed under us the part is already safe
+    // on its own card — leaving the duplicate text behind beats deleting an
+    // edit the user just made.
+    if (cards.value.find((c) => c.id === parentId)?.description !== sourceAtSplit) {
+      useToastStore().show('The note changed while splitting — the section was kept in both cards')
+      return child
+    }
+    await updateCardField(parentId, 'description', remaining)
+    return child
+  }
+
+  // Merge: fold a child back into its parent. The caller has already built the
+  // combined note (see mergeNote in lib/markdown.ts). The parent is written
+  // first — if that fails nothing is deleted and the user can simply retry,
+  // whereas deleting first could drop the child's text on the floor.
+  // deleteCard then moves any grandchildren up to this same parent.
+  async function mergeCardIntoParent(childId: number, mergedParentNote: string) {
+    const child = cards.value.find((c) => c.id === childId)
+    if (!child || child.parent_id === null) return
+    const parentId = child.parent_id
+    await updateCardField(parentId, 'description', mergedParentNote)
+    // updateCardField rolls the note back itself on failure, so the note not
+    // reading as what we just wrote means the write didn't land — stop rather
+    // than delete a card whose text never reached the parent.
+    if (cards.value.find((c) => c.id === parentId)?.description !== mergedParentNote) return
+    await deleteCard(childId)
   }
 
   async function moveCard(
@@ -800,12 +989,13 @@ export const useBoardStore = defineStore('board', () => {
 
   return {
     boards, board, columns, cards, labels, cardLabels, loading,
-    cardsByColumn, labelsForCard, dueColumn, quickTargetColumns,
+    cardsByColumn, labelsForCard, dueColumn, quickTargetColumns, inboxColumn,
     loadBoards, createBoard, deleteBoard, joinBoard,
     importTrelloBoard, importTrelloIntoBoard, exportBoard,
     loadBoard,
-    addColumn, renameColumn, updateColumnSettings, setColumnQuickTarget, deleteColumn, moveColumn, moveColumnTo,
+    addColumn, renameColumn, updateColumnSettings, setColumnQuickTarget, setColumnInbox, deleteColumn, moveColumn, moveColumnTo,
     addCard, renameCard, deleteCard,
+    setCardParent, splitCardFromNote, mergeCardIntoParent,
     updateCardDescription, updateCardDueDate, recordPracticeInPlace, cardHistoryLabel,
     createLabel, deleteLabel, toggleCardLabel,
     moveCard, sweepDueCards,

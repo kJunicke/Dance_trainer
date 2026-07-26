@@ -16,6 +16,7 @@ const emit = defineEmits<{
   focus: [cardId: number]
   reorder: [order: number[]]
   undo: [cardId: number]
+  remove: [cardId: number]
   'toggle-expand': []
 }>()
 
@@ -39,6 +40,35 @@ const MOVE_CANCEL_PX = 10
 let pressTimer: ReturnType<typeof setTimeout> | null = null
 let pressStart: { x: number; y: number; pointerId: number; cardId: number } | null = null
 let localOrder: number[] = []
+
+// Swipe-to-remove. The same pointer gesture that can become a drag can also
+// become a horizontal swipe — whichever axis wins the first 10px takes it, so
+// the vertical reorder and this never fire together.
+const REVEAL_PX = 88
+const OPEN_PX = 44
+const swipingId = ref<number | null>(null)
+const swipeDx = ref(0)
+const swipedId = ref<number | null>(null)
+
+function closeSwipe() {
+  swipingId.value = null
+  swipeDx.value = 0
+  swipedId.value = null
+}
+
+// Only ever returns a transform for a row mid-swipe or held open. An always-on
+// inline transform would fight TransitionGroup's FLIP, which drives the
+// reorder animation through that same property.
+function rowStyle(cardId: number) {
+  if (swipingId.value === cardId) return { transform: `translateX(${swipeDx.value}px)` }
+  if (swipedId.value === cardId) return { transform: `translateX(${-REVEAL_PX}px)` }
+  return {}
+}
+
+function onRemove(cardId: number) {
+  closeSwipe()
+  emit('remove', cardId)
+}
 
 function clearPressTimer() {
   if (pressTimer) {
@@ -90,7 +120,23 @@ function onRowPointerMove(e: PointerEvent) {
   if (draggingId.value === null) {
     const dx = e.clientX - pressStart.x
     const dy = e.clientY - pressStart.y
-    if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) clearPressTimer()
+    if (swipingId.value !== null) {
+      // Rightward drag past the origin does nothing — there's nothing to
+      // reveal on that side.
+      swipeDx.value = Math.max(-REVEAL_PX, Math.min(0, dx))
+      return
+    }
+    if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) {
+      clearPressTimer()
+      if (Math.abs(dx) > Math.abs(dy) && dx < 0) {
+        swipedId.value = null
+        swipingId.value = pressStart.cardId
+        ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+        // The starting move carries its own distance — a fast flick can be a
+        // single event, and waiting for the next one would drop it.
+        swipeDx.value = Math.max(-REVEAL_PX, dx)
+      }
+    }
     return
   }
   const fromIndex = localOrder.indexOf(draggingId.value)
@@ -114,11 +160,23 @@ function endDrag() {
 function onRowPointerUp(e: PointerEvent) {
   if (!pressStart || e.pointerId !== pressStart.pointerId) return
   clearPressTimer()
+  if (swipingId.value !== null) {
+    swipedId.value = swipeDx.value <= -OPEN_PX ? swipingId.value : null
+    swipingId.value = null
+    swipeDx.value = 0
+    suppressNextClick.value = true
+    requestAnimationFrame(() => { suppressNextClick.value = false })
+    pressStart = null
+    return
+  }
   endDrag()
 }
 
+// A tap anywhere while a row is held open just closes it — the same "tap out to
+// dismiss" the drawer and menus use, without stealing the focus action.
 function onRowClick(cardId: number) {
   if (suppressNextClick.value) { suppressNextClick.value = false; return }
+  if (swipedId.value !== null) { swipedId.value = null; return }
   emit('focus', cardId)
 }
 </script>
@@ -136,38 +194,50 @@ function onRowClick(cardId: number) {
            a component yields its instance, and indexAtPoint needs a DOM node. -->
       <div v-else ref="listRowsEl">
         <TransitionGroup tag="div" name="row" class="list-rows">
-          <button
-            v-for="card in pendingCards"
-            :key="card.id"
-            :data-row-id="card.id"
-            class="list-row"
-            :class="[
-              dueStatus(card.due_date) ? `status-${dueStatus(card.due_date)}` : '',
-              { active: card.id === activeId, dragging: card.id === draggingId },
-            ]"
-            @pointerdown="onRowPointerDown(card.id, $event)"
-            @pointermove="onRowPointerMove"
-            @pointerup="onRowPointerUp"
-            @pointercancel="onRowPointerUp"
-            @click="onRowClick(card.id)"
-          >
-            <span
-              class="grip"
-              aria-hidden="true"
-              @pointerdown.stop="onGripPointerDown(card.id, $event)"
-            >⠿</span>
-            <span class="row-dot" />
-            <span class="row-title">{{ card.name }}</span>
-            <span v-if="labelsFor(card.id).length" class="row-labels">
+          <!-- The wrapper carries the row identity so the Remove button can sit
+               behind the row and be uncovered by the swipe. -->
+          <div v-for="card in pendingCards" :key="card.id" :data-row-id="card.id" class="row-slot">
+            <button
+              v-if="card.id === swipingId || card.id === swipedId"
+              class="remove-btn"
+              @click="onRemove(card.id)"
+            >Remove</button>
+            <button
+              class="list-row"
+              :class="[
+                dueStatus(card.due_date) ? `status-${dueStatus(card.due_date)}` : '',
+                {
+                  active: card.id === activeId,
+                  dragging: card.id === draggingId,
+                  swiping: card.id === swipingId,
+                  swiped: card.id === swipedId,
+                },
+              ]"
+              :style="rowStyle(card.id)"
+              @pointerdown="onRowPointerDown(card.id, $event)"
+              @pointermove="onRowPointerMove"
+              @pointerup="onRowPointerUp"
+              @pointercancel="onRowPointerUp"
+              @click="onRowClick(card.id)"
+            >
               <span
-                v-for="l in labelsFor(card.id)"
-                :key="l.id"
-                class="label-dot"
-                :style="{ background: LABEL_COLORS[l.color] ?? '#999' }"
-                :title="l.name"
-              />
-            </span>
-          </button>
+                class="grip"
+                aria-hidden="true"
+                @pointerdown.stop="onGripPointerDown(card.id, $event)"
+              >⠿</span>
+              <span class="row-dot" />
+              <span class="row-title">{{ card.name }}</span>
+              <span v-if="labelsFor(card.id).length" class="row-labels">
+                <span
+                  v-for="l in labelsFor(card.id)"
+                  :key="l.id"
+                  class="label-dot"
+                  :style="{ background: LABEL_COLORS[l.color] ?? '#999' }"
+                  :title="l.name"
+                />
+              </span>
+            </button>
+          </div>
         </TransitionGroup>
       </div>
 
@@ -249,8 +319,31 @@ function onRowClick(cardId: number) {
   gap: 4px;
 }
 
-.list-row {
+/* Holds the row and, behind it, the Remove button the swipe uncovers. */
+.row-slot {
+  position: relative;
   flex-shrink: 0;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 88px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--pc-overdue);
+  color: #2a0d0a;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.list-row {
+  position: relative;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -267,7 +360,28 @@ function onRowClick(cardId: number) {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
-  transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1), opacity 150ms;
+  /* pan-y leaves vertical scrolling to the browser and hands horizontal
+     movement to the pointer handlers, which is what makes the swipe possible
+     inside a scrolling list. */
+  touch-action: pan-y;
+  transition:
+    background-color 150ms cubic-bezier(0.25, 1, 0.5, 1),
+    opacity 150ms,
+    transform 160ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Opaque while the Remove button is behind it — rows are transparent by
+   default and the button would read straight through. */
+.list-row.swiping,
+.list-row.swiped {
+  background: var(--pc-surface);
+}
+
+/* Follows the finger, so no easing. Deliberately duration-only: setting
+   `transition: none` here would strip `transform` from the property list this
+   rule hands to TransitionGroup's FLIP probe — see the note on .dragging. */
+.list-row.swiping {
+  transition-duration: 0s;
 }
 
 .list-row.active {

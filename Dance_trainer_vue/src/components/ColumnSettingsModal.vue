@@ -69,6 +69,10 @@ function onQuickTargetToggle(event: Event) {
   store.setColumnQuickTarget(props.columnId, (event.target as HTMLInputElement).checked)
 }
 
+function onInboxToggle(event: Event) {
+  store.setColumnInbox(props.columnId, (event.target as HTMLInputElement).checked)
+}
+
 const columnIndex = computed(() =>
   store.columns.findIndex((c) => c.id === props.columnId),
 )
@@ -169,6 +173,19 @@ onMounted(() => backdropEl.value?.focus())
           <span>Show this column as a drop target while dragging a card</span>
         </label>
         <p class="hint">Marked columns appear as drop buckets at the top of the board during a drag.</p>
+      </section>
+
+      <section class="field">
+        <label class="field-label">Inbox</label>
+        <label class="setting-row">
+          <input
+            type="checkbox"
+            :checked="column.is_inbox_column"
+            @change="onInboxToggle"
+          />
+          <span>New cards created in the practice view land here</span>
+        </label>
+        <p class="hint">One per board. Without one, the practice view can only queue cards that already exist.</p>
       </section>
 
       <section class="field">

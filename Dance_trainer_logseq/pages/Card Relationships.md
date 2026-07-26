@@ -1,0 +1,62 @@
+- How cards relate to one another: the parent→child link, how a card is split out of a note, and how one is folded back in. The link is a **navigation and authoring** structure — it never touches scheduling. See [[Tables]] for the field, [[Card Notes]] for the note it operates on, [[Board View]] for the card face.
+- ## Why it exists
+	- Several cards often track subskills of one macro skill — the One Footed Spins family is the case that drove it. The point is to practise a part in isolation **while it is raw**, then fold it back into the parent once it holds up.
+	- That "fold it back" step is the one that gets skipped, so **merge is deliberately cheap**: one dialog, no confirmation ceremony, no bookkeeping written into the note.
+	- Checked against `motorLearningForDance.md`. Three findings shaped the design:
+		- **A markdown header is an editorial seam, not a motor seam.** Part-practice helps when a skill decomposes into weakly-interacting parts; a spin's prep→entry→rotation→exit is momentum-coupled, and chopping it destroys the coupling being trained. This is guidance for the user, not a rule the app enforces — the user judges the seam, the app just makes the cut cheap in both directions.
+		- **Over-decomposition risks reinvestment under pressure** (Masters 1992): a skill fragmented into eight named cards, each re-read weekly, *is* the explicit rule-loading that degrades performance under pressure. The counterweight is cheap merge, which is why merge has no guards.
+		- The user's phrase "consolidated into macro skills" is **not** the research's *consolidation* (offline/sleep stabilisation). Merge is justified by part/whole practice structure, not by consolidation evidence.
+- ## The link
+	- `cards.parent_id bigint null references cards(id) on delete set null` — one parent, arbitrary depth, same board only. Same-board is enforced in the pickers, not by a constraint; RLS already scopes a user to their own boards.
+	- `on delete set null`, never cascade. **Deleting a card must never take its parts with it** — both delete and merge reparent children to the grandparent, so a part keeps its own note, column, due date and practice history when its parent goes away. One rule, both paths.
+- ## Names are leaf-only
+	- `cards.name` stores **just the leaf** — `"Prep"`, never `"OFS - Prep"`. The ancestor chain is derived at render time by `lib/cardTree.ts`.
+	- So renaming a parent updates every descendant's display with **zero writes**, and can never clobber a child name the user hand-edited.
+	- Decided against storing the composed string: it needs a recursive cascade-rewrite of every descendant on rename, and any hand-edited child name is silently overwritten by it.
+	- The consequence to remember: **board search matches the *composed* name**, so typing "OFS" still finds the parts. Anything else that matches on `name` has the same choice to make.
+	- It also makes merge free — the child's title needs no stripping of the parent prefix, because the prefix was never in the string.
+- ## `lib/cardTree.ts`
+	- Pure, dependency-free derivations over any `{ id, name, parent_id }[]`. No Vue, no store import — structural typing means boardStore's `Card` satisfies it, and it stays unit-testable.
+	- `childrenOf` (input order = `position` order, since the store keeps `cards` sorted), `ancestorsOf` (root-first), `descendantIdsOf`, `familyRootOf`, `composedName`, `wouldCycle`.
+	- **Every walk is cycle-guarded with a visited set**, upward and downward. A cycle can only arrive from a bad import or a hand-edited row, but a hung UI is a much worse failure than a wrong-but-finite chain — so a broken walk stops and returns what it has.
+	- A dangling `parent_id` (points at a card not in the array — possible mid-load) is treated as "no parent", never throws.
+	- Re-scans the array per call rather than caching an index: a board is a few hundred cards, and a cached map is one more thing to invalidate after every edit.
+- ## Split — a note section becomes a child card
+	- **Unit:** the chosen header **plus everything down to the next header of the same or higher level**. Nested subheaders travel with their section. Content above the first header never moves.
+	- The header line is **consumed** and becomes the new card's name — repeating it inside the new note would be noise.
+	- **Nothing is left behind** in the parent: no stub, no back-link, no marker. The family tree is the reference. (Consistent with the earlier rejection of `<!-- -->` injection, which "writes permanent noise into notes that are kept for years".)
+	- The new card lands in the **parent's column**, just below it, and its due date is stamped by that column's ordinary on-enter rule — a split is just a card arriving in a column, with no special scheduling path.
+		- It actually lands one slot lower than "immediately after", because `moveCard`'s same-column branch assigns the position and re-sorts, so the new card ties with the incumbent and loses the stable sort. Same tie-break already logged against upward drags in [[Open Work]]; not worth a special case in split.
+	- **The whole split/merge path normalises CRLF to LF.** `marked.lexer()` converts line endings *before* tokenising, so on a CRLF note the token `raw` lengths stop summing to the source length and every derived offset drifts a byte per `\r` — slicing then cuts across the real boundaries, bleeding header text into the new card and stranding or dropping a fragment of the body. CRLF arrives from Trello descriptions authored on Windows and survives editing, so this is reachable, not theoretical. A CRLF note is rewritten to LF the first time it's split, which is a repair rather than a loss.
+	- **Nothing is removed from the parent until the child's note is confirmed written.** `updateCardField` reports failure by toasting and rolling back locally, so the store reads the value back rather than trusting a return. If the parent's note changed during the split's round trips, the removal is skipped and the section is simply left in both cards — a duplicate is recoverable, a clobbered edit is not.
+	- **The Split action lives in `CardModal`, never in `MarkdownNote`.** That component is shared by the board face and the practice focus card; a per-block split button would hand both of them a card-mutating control they must not have. The modal presents the note's headers as a list to pick from.
+- ## Merge — a child folds back into its parent
+	- Dialog with a preview and a header-level picker. Default: the child's title becomes `#`, and the child's own headings are **demoted uniformly** so its shallowest lands one level below that — relative nesting is preserved exactly.
+	- Appended at the **end** of the parent note. The original position isn't restored: the offset goes stale on the first edit, and the parent note gets edited constantly — that's its job.
+	- **Clean fold.** No practice-history line, no interval warning, no metadata. Notes stay entirely hand-written.
+	- The child's grandchildren **reparent to the grandparent**, keeping their columns, due dates and history. Nothing is deleted but the merged card's own row.
+- ## Where it shows
+	- **Board card face** — an ancestor line above the title, and a family icon with a part count in the meta row when the card has children. See [[Board View]] for the icon's exception to the tap-anywhere rule.
+	- **Card modal** — breadcrumb of tappable ancestors above the title, and a **Family** section below the notes holding the tree, `+ Split`, `+ Add existing card as part`, and `Merge into "…"` when the card has a parent. All four flows share one overlay sheet rather than duplicating a picker panel.
+		- **The modal navigates internally.** It renders a local card id seeded from the prop, so a breadcrumb or tree tap switches card without going back to the board. Each switch flushes the note editor first: `MarkdownNote` survives the switch, so an open block would otherwise commit the previous card's text onto the new one.
+		- **Merge navigates to the parent rather than closing.** The text the user was reading now lives there, and switching before the delete also stops the card watcher from seeing a vanished row and closing the modal out from under them.
+		- **Delete's confirm names the real consequence**, which depends on the card: children become parts of the *grandparent* when there is one, and top-level cards only when there isn't.
+	- **The family tree** (`components/CardFamilyTree.vue`) is a tree of mini cards, not a text outline — each node carries labels, a due dot, its title and its column, so the tree answers "where does each part sit in the schedule" at a glance. Rooted at the family root, every descendant shown, the current card marked. Purely presentational: the caller assembles the nested shape and it emits an id to open.
+	- Everything renders from cards and labels **already in the store** — the feature adds no queries.
+- ## Cycles can't be selected
+	- **The two pickers filter by opposite relations** — this is easy to get wrong, and getting it wrong makes a cycle offerable even though the store would then refuse it.
+		- `Part of…` picks a **parent** for this card, so it subtracts this card's **descendants** (and itself): making a card a part of its own part is the cycle.
+		- `+ Add existing card as part` picks a **child** for this card, so it subtracts this card's **ancestors** (and itself): a cycle here means adopting one of your own parents.
+	- `wouldCycle` guards the store write as well, because a picker isn't the only way a parent can be set — an import resolves `parentRef`s, and a future drag might too. The pickers make a cycle unofferable; the store makes it impossible.
+	- `childrenOf` is not itself cycle-guarded (it's a single-level filter), so anything recursing with it — the tree assembly in `CardModal` — carries its own `seen` set, matching `cardTree.ts`'s stance that a malformed row must never hang the UI.
+- ## Decided against
+	- **Relations driving the practice queue.** Surfacing a family as a contiguous run is blocked practice by definition (Shea & Morgan 1979) — right while a part is raw, wrong once it's stable, and an app affordance would make the wrong one permanent and one-tap. Same argument that killed auto-seeding the practice queue on 2026-07-21. The evidence is real but **contested** in applied settings (applied d≈0.19 vs lab d≈0.57), so this is "don't make it the default", not a ban. Quick sibling access is deferred in [[Open Work]] and must stay **read-only** if built.
+	- **An interval guard on merge.** Folding a daily part into a monthly parent silently drops that content to monthly review. It's pure arithmetic on `due_offset_days` — nothing SM2-shaped — and would have been one line in a dialog being built anyway. Declined: the user knows their own columns, and merge must stay cheap.
+	- **A practice-history line written into the folded note.** The child's `last_practiced_on` and `last_scheduled_column_id` die with the row, permanently, on a card whose job is documenting progress over months. The clean fold was chosen anyway — notes stay hand-written.
+	- **A proactive "time to merge?" prompt.** The research's own answer to *when* to recombine (all parts at or above the parent's Leitner level). Declined as a new kind of voice the app doesn't have.
+	- **Storing the composed name** — see "Names are leaf-only".
+	- **Drop-onto-card to create a relation.** The board runs two drag systems (native + hand-rolled touch) that hit-test for drop-*between*; disambiguating "move here" from "make this its parent" mid-gesture is high risk against working code.
+	- **A text-outline family tree** — replaced by mini cards carrying labels, due and column, which is what makes the tree worth scrolling to.
+	- **Splitting from inside `MarkdownNote`** — would push card mutation into a component shared with the board face and practice card.
+	- **A popover or inline expansion** for the board-face family icon: a floating layer anchored to a horizontally scrolling board, and inline expansion changes card height under the touch drag's hit-testing. The icon opens the card's own modal instead.
+	- **Landing a split in an inbox column.** Considered, then reversed to keep the feature self-contained — a split lands in the parent's column.

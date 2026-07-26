@@ -1,0 +1,731 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-26T09:55:14.469Z",
+  "title": "Design System: Dance Trainer",
+  "extensions": {
+    "colorMeta": {
+      "board-ground": {
+        "role": "neutral",
+        "displayName": "Board Ground",
+        "canonical": "oklch(90.8% 0.017 84.6)",
+        "tonalRamp": [
+          "oklch(15% 0.013 84.6)",
+          "oklch(26% 0.013 84.6)",
+          "oklch(37% 0.014 84.6)",
+          "oklch(48% 0.015 84.6)",
+          "oklch(59% 0.015 84.6)",
+          "oklch(70% 0.016 84.6)",
+          "oklch(83% 0.017 84.6)",
+          "oklch(95% 0.017 84.6)"
+        ]
+      },
+      "panel-surface": {
+        "role": "neutral",
+        "displayName": "Panel Surface",
+        "canonical": "oklch(94.1% 0.014 84.6)",
+        "tonalRamp": [
+          "oklch(15% 0.010 84.6)",
+          "oklch(26% 0.011 84.6)",
+          "oklch(37% 0.012 84.6)",
+          "oklch(48% 0.012 84.6)",
+          "oklch(59% 0.013 84.6)",
+          "oklch(70% 0.013 84.6)",
+          "oklch(83% 0.014 84.6)",
+          "oklch(95% 0.014 84.6)"
+        ]
+      },
+      "card-surface": {
+        "role": "neutral",
+        "displayName": "Card Surface",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(26% 0.000 89.9)",
+          "oklch(37% 0.000 89.9)",
+          "oklch(48% 0.000 89.9)",
+          "oklch(59% 0.000 89.9)",
+          "oklch(70% 0.000 89.9)",
+          "oklch(83% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline Border",
+        "canonical": "oklch(85.7% 0.024 82.1)",
+        "tonalRamp": [
+          "oklch(15% 0.018 82.1)",
+          "oklch(26% 0.019 82.1)",
+          "oklch(37% 0.020 82.1)",
+          "oklch(48% 0.021 82.1)",
+          "oklch(59% 0.022 82.1)",
+          "oklch(70% 0.023 82.1)",
+          "oklch(83% 0.024 82.1)",
+          "oklch(95% 0.023 82.1)"
+        ]
+      },
+      "primary-ink": {
+        "role": "neutral",
+        "displayName": "Primary Ink",
+        "canonical": "oklch(26.6% 0.012 55.8)",
+        "tonalRamp": [
+          "oklch(15% 0.011 55.8)",
+          "oklch(26% 0.012 55.8)",
+          "oklch(37% 0.011 55.8)",
+          "oklch(48% 0.011 55.8)",
+          "oklch(59% 0.010 55.8)",
+          "oklch(70% 0.010 55.8)",
+          "oklch(83% 0.009 55.8)",
+          "oklch(95% 0.009 55.8)"
+        ]
+      },
+      "secondary-ink": {
+        "role": "neutral",
+        "displayName": "Secondary Ink",
+        "canonical": "oklch(49.8% 0.021 72.9)",
+        "tonalRamp": [
+          "oklch(15% 0.018 72.9)",
+          "oklch(26% 0.019 72.9)",
+          "oklch(37% 0.020 72.9)",
+          "oklch(48% 0.020 72.9)",
+          "oklch(59% 0.020 72.9)",
+          "oklch(70% 0.019 72.9)",
+          "oklch(83% 0.018 72.9)",
+          "oklch(95% 0.017 72.9)"
+        ]
+      },
+      "accent-fill": {
+        "role": "primary",
+        "displayName": "Accent Fill",
+        "canonical": "oklch(66.0% 0.169 51.1)",
+        "tonalRamp": [
+          "oklch(15% 0.139 51.1)",
+          "oklch(26% 0.145 51.1)",
+          "oklch(37% 0.152 51.1)",
+          "oklch(48% 0.158 51.1)",
+          "oklch(59% 0.165 51.1)",
+          "oklch(70% 0.167 51.1)",
+          "oklch(83% 0.159 51.1)",
+          "oklch(95% 0.152 51.1)"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Accent Hover",
+        "canonical": "oklch(72.2% 0.165 54.2)",
+        "tonalRamp": [
+          "oklch(15% 0.132 54.2)",
+          "oklch(26% 0.138 54.2)",
+          "oklch(37% 0.144 54.2)",
+          "oklch(48% 0.151 54.2)",
+          "oklch(59% 0.157 54.2)",
+          "oklch(70% 0.163 54.2)",
+          "oklch(83% 0.159 54.2)",
+          "oklch(95% 0.152 54.2)"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Accent Ink",
+        "canonical": "oklch(51.4% 0.132 51.8)",
+        "tonalRamp": [
+          "oklch(15% 0.116 51.8)",
+          "oklch(26% 0.121 51.8)",
+          "oklch(37% 0.126 51.8)",
+          "oklch(48% 0.131 51.8)",
+          "oklch(59% 0.129 51.8)",
+          "oklch(70% 0.124 51.8)",
+          "oklch(83% 0.118 51.8)",
+          "oklch(95% 0.112 51.8)"
+        ]
+      },
+      "ink-on-accent": {
+        "role": "primary",
+        "displayName": "Ink on Accent",
+        "canonical": "oklch(20.1% 0.034 76.3)",
+        "tonalRamp": [
+          "oklch(15% 0.033 76.3)",
+          "oklch(26% 0.033 76.3)",
+          "oklch(37% 0.032 76.3)",
+          "oklch(48% 0.031 76.3)",
+          "oklch(59% 0.029 76.3)",
+          "oklch(70% 0.028 76.3)",
+          "oklch(83% 0.026 76.3)",
+          "oklch(95% 0.025 76.3)"
+        ]
+      },
+      "status-on-track": {
+        "role": "secondary",
+        "displayName": "On Track",
+        "canonical": "oklch(62.1% 0.112 159.3)",
+        "tonalRamp": [
+          "oklch(15% 0.094 159.3)",
+          "oklch(26% 0.098 159.3)",
+          "oklch(37% 0.102 159.3)",
+          "oklch(48% 0.107 159.3)",
+          "oklch(59% 0.111 159.3)",
+          "oklch(70% 0.109 159.3)",
+          "oklch(83% 0.104 159.3)",
+          "oklch(95% 0.099 159.3)"
+        ]
+      },
+      "status-on-track-hover": {
+        "role": "secondary",
+        "displayName": "On Track Hover",
+        "canonical": "oklch(68.6% 0.118 158.9)",
+        "tonalRamp": [
+          "oklch(15% 0.096 158.9)",
+          "oklch(26% 0.100 158.9)",
+          "oklch(37% 0.105 158.9)",
+          "oklch(48% 0.109 158.9)",
+          "oklch(59% 0.114 158.9)",
+          "oklch(70% 0.117 158.9)",
+          "oklch(83% 0.112 158.9)",
+          "oklch(95% 0.107 158.9)"
+        ]
+      },
+      "status-due": {
+        "role": "secondary",
+        "displayName": "Due Today",
+        "canonical": "oklch(68.0% 0.138 75.2)",
+        "tonalRamp": [
+          "oklch(15% 0.113 75.2)",
+          "oklch(26% 0.118 75.2)",
+          "oklch(37% 0.123 75.2)",
+          "oklch(48% 0.128 75.2)",
+          "oklch(59% 0.134 75.2)",
+          "oklch(70% 0.137 75.2)",
+          "oklch(83% 0.131 75.2)",
+          "oklch(95% 0.125 75.2)"
+        ]
+      },
+      "status-overdue": {
+        "role": "secondary",
+        "displayName": "Overdue",
+        "canonical": "oklch(57.5% 0.174 24.4)",
+        "tonalRamp": [
+          "oklch(15% 0.148 24.4)",
+          "oklch(26% 0.154 24.4)",
+          "oklch(37% 0.161 24.4)",
+          "oklch(48% 0.168 24.4)",
+          "oklch(59% 0.173 24.4)",
+          "oklch(70% 0.166 24.4)",
+          "oklch(83% 0.158 24.4)",
+          "oklch(95% 0.151 24.4)"
+        ]
+      },
+      "practice-ground": {
+        "role": "neutral",
+        "displayName": "Practice Ground",
+        "canonical": "oklch(17.7% 0.010 67.1)",
+        "tonalRamp": [
+          "oklch(15% 0.010 67.1)",
+          "oklch(26% 0.010 67.1)",
+          "oklch(37% 0.010 67.1)",
+          "oklch(48% 0.009 67.1)",
+          "oklch(59% 0.009 67.1)",
+          "oklch(70% 0.009 67.1)",
+          "oklch(83% 0.008 67.1)",
+          "oklch(95% 0.008 67.1)"
+        ]
+      },
+      "practice-surface": {
+        "role": "neutral",
+        "displayName": "Practice Surface",
+        "canonical": "oklch(21.0% 0.014 61.8)",
+        "tonalRamp": [
+          "oklch(15% 0.013 61.8)",
+          "oklch(26% 0.013 61.8)",
+          "oklch(37% 0.013 61.8)",
+          "oklch(48% 0.012 61.8)",
+          "oklch(59% 0.012 61.8)",
+          "oklch(70% 0.011 61.8)",
+          "oklch(83% 0.011 61.8)",
+          "oklch(95% 0.010 61.8)"
+        ]
+      },
+      "practice-border": {
+        "role": "neutral",
+        "displayName": "Practice Border",
+        "canonical": "oklch(34.3% 0.045 60.0)",
+        "tonalRamp": [
+          "oklch(15% 0.042 60.0)",
+          "oklch(26% 0.044 60.0)",
+          "oklch(37% 0.045 60.0)",
+          "oklch(48% 0.043 60.0)",
+          "oklch(59% 0.041 60.0)",
+          "oklch(70% 0.039 60.0)",
+          "oklch(83% 0.037 60.0)",
+          "oklch(95% 0.036 60.0)"
+        ]
+      },
+      "practice-primary-ink": {
+        "role": "neutral",
+        "displayName": "Practice Primary Ink",
+        "canonical": "oklch(94.9% 0.017 76.1)",
+        "tonalRamp": [
+          "oklch(15% 0.012 76.1)",
+          "oklch(26% 0.013 76.1)",
+          "oklch(37% 0.014 76.1)",
+          "oklch(48% 0.014 76.1)",
+          "oklch(59% 0.015 76.1)",
+          "oklch(70% 0.016 76.1)",
+          "oklch(83% 0.016 76.1)",
+          "oklch(95% 0.017 76.1)"
+        ]
+      },
+      "practice-secondary-ink": {
+        "role": "neutral",
+        "displayName": "Practice Secondary Ink",
+        "canonical": "oklch(73.5% 0.033 70.4)",
+        "tonalRamp": [
+          "oklch(15% 0.026 70.4)",
+          "oklch(26% 0.028 70.4)",
+          "oklch(37% 0.029 70.4)",
+          "oklch(48% 0.030 70.4)",
+          "oklch(59% 0.032 70.4)",
+          "oklch(70% 0.033 70.4)",
+          "oklch(83% 0.032 70.4)",
+          "oklch(95% 0.031 70.4)"
+        ]
+      },
+      "practice-accent-fill": {
+        "role": "primary",
+        "displayName": "Practice Accent Fill",
+        "canonical": "oklch(75.0% 0.167 50.5)",
+        "tonalRamp": [
+          "oklch(15% 0.132 50.5)",
+          "oklch(26% 0.138 50.5)",
+          "oklch(37% 0.145 50.5)",
+          "oklch(48% 0.151 50.5)",
+          "oklch(59% 0.157 50.5)",
+          "oklch(70% 0.164 50.5)",
+          "oklch(83% 0.162 50.5)",
+          "oklch(95% 0.155 50.5)"
+        ]
+      },
+      "practice-accent-hover": {
+        "role": "primary",
+        "displayName": "Practice Accent Hover",
+        "canonical": "oklch(82.0% 0.121 57.7)",
+        "tonalRamp": [
+          "oklch(15% 0.092 57.7)",
+          "oklch(26% 0.097 57.7)",
+          "oklch(37% 0.102 57.7)",
+          "oklch(48% 0.106 57.7)",
+          "oklch(59% 0.111 57.7)",
+          "oklch(70% 0.115 57.7)",
+          "oklch(83% 0.120 57.7)",
+          "oklch(95% 0.115 57.7)"
+        ]
+      },
+      "practice-status-on-track": {
+        "role": "secondary",
+        "displayName": "Practice On Track",
+        "canonical": "oklch(75.2% 0.125 160.6)",
+        "tonalRamp": [
+          "oklch(15% 0.099 160.6)",
+          "oklch(26% 0.104 160.6)",
+          "oklch(37% 0.109 160.6)",
+          "oklch(48% 0.113 160.6)",
+          "oklch(59% 0.118 160.6)",
+          "oklch(70% 0.123 160.6)",
+          "oklch(83% 0.122 160.6)",
+          "oklch(95% 0.117 160.6)"
+        ]
+      },
+      "practice-status-due": {
+        "role": "secondary",
+        "displayName": "Practice Due Today",
+        "canonical": "oklch(76.6% 0.136 79.9)",
+        "tonalRamp": [
+          "oklch(15% 0.107 79.9)",
+          "oklch(26% 0.112 79.9)",
+          "oklch(37% 0.117 79.9)",
+          "oklch(48% 0.123 79.9)",
+          "oklch(59% 0.128 79.9)",
+          "oklch(70% 0.133 79.9)",
+          "oklch(83% 0.133 79.9)",
+          "oklch(95% 0.127 79.9)"
+        ]
+      },
+      "practice-status-overdue": {
+        "role": "secondary",
+        "displayName": "Practice Overdue",
+        "canonical": "oklch(67.3% 0.160 26.7)",
+        "tonalRamp": [
+          "oklch(15% 0.130 26.7)",
+          "oklch(26% 0.137 26.7)",
+          "oklch(37% 0.143 26.7)",
+          "oklch(48% 0.149 26.7)",
+          "oklch(59% 0.155 26.7)",
+          "oklch(70% 0.158 26.7)",
+          "oklch(83% 0.151 26.7)",
+          "oklch(95% 0.144 26.7)"
+        ]
+      },
+      "label-rose": {
+        "role": "tertiary",
+        "displayName": "Label Rose",
+        "canonical": "oklch(57.1% 0.154 14.9)",
+        "tonalRamp": [
+          "oklch(15% 0.131 14.9)",
+          "oklch(26% 0.137 14.9)",
+          "oklch(37% 0.143 14.9)",
+          "oklch(48% 0.149 14.9)",
+          "oklch(59% 0.153 14.9)",
+          "oklch(70% 0.147 14.9)",
+          "oklch(83% 0.140 14.9)",
+          "oklch(95% 0.133 14.9)"
+        ]
+      },
+      "label-brass": {
+        "role": "tertiary",
+        "displayName": "Label Brass",
+        "canonical": "oklch(68.1% 0.118 70.9)",
+        "tonalRamp": [
+          "oklch(15% 0.096 70.9)",
+          "oklch(26% 0.100 70.9)",
+          "oklch(37% 0.105 70.9)",
+          "oklch(48% 0.110 70.9)",
+          "oklch(59% 0.114 70.9)",
+          "oklch(70% 0.117 70.9)",
+          "oklch(83% 0.112 70.9)",
+          "oklch(95% 0.107 70.9)"
+        ]
+      },
+      "label-sage": {
+        "role": "tertiary",
+        "displayName": "Label Sage",
+        "canonical": "oklch(65.5% 0.057 142.4)",
+        "tonalRamp": [
+          "oklch(15% 0.047 142.4)",
+          "oklch(26% 0.049 142.4)",
+          "oklch(37% 0.051 142.4)",
+          "oklch(48% 0.053 142.4)",
+          "oklch(59% 0.056 142.4)",
+          "oklch(70% 0.056 142.4)",
+          "oklch(83% 0.053 142.4)",
+          "oklch(95% 0.051 142.4)"
+        ]
+      },
+      "label-denim": {
+        "role": "tertiary",
+        "displayName": "Label Denim",
+        "canonical": "oklch(56.9% 0.059 249.7)",
+        "tonalRamp": [
+          "oklch(15% 0.051 249.7)",
+          "oklch(26% 0.053 249.7)",
+          "oklch(37% 0.055 249.7)",
+          "oklch(48% 0.058 249.7)",
+          "oklch(59% 0.059 249.7)",
+          "oklch(70% 0.057 249.7)",
+          "oklch(83% 0.054 249.7)",
+          "oklch(95% 0.051 249.7)"
+        ]
+      },
+      "label-plum": {
+        "role": "tertiary",
+        "displayName": "Label Plum",
+        "canonical": "oklch(50.1% 0.070 329.3)",
+        "tonalRamp": [
+          "oklch(15% 0.061 329.3)",
+          "oklch(26% 0.064 329.3)",
+          "oklch(37% 0.066 329.3)",
+          "oklch(48% 0.069 329.3)",
+          "oklch(59% 0.067 329.3)",
+          "oklch(70% 0.065 329.3)",
+          "oklch(83% 0.062 329.3)",
+          "oklch(95% 0.059 329.3)"
+        ]
+      },
+      "label-ochre": {
+        "role": "tertiary",
+        "displayName": "Label Ochre",
+        "canonical": "oklch(66.3% 0.120 80.3)",
+        "tonalRamp": [
+          "oklch(15% 0.098 80.3)",
+          "oklch(26% 0.103 80.3)",
+          "oklch(37% 0.107 80.3)",
+          "oklch(48% 0.112 80.3)",
+          "oklch(59% 0.117 80.3)",
+          "oklch(70% 0.118 80.3)",
+          "oklch(83% 0.113 80.3)",
+          "oklch(95% 0.108 80.3)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Auth screen and board-select page titles. Space Grotesk 700 at 26px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Card modal title (22px) and practice focus card title (20px)."
+      },
+      "title": {
+        "displayName": "Card Title",
+        "purpose": "The board card's name. By rule, the largest thing on a card."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Note text, list rows, search results, inputs. 13px in denser secondary contexts."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons, column headers, form labels. Work Sans 600."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Measured values only: relative due labels, practice counts, invite codes. Space Mono."
+      },
+      "eyebrow": {
+        "displayName": "Eyebrow",
+        "purpose": "Rare one-off section markers. Uppercase mono at 0.05em. Never a per-section scaffold."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-card",
+        "value": "0 1px 2px rgba(70, 55, 40, 0.1), 0 2px 5px rgba(70, 55, 40, 0.07)",
+        "purpose": "Ambient separation for a card resting on its column. Warm-tinted; barely visible alone, which is correct — the tonal climb carries the hierarchy."
+      },
+      {
+        "name": "shadow-modal",
+        "value": "0 16px 40px rgba(50, 38, 25, 0.24)",
+        "purpose": "Anything genuinely floating over the board: modal, search panel, overflow menu, toast, quick-drop bar."
+      },
+      {
+        "name": "status-rail",
+        "value": "inset 4px 0 0 var(--color-overdue), 0 1px 2px rgba(70, 55, 40, 0.1), 0 2px 5px rgba(70, 55, 40, 0.07)",
+        "purpose": "The signature. A 4px status band on the card's left edge, drawn inset and layered in front of the card shadow so it never shifts content or fights the 1px border. Swap the inset colour for --color-due or --color-good."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 2px solid var(--color-ember-text); outline-offset: 2px",
+        "purpose": "The app's only focus indicator. Uses Accent Ink, not Accent Fill, because it must clear 3:1 on the board ground (4.53) as well as on a white card (5.95)."
+      },
+      {
+        "name": "selection-inset",
+        "value": "inset 0 0 0 1px var(--color-ember)",
+        "purpose": "Marks the keyboard-highlighted search result so it outranks a stale pointer hover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-state",
+        "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Ease-out-quart. Default for state changes — background, colour, small transforms. 150ms."
+      },
+      {
+        "name": "ease-entrance",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Ease-out-expo. Panels, receipts, and cards entering. 160–220ms."
+      },
+      {
+        "name": "duration-fast",
+        "value": "120ms",
+        "purpose": "Opacity-only fades on hover-revealed affordances."
+      },
+      {
+        "name": "duration-base",
+        "value": "150ms",
+        "purpose": "The default for a state transition."
+      },
+      {
+        "name": "duration-entrance",
+        "value": "180-220ms",
+        "purpose": "Ceiling for anything entering. Nothing in this app animates longer."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "@media (prefers-reduced-motion: reduce) { transition: none }",
+        "purpose": "Non-optional. Every animated element has a counterpart block; there are nine in the codebase and no exceptions. Where a transform is part of the transition list, drop the property rather than writing transition:none, which would strip the transform too."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "640px"
+      },
+      {
+        "name": "narrow-desktop",
+        "value": "760px"
+      }
+    ],
+    "zIndex": [
+      {
+        "name": "drag-affordance",
+        "value": "20"
+      },
+      {
+        "name": "sticky-column-chrome",
+        "value": "60"
+      },
+      {
+        "name": "search-panel",
+        "value": "95"
+      },
+      {
+        "name": "modal",
+        "value": "100"
+      },
+      {
+        "name": "toast",
+        "value": "1000"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Task Card (status rail)",
+      "kind": "card",
+      "refersTo": "card-task",
+      "description": "The signature component. A white drill card on the column surface, with a 4px inset status rail on the left edge and a fixed bottom meta strip.",
+      "html": "<article class=\"ds-card ds-card--overdue\"><div class=\"ds-card__labels\"><span class=\"ds-chip ds-chip--denim\">footwork</span><span class=\"ds-chip ds-chip--brass\">lead</span></div><h3 class=\"ds-card__title\">Yo-yo into comb</h3><div class=\"ds-card__note\">Keep the frame quiet on the return.</div><div class=\"ds-card__meta\"><span class=\"ds-card__dot\"></span><span class=\"ds-card__due\">3d late</span></div></article>",
+      "css": ".ds-card { width: 240px; padding: 10px 12px; background: var(--color-surface-light, #ffffff); border: 1px solid var(--color-border, #d8cfbf); border-radius: var(--radius-sm, 4px); box-shadow: 0 1px 2px rgba(70,55,40,0.1), 0 2px 5px rgba(70,55,40,0.07); cursor: grab; } .ds-card--overdue { box-shadow: inset 4px 0 0 var(--color-overdue, #cb4242), 0 1px 2px rgba(70,55,40,0.1), 0 2px 5px rgba(70,55,40,0.07); } .ds-card:hover { border-color: color-mix(in srgb, var(--color-ember, #e06d0a) 45%, var(--color-border, #d8cfbf)); } .ds-card__labels { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; } .ds-card__title { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; line-height: 1.3; color: var(--color-ink, #2a2420); } .ds-card__note { margin-top: 6px; font-family: 'Work Sans', sans-serif; font-size: 12px; color: var(--color-ink-dim, #6a6156); } .ds-card__meta { display: flex; align-items: center; gap: 6px; margin-top: 8px; } .ds-card__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-overdue, #cb4242); } .ds-card__due { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: var(--color-overdue, #cb4242); }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single ember-filled action per surface. Dark ink on orange, never white.",
+      "html": "<button class=\"ds-btn-primary\">Add card</button>",
+      "css": ".ds-btn-primary { padding: 8px 14px; border: none; border-radius: var(--radius-sm, 4px); background: var(--color-ember, #e06d0a); color: var(--color-text-on-ember, #1f1404); font-family: 'Work Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { background: var(--color-ember-light, #f2842a); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-ember-text, #a04c00); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.6; cursor: default; } @media (prefers-reduced-motion: reduce) { .ds-btn-primary { transition: none; } }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "The workhorse secondary action. Transparent fill, 1px ember border, primary ink.",
+      "html": "<button class=\"ds-btn-outline\">Sweep due</button>",
+      "css": ".ds-btn-outline { padding: 6px 10px; border: 1px solid var(--color-ember, #e06d0a); border-radius: var(--radius-sm, 4px); background: transparent; color: var(--color-ink, #2a2420); font-family: 'Work Sans', sans-serif; font-size: 12px; white-space: nowrap; cursor: pointer; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-outline:hover { background: var(--color-surface-light, #ffffff); } .ds-btn-outline:focus-visible { outline: 2px solid var(--color-ember-text, #a04c00); outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-btn-outline { transition: none; } }"
+    },
+    {
+      "name": "Dashed Add Slot",
+      "kind": "button",
+      "refersTo": "button-dashed-add",
+      "description": "The 'add a card' affordance. Reads as an empty slot in the box rather than a button.",
+      "html": "<button class=\"ds-btn-add\">+ Add a card</button>",
+      "css": ".ds-btn-add { width: 220px; padding: 10px; border: 2px dashed var(--color-border, #d8cfbf); border-radius: var(--radius-sm, 4px); background: transparent; color: var(--color-ink-dim, #6a6156); font-family: 'Work Sans', sans-serif; font-size: 13px; text-align: left; cursor: pointer; } .ds-btn-add:hover { border-color: var(--color-ember, #e06d0a); color: var(--color-ink, #2a2420); } .ds-btn-add:focus-visible { outline: 2px solid var(--color-ember-text, #a04c00); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Recessed field — fills with the board ground, darker than the surface it sits on, so inputs sink rather than float.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field__label\">Card name</span><input class=\"ds-input\" type=\"text\" placeholder=\"Search cards\" /></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 4px; } .ds-field__label { font-family: 'Work Sans', sans-serif; font-size: 13px; color: var(--color-ink-dim, #6a6156); } .ds-input { padding: 10px 12px; border: 1px solid var(--color-border, #d8cfbf); border-radius: var(--radius-sm, 4px); background: var(--color-bg, #e6e0d4); color: var(--color-ink, #2a2420); font-family: 'Work Sans', sans-serif; font-size: 14px; } .ds-input::placeholder { color: var(--color-ink-dim, #6a6156); } .ds-input:focus { outline: none; border-color: var(--color-ember, #e06d0a); } .ds-input:focus-visible { outline: 2px solid var(--color-ember-text, #a04c00); outline-offset: 2px; }"
+    },
+    {
+      "name": "Label Chip",
+      "kind": "chip",
+      "refersTo": "chip-label",
+      "description": "User-assigned card label. Each of the six fills carries its own ink value — no single value clears 4.5:1 on all six.",
+      "html": "<span class=\"ds-chip ds-chip--rose\">drills</span> <span class=\"ds-chip ds-chip--brass\">lead</span> <span class=\"ds-chip ds-chip--sage\">musicality</span> <span class=\"ds-chip ds-chip--denim\">footwork</span> <span class=\"ds-chip ds-chip--plum\">styling</span> <span class=\"ds-chip ds-chip--ochre\">comp</span>",
+      "css": ".ds-chip { display: inline-block; border-radius: 4px; padding: 2px 8px; font-family: 'Work Sans', sans-serif; font-size: 11px; } .ds-chip--rose { background: #c1495a; color: #ffffff; } .ds-chip--brass { background: #c68b3d; color: #2a2420; } .ds-chip--sage { background: #7d9a7a; color: #2a2420; } .ds-chip--denim { background: #5c7a99; color: #ffffff; } .ds-chip--plum { background: #7a5577; color: #ffffff; } .ds-chip--ochre { background: #b98a2e; color: #2a2420; }"
+    },
+    {
+      "name": "Column Panel",
+      "kind": "card",
+      "refersTo": "panel-column",
+      "description": "The Kanban column: the middle step of the tonal climb, holding white cards and a sticky header with a mono count.",
+      "html": "<section class=\"ds-column\"><header class=\"ds-column__head\"><span class=\"ds-column__name\">Due today</span><span class=\"ds-column__count\">7</span></header><div class=\"ds-column__body\">…</div></section>",
+      "css": ".ds-column { display: flex; flex-direction: column; width: 264px; padding: 10px; background: var(--color-surface, #f0ebe1); border: 1px solid var(--color-border, #d8cfbf); border-radius: var(--radius-lg, 8px); } .ds-column__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-bottom: 8px; } .ds-column__name { font-family: 'Work Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--color-ink, #2a2420); } .ds-column__count { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--color-ink-dim, #6a6156); } .ds-column__body { min-height: 40px; font-family: 'Work Sans', sans-serif; font-size: 13px; color: var(--color-ink-dim, #6a6156); }"
+    },
+    {
+      "name": "Segmented Toggle",
+      "kind": "nav",
+      "refersTo": "button-outline",
+      "description": "Board/list view switch. One of only two pill shapes in the system, and it is a track, not a button.",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg__btn ds-seg__btn--active\">Board</button><button class=\"ds-seg__btn\">List</button></div>",
+      "css": ".ds-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; background: var(--color-bg, #e6e0d4); } .ds-seg__btn { padding: 4px 12px; border: none; border-radius: 999px; background: transparent; color: var(--color-ink-dim, #6a6156); font-family: 'Work Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background-color 150ms cubic-bezier(0.25, 1, 0.5, 1), color 150ms; } .ds-seg__btn--active { background: var(--color-ember, #e06d0a); color: var(--color-text-on-ember, #1f1404); } .ds-seg__btn:focus-visible { outline: 2px solid var(--color-ember-text, #a04c00); outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-seg__btn { transition: none; } }"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Inverted ink surface, bottom-centre. Status rides a 3px left rail — the same motif as the card status rail — instead of tinting the background.",
+      "html": "<div class=\"ds-toast ds-toast--success\"><div class=\"ds-toast__text\">Swept 4 cards into Due today<div class=\"ds-toast__detail\">Next sweep tomorrow at 04:00</div></div><button class=\"ds-toast__x\" aria-label=\"Dismiss\">×</button></div>",
+      "css": ".ds-toast { display: flex; align-items: flex-start; gap: 8px; width: 360px; max-width: calc(100vw - 32px); padding: 10px 6px 10px 11px; border-radius: var(--radius-sm, 4px); border-left: 3px solid var(--color-overdue, #cb4242); background: var(--color-ink, #2a2420); color: var(--color-surface-light, #ffffff); box-shadow: 0 16px 40px rgba(50,38,25,0.24); font-family: 'Work Sans', sans-serif; font-size: 0.9rem; } .ds-toast--success { border-left-color: var(--color-good, #3e9b6e); } .ds-toast__text { flex: 1; min-width: 0; } .ds-toast__detail { margin-top: 3px; font-size: 0.78rem; color: rgba(255,255,255,0.7); overflow-wrap: anywhere; } .ds-toast__x { flex-shrink: 0; width: 24px; border: none; background: transparent; color: inherit; opacity: 0.6; font-size: 16px; cursor: pointer; } .ds-toast__x:hover { opacity: 1; }"
+    },
+    {
+      "name": "Practice Focus Card",
+      "kind": "custom",
+      "refersTo": "card-task",
+      "description": "The mid-practice companion surface. Deliberately chrome-less — no border, background, or radius — sitting straight on the scoped dark palette. Documents the second room.",
+      "html": "<div class=\"ds-practice\"><div class=\"ds-practice__focus\"><div class=\"ds-practice__meta\"><span class=\"ds-practice__dot\"></span><span class=\"ds-practice__due\">today</span></div><h2 class=\"ds-practice__title\">Yo-yo into comb</h2><p class=\"ds-practice__history\">last practised 12d ago · 4 sessions</p></div></div>",
+      "css": ".ds-practice { padding: 16px; background: #14100c; border-radius: var(--radius-lg, 8px); } .ds-practice__focus { display: flex; flex-direction: column; gap: 10px; } .ds-practice__meta { display: flex; align-items: center; gap: 6px; } .ds-practice__dot { width: 8px; height: 8px; border-radius: 50%; background: #e0a83d; } .ds-practice__due { font-family: 'Space Mono', monospace; font-size: 12px; color: #b7a693; } .ds-practice__title { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; color: #f5ede2; } .ds-practice__history { margin: 6px 0 0; font-family: 'Space Mono', monospace; font-size: 12px; color: #b7a693; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Drill Card",
+    "overview": "Every skill in this app is one index card in a physical box. You practise it, then you sort it into a slot that decides when you'll see it again — that is literally the Leitner scheduling model, and it is also the whole visual thesis. The interface is a box of cards on a table under warm light. Cards are flat, white, and small enough to fan through. The board they sit on is warm greige paper, not a screen. Nothing is glossy, nothing floats, nothing animates for pleasure. The single most important thing on any card is legible at a glance from a metre away, because the user is standing up mid-practice, not sitting down to read.\n\nThat physical metaphor keeps two forces in check. The domain (Modern Jive, partner dancing) pulls toward dance-school warmth — lifestyle photography, pill buttons, soft rounding — and the category (a training tool with intervals and streaks) pulls the other way, toward a dark terminal aesthetic with monospace everywhere. The drill card refuses both. It is warm because paper is warm, not because dancing is warm. It is technical because a filing system is technical, not because tools should look like terminals. Monospace appears on measured values only — dates, counts, invite codes — the way a handwritten card would have a date in the corner.\n\nDepth is tonal, not dramatic. Lightness climbs in three fixed steps — board → column → card — so the stack reads as physical layering rather than as drop shadows. The one memorable detail is the coloured rail down a card's left edge, which is the same gesture as a coloured tab on a real filing card: it says when, and it is readable before you read anything.",
+    "keyCharacteristics": [
+      "Three-step tonal climb (ground → surface → white) carries all hierarchy; shadows only separate.",
+      "Semantic status trio (on-track / due / overdue) is the only colour system for training state.",
+      "Monospace is reserved for measured values, never used for prose or labels-as-decoration.",
+      "Modest 4px radii throughout; pill shapes appear exactly twice, both as tracks, never as buttons.",
+      "One accent, used for the primary action and the current selection only.",
+      "A second, fully dark palette is scoped to the mid-practice companion view — same app, different room."
+    ],
+    "rules": [
+      {
+        "name": "The Three-Token Ember Rule",
+        "body": "Ember has three tokens and only one of them is legible as ink. Fill and borders take Accent Fill; hover fills take Accent Hover; anything that paints ember as text or as the focus ring takes Accent Ink. Before writing ember anywhere, ask whether it is being painted as ink — if yes, there is only one right answer.",
+        "section": "colors"
+      },
+      {
+        "name": "The Measured-Background Rule",
+        "body": "Contrast is checked against the tinted surface the element actually lands on, never against white. The three grounds are #e6e0d4, #f0ebe1, and #ffffff, and a value can pass on one and fail on another — Accent Ink is 4.53 / 5.01 / 5.95 across them, which is exactly why it exists.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Accent Rule",
+        "body": "Ember marks the primary action, the current selection, and the active drop target. It never decorates. A surface with two ember-filled buttons has one too many.",
+        "section": "colors"
+      },
+      {
+        "name": "The Card Title Wins Rule",
+        "body": "On the board face, nothing renders larger than the 15px card title — including markdown headings inside the note preview. The note component's --note-heading-scale is set to 0 there for exactly this reason: it flattens h1–h6 onto the 12px base so headings stay marked by weight and ink but never out-size the title. The modal (22px title vs 14px base) and practice card (20px vs 14px) already satisfy the rule and keep the full scale.",
+        "section": "typography"
+      },
+      {
+        "name": "The Measured-Value Rule",
+        "body": "If a number was counted, dated, or generated, it is Space Mono. If it is prose, a label, or a heading, it is not. There is no third case.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed-Scale Rule",
+        "body": "Type sizes are fixed px, never clamp(). This is product UI viewed at consistent DPI; a fluid heading that shrinks inside a 280px column looks worse, not better. The one global size override is the iOS 16px input-font floor under 640px, which exists to stop Safari zooming on focus.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tonal-Climb Rule",
+        "body": "New surfaces pick a step on the existing ladder rather than inventing a shadow. If something needs to feel raised, move it toward white; only add elevation if it genuinely floats over content the user can still see.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do run every new colour through the Three-Token Ember Rule and the Measured-Background Rule before committing it. Add a token in tokens.css rather than a hex in a component.",
+      "Do reach for the status trio when surfacing new training state, and extend the rail / dot / mono-label vocabulary rather than inventing a parallel indicator system.",
+      "Do keep type in fixed px on the existing scale (11 / 12 / 13 / 14 / 15 · 18 / 20 / 22 / 26).",
+      "Do give every transition a prefers-reduced-motion: reduce counterpart. The codebase has nine of them and no exceptions; keep it that way.",
+      "Do hold transitions to 120–220ms and use the incumbent easings — cubic-bezier(0.25, 1, 0.5, 1) for state changes, cubic-bezier(0.16, 1, 0.3, 1) for entrances.",
+      "Do theme card notes by setting --note-* custom properties on the host, never by editing MarkdownNote.vue — it is the single component behind all three note surfaces and takes no palette props.",
+      "Do place new stacking contexts on the existing z-index ladder (20 / 60 / 95 / 100 / 1000)."
+    ],
+    "donts": [
+      "Don't paint Accent Fill as text. It is 2.78:1 on the panel surface and 3.30:1 on white — below even the 3:1 non-text floor on the board. This has been got wrong twice.",
+      "Don't collapse the six label ink values back to one. No single value clears all six fills.",
+      "Don't add pill-shaped buttons or radii above 8px. Both read as consumer SaaS and undo the filing-card geometry.",
+      "Don't use a coloured border-left wider than 1px as a generic card or callout accent. The 4px status rail and the toast's 3px rail are the only sanctioned instances, and both mean the same specific thing: status. A third one dilutes the signature into a decoration.",
+      "Don't introduce a second display face or use Space Grotesk for body copy, buttons, or labels — it is for headlines and card titles only.",
+      "Don't use Space Mono for anything that wasn't measured. Mono-as-texture is the fastest way to turn this into the generic dark-terminal tool the design deliberately isn't.",
+      "Don't apply the --pc-* practice palette outside .practice-view, or push global tokens into it. They are two rooms, kept separate on purpose.",
+      "Don't add ornament without a data reason. A 'level meter' glyph was removed for precisely this — it can return when per-skill levels actually exist in the schema.",
+      "Don't design indicators for ease factors, intervals, or repetition counts. Scheduling is a Leitner box: a card's state is its column plus a due date. There is no SM2 here."
+    ]
+  }
+}

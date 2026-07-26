@@ -624,7 +624,14 @@ defineExpose({ flush: saveEdit })
    15px card title inside a preview clipped at 4.5em. Sizes stay *em-relative*
    because the three surfaces deliberately read at different base sizes (board
    12px, modal and practice card 14px) — each host keeps owning its own base.
-   See Dance_trainer_logseq/pages/Card Notes.md. */
+   See Dance_trainer_logseq/pages/Card Notes.md.
+
+   --note-heading-scale scales only the *step above* the base, not the whole
+   size: at 1 (default) h1/h2 keep their 1.15/1.08em, at 0 every level collapses
+   to the host's base size and headings are told apart by weight and ink alone.
+   Multiplying the whole em value instead would need a different factor per
+   level to land them all on the base, and any factor that flattened h1 would
+   push h2 *below* body text. */
 .md-block :deep(:is(h1, h2, h3, h4, h5, h6)) {
   margin: 0 0 6px;
   font-family: var(--font-display);
@@ -633,11 +640,11 @@ defineExpose({ flush: saveEdit })
 }
 
 .md-block :deep(h1) {
-  font-size: 1.15em;
+  font-size: calc(1em + 0.15em * var(--note-heading-scale, 1));
 }
 
 .md-block :deep(h2) {
-  font-size: 1.08em;
+  font-size: calc(1em + 0.08em * var(--note-heading-scale, 1));
 }
 
 .md-block :deep(:is(h3, h4, h5, h6)) {

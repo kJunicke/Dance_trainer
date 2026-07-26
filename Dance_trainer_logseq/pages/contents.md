@@ -6,9 +6,10 @@
 - ## Backend
 	- [[Supabase]] — Migration gotchas (grants, constraint ordering, filename versions), RLS/grant patterns, GitHub auto-deploy caveats
 - ## Feature
-	- [[Board View]] — the Kanban surface: the two drag systems and why touch is hand-rolled, hit-testing, edge auto-scroll, the quick-move bar, the store's optimistic/revert and per-card write queue, what `moveCard` does to the schedule, board select and joining, toasts
+	- [[Board View]] — the Kanban surface: the two drag systems and why touch is hand-rolled, hit-testing, edge auto-scroll, mobile column snapping, the quick-move bar, the store's optimistic/revert and per-card write queue, what `moveCard` does to the schedule, board select and joining, toasts
 	- [[Practice Companion View]] — mobile practice-session companion: the continuous session model, add drawer, Session Review
 	- [[Card Notes]] — the card `description` field: markdown render pipeline, the shared `MarkdownNote.vue` component and its `--note-*` theming API, per-block inline editing and save model
+	- [[Card Relationships]] — cards as parts of other cards: the `parent_id` link, leaf-only naming, splitting a note section into a child card and merging one back, the family tree, and why relations never touch scheduling
 - ## Archive — superseded, never build from these
 	- [[PROJECT_HANDOFF]] — v1→v2 brief: 5-status system, SM2, focus XP. None of it built, and SM2 was explicitly declined. Kept as the record of what was designed
 	- [[UX Batches 2026-07]] — the eight-batch UX pass of 2026-07-21, all shipped. Valuable for what was *decided against* and where the critique was factually wrong; its open items moved to [[Open Work]]
@@ -18,11 +19,12 @@
 	- `stores/boardStore.ts` → [[Board View]] for the persistence model and move behaviour, [[Tables]] for what the fields mean
 	- `views/BoardSelectView.vue` + the invite/join flow → [[Board View]] ("Board select and joining"), [[Supabase]] for the RLS behind it
 	- `views/PracticeView.vue`, `components/Practice*.vue`, `stores/practiceSessionStore.ts` → [[Practice Companion View]] — except `PracticeFocusCard`'s description editing, which is [[Card Notes]] (it renders the shared `MarkdownNote` component, same as the card modal)
-	- `components/CardModal.vue`, `components/MarkdownNote.vue`, `lib/markdown.ts` → [[Card Notes]]
+	- `components/CardModal.vue`, `components/MarkdownNote.vue`, `lib/markdown.ts` → [[Card Notes]] — except `markdown.ts`'s `noteSections`/`splitSection`/`demoteHeadings`/`mergeNote` and the modal's breadcrumb, pickers and Family section, which are [[Card Relationships]]
+	- `lib/cardTree.ts`, `components/CardFamilyTree.vue` → [[Card Relationships]]
 	- `lib/boardFormat.ts`, `lib/trelloFormat.ts` → [[Tables]] ("Board import/export")
 	- `lib/dates.ts` → [[Tables]] for the scheduling fields it reads, [[Board View]] for `sweepDueCards` and the on-enter rules
 	- `stores/toastStore.ts`, `components/ToastStack.vue` → [[Board View]] ("Toasts")
 	- `supabase/migrations/` → [[Supabase]] for the rules a migration must follow, [[Tables]] for what each one added
-	- `assets/tokens.css`, `lib/labelColors.ts`, and anything visual → **not in this wiki**: `.claude/skills/dance-trainer-design-system/` holds the conventions, `PRODUCT.md` the principles and rejected directions. The contrast measurements behind the current values are in [[UX Batches 2026-07]] Batch 6
+	- `assets/tokens.css`, `lib/labelColors.ts`, and anything visual → **not in this wiki**: `DESIGN.md` at the repo root holds the tokens, type scale, component vocabulary and named rules; `PRODUCT.md` the principles and rejected directions. The contrast measurements behind the current values are in [[UX Batches 2026-07]] Batch 6
 	- `views/LoginView.vue`, `stores/authStore.ts` → none yet
 	- `router/index.ts`, `lib/useBackButtonClose.ts`, PWA / `vite.config.ts` → none yet; the deployment constraint is in `CLAUDE.md`
