@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GRATICULE — Dance Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#eeeee9;
+  --sheet:#ffffff;
+  --ink:#0e0f10;
+  --ink-2:#5d5f60;
+  --ink-3:#8e9091;
+  --rule:#d2d3cd;
+  --rule-2:#e6e7e2;
+  --grat:#e4e5df;
+  --sig:#1236cf;
+  --alert:#c81f10;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:80px}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+
+.banner{background:#101113;color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:6px 26px;align-items:baseline;font-family:ui-monospace,monospace;font-size:12px}
+.banner b{font-size:14px;letter-spacing:.16em}
+.banner span{color:#9a9b9e}
+.banner em{font-style:normal;color:#d8d9dc}
+.cap{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;color:#7c7e7a;text-transform:uppercase;padding:34px 24px 12px;display:flex;align-items:center;gap:12px}
+.cap:after{content:"";height:1px;background:var(--rule);flex:1}
+
+/* ── instrument surface ───────────────────────────────────── */
+.surface{margin:0 16px;background:var(--sheet);border:1px solid var(--ink);position:relative;
+  background-image:linear-gradient(var(--grat) 1px,transparent 1px),linear-gradient(90deg,var(--grat) 1px,transparent 1px);
+  background-size:8px 8px;background-position:-1px -1px}
+.shead{display:flex;align-items:flex-end;gap:16px;padding:12px 14px 10px;border-bottom:1px solid var(--ink);background:var(--sheet)}
+.title{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:13px;letter-spacing:.26em}
+.meta{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;color:var(--ink-2)}
+.shead .sp{flex:1}
+
+/* ── ladder scale strip ───────────────────────────────────── */
+.scaleband{background:var(--sheet);border-bottom:1px solid var(--ink)}
+.scalerow{display:flex;min-width:max-content}
+.scell{width:268px;flex:0 0 268px;min-width:0;padding:11px 12px 9px;border-right:1px solid var(--rule)}
+.scell:last-child{border-right:0}
+.snum{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:21px;letter-spacing:-.02em;line-height:1;display:flex;align-items:baseline;gap:5px}
+.snum small{font-size:9px;letter-spacing:.16em;color:var(--ink-2)}
+.snum.na{color:var(--ink-3)}
+.ruler{margin-top:9px;height:16px;position:relative}
+.ruler .base{position:absolute;left:0;right:0;top:15px;height:1px;background:var(--rule)}
+.ruler .seg{position:absolute;left:0;top:15px;height:1px;background:var(--ink)}
+.ruler i{position:absolute;bottom:1px;width:1px;background:var(--ink)}
+.ruler .zero{position:absolute;bottom:1px;width:1px;height:16px;background:var(--sig)}
+.srange{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink-3);padding-top:6px}
+.scell.origin{background:#f4f6ff}
+.scell.origin .srange{color:var(--sig)}
+
+/* ── board ────────────────────────────────────────────────── */
+.boardscroll{overflow-x:auto}
+.board{display:flex;min-width:max-content}
+.col{width:268px;flex:0 0 268px;min-width:0;border-right:1px solid var(--rule);background:rgba(255,255,255,.72)}
+.col:last-child{border-right:0}
+.col.origin{background:var(--sheet);box-shadow:inset 3px 0 0 var(--sig)}
+.chead{display:flex;align-items:center;gap:8px;padding:9px 12px 8px;border-bottom:1px solid var(--ink);background:var(--sheet)}
+.cname{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:700;font-size:11px;letter-spacing:.13em;flex:1}
+.cct{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--ink-2)}
+.cct b{color:var(--ink);font-weight:600}
+
+/* ── card row ─────────────────────────────────────────────── */
+.row{padding:9px 12px 8px;border-bottom:1px solid var(--rule-2);position:relative}
+.row.late{background:var(--sheet)}
+.row.late:before{content:"";position:absolute;left:0;top:-1px;bottom:-1px;width:2px;background:var(--alert)}
+.anc{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;color:var(--ink-3);margin-bottom:2px}
+.nm{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:15.5px;line-height:1.2;letter-spacing:0}
+.nt{margin-top:5px;font-size:11.5px;line-height:1.45;color:var(--ink-2);display:flex;flex-direction:column;gap:2px}
+.nt .h{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:9px;letter-spacing:.16em;color:var(--ink);text-transform:uppercase}
+.nt .b{padding-left:10px;position:relative}
+.nt .b:before{content:"—";position:absolute;left:0;color:var(--ink-3)}
+.clip{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lnk{display:inline-flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;color:var(--sig);border-bottom:1px solid #b9c4f2;padding-bottom:1px;width:fit-content}
+.rfoot{display:flex;align-items:center;gap:10px;margin-top:8px}
+.lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--ink-3);text-transform:uppercase;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.dev{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.devnum{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:11px;letter-spacing:.02em;width:44px;text-align:right}
+.devnum.late{color:var(--alert)}
+.devnum.none{color:var(--ink-3);font-weight:400}
+.colfoot{padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--ink-3)}
+
+/* sweep return */
+.sweep{position:relative;height:34px;border-top:1px solid var(--ink);background:var(--sheet);overflow:hidden}
+.sweep .lbl2{position:absolute;left:14px;top:11px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--sig);background:var(--sheet);padding-right:8px;z-index:2}
+
+/* ── phone ────────────────────────────────────────────────── */
+.stage{display:flex;flex-wrap:wrap;gap:26px;padding:0 24px;align-items:flex-start}
+.phone{width:390px;flex:0 0 390px;background:var(--sheet);border:1px solid var(--ink)}
+.pbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--ink)}
+.pscale{display:flex;border-bottom:1px solid var(--ink);background:var(--sheet)}
+.pscale div{flex:1;padding:7px 0 6px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.04em;color:var(--ink-3);border-right:1px solid var(--rule-2);position:relative}
+.pscale div:last-child{border-right:0}
+.pscale div.on{color:var(--sig);font-weight:600}
+.pscale div.on:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--sig)}
+.ptabs{display:flex;border-top:1px solid var(--ink)}
+.ptabs div{flex:1;text-align:center;padding:12px 0;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;color:var(--ink-2);border-right:1px solid var(--rule-2)}
+.ptabs div:last-child{border-right:0}
+.ptabs div.on{background:var(--ink);color:#fff}
+
+/* ── detail ───────────────────────────────────────────────── */
+.detail{width:640px;flex:0 0 640px;max-width:100%;background:var(--sheet);border:1px solid var(--ink)}
+.dhead{padding:14px 16px 13px;border-bottom:1px solid var(--ink)}
+.dcrumb{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:var(--ink-2);margin-bottom:9px}
+.dname{font-family:'IBM Plex Sans Condensed',sans-serif;font-size:27px;font-weight:600;letter-spacing:-.005em;line-height:1.1}
+.tbl{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px}
+.tbl th{text-align:left;font-weight:400;letter-spacing:.16em;font-size:8.5px;color:var(--ink-3);padding:8px 16px 2px;width:1%;white-space:nowrap;vertical-align:bottom}
+.tbl td{padding:0 16px 9px;font-weight:500;font-size:13px;letter-spacing:-.01em;border-bottom:1px solid var(--rule-2)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.hi{color:var(--alert);font-weight:600}
+.sect{padding:14px 16px;border-top:1px solid var(--rule)}
+.sh{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--ink-3);margin-bottom:10px}
+.note-panel{border-left:2px solid var(--ink);padding:2px 0 2px 14px;font-size:14px;line-height:1.65}
+.note-panel ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+.note-panel li{padding-left:15px;position:relative}
+.note-panel li:before{content:"—";position:absolute;left:0;color:var(--ink-3)}
+.fam{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-3);letter-spacing:.06em;display:flex;align-items:center;gap:10px}
+.acts{display:flex;gap:0;border-top:1px solid var(--ink)}
+.acts div{flex:1;text-align:center;padding:13px 0;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;border-right:1px solid var(--rule-2);cursor:pointer}
+.acts div:last-child{border-right:0}
+.acts div.pri{background:var(--sig);color:#fff;flex:1.4}
+
+/* ── practice ─────────────────────────────────────────────── */
+.pracbar{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--ink);font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:var(--ink-2)}
+.pracmain{padding:16px 14px 18px}
+.devbig{display:flex;align-items:flex-end;gap:12px;margin-bottom:12px}
+.devbig .n{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:34px;line-height:.9;letter-spacing:-.03em;color:var(--alert)}
+.devbig .u{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--ink-2);padding-bottom:4px}
+.pracname{font-family:'IBM Plex Sans Condensed',sans-serif;font-size:38px;font-weight:600;line-height:1.02;letter-spacing:-.015em;margin-bottom:14px}
+.pracnote{border-left:2px solid var(--ink);padding-left:14px;font-size:14px;line-height:1.62;color:#24262a}
+.pracnote .h{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);margin-bottom:7px}
+
+/* slide-rule cursor */
+.rulewrap{border-top:1px solid var(--ink);padding:14px 14px 0}
+.rulehead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.rulehead .lab{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--ink-3)}
+.rulehead .val{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em}
+.rulehead .val b{color:var(--sig)}
+.slide{position:relative;height:76px;border:1px solid var(--ink);background:var(--sheet);user-select:none}
+.slidestock{position:absolute;left:0;right:0;top:26px;height:24px;background:#f5f5f0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.ticks{position:absolute;left:0;right:0;top:0;height:76px}
+.ticks i{position:absolute;top:14px;width:1px;height:12px;background:var(--ink-3)}
+.ticks i.maj{top:8px;height:18px;background:var(--ink)}
+.ticks span{position:absolute;top:52px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.04em;color:var(--ink-2);transform:translateX(-50%)}
+.ticks span.maj{color:var(--ink);font-weight:600;top:50px;font-size:10px}
+.cursor{position:absolute;top:-1px;bottom:-1px;width:62px;margin-left:-31px;background:rgba(18,54,207,.07);border-left:1px solid rgba(18,54,207,.5);border-right:1px solid rgba(18,54,207,.5);transition:left .18s cubic-bezier(.2,.9,.3,1);pointer-events:none}
+.cursor:after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--sig);margin-left:-.5px}
+.cursor:before{content:"";position:absolute;left:50%;top:-1px;width:9px;height:9px;background:var(--sig);margin-left:-4.5px}
+.hit{position:absolute;top:0;bottom:0;cursor:pointer}
+.pracact{display:flex;border-top:1px solid var(--ink);margin-top:14px}
+.pracact div{padding:14px 0;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.16em;border-right:1px solid var(--rule-2);cursor:pointer}
+.pracact .skip{flex:0 0 100px;color:var(--ink-2)}
+.pracact .go{flex:1;background:var(--sig);color:#fff;border-right:0}
+@media(max-width:900px){.detail{width:100%}}
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <b>GRATICULE</b>
+  <span>LENS</span><em>The Instrument</em>
+  <span>THESIS</span><em>A Swiss measuring surface, not an app: every column header is a to-scale day ruler and every card carries a zero-centre deviation meter, so the ladder is read off a graduated scale.</em>
+</div>
+
+<!-- ═══ BOARD, DESKTOP ═══════════════════════════════════════ -->
+<div class="cap">02 · Board · desktop</div>
+<div class="surface">
+  <div class="shead">
+    <span class="title">DANCE TRAINER</span>
+    <span class="meta">BOARD · TEST BOARD</span>
+    <span class="sp"></span>
+    <span class="meta">EPOCH 2026-07-27</span>
+    <span class="meta">SWEPT 04:00 · 12 → TODAY</span>
+    <span class="meta" style="color:var(--alert)">6 OVERDUE</span>
+  </div>
+
+  <div class="scaleband"><div class="scalerow" id="scalerow"></div></div>
+  <div class="boardscroll"><div class="board" id="board"></div></div>
+
+  <div class="sweep">
+    <span class="lbl2">NIGHTLY SWEEP → TODAY</span>
+    <svg width="100%" height="34" style="position:absolute;left:0;top:0">
+      <path d="M 1600 8 L 1600 20 L 210 20 L 210 8" fill="none" stroke="#1236cf" stroke-width="1" stroke-dasharray="3 3"/>
+      <path d="M 210 6 l -4 7 l 8 0 z" fill="#1236cf"/>
+    </svg>
+  </div>
+</div>
+
+<!-- ═══ PHONE + DETAIL ═══════════════════════════════════════ -->
+<div class="cap">03 · Board · phone 390px · TODAY</div>
+<div class="stage">
+  <div class="phone">
+    <div class="pbar">
+      <span class="title" style="font-size:11px;letter-spacing:.22em">DANCE TRAINER</span>
+      <span style="flex:1"></span>
+      <span class="meta" style="color:var(--alert)">6 OVERDUE</span>
+    </div>
+    <div class="pscale" id="pscale"></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px 8px;border-bottom:1px solid var(--ink)">
+      <span class="cname" style="font-size:12px">TODAY</span>
+      <span style="flex:1"></span>
+      <span class="cct"><b>12</b>/12</span>
+    </div>
+    <div id="phonelist"></div>
+    <div class="colfoot">+ 6 MORE · SCROLL</div>
+    <div class="ptabs"><div class="on">BOARD</div><div>PRACTICE</div><div>ADD</div></div>
+  </div>
+
+<!-- ═══ CARD DETAIL ══════════════════════════════════════════ -->
+  <div class="detail">
+    <div class="dhead">
+      <div class="dcrumb">TEST BOARD / TODAY / 0142</div>
+      <div class="dname">Gaze &amp; Facing Cues</div>
+    </div>
+    <table class="tbl">
+      <tr><th>COLUMN</th><td>TODAY <span style="color:var(--ink-3)">· sweep target</span></td>
+          <th>INTERVAL</th><td>— <span style="color:var(--ink-3)">none</span></td></tr>
+      <tr><th>DUE</th><td>2026-07-11</td>
+          <th>DEVIATION</th><td class="hi">−16 d</td></tr>
+      <tr><th>LABELS</th><td>Skill Block</td>
+          <th>PARTS</th><td>0</td></tr>
+      <tr><th>PRACTISED</th><td>7 ×</td>
+          <th>LAST</th><td>2026-06-25</td></tr>
+    </table>
+    <div class="sect">
+      <div class="sh">DEVIATION FROM DUE</div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <svg width="300" height="42" style="flex:0 0 300px">
+          <line x1="0" y1="30" x2="300" y2="30" stroke="#0e0f10" stroke-width="1"/>
+          <line x1="150" y1="8"  x2="150" y2="36" stroke="#1236cf" stroke-width="1"/>
+          <text x="150" y="8" font-family="IBM Plex Mono" font-size="9" fill="#1236cf" text-anchor="middle" dy="-1">0</text>
+          <g stroke="#8e9091" stroke-width="1">
+            <line x1="70"  y1="30" x2="70"  y2="24"/><line x1="105" y1="30" x2="105" y2="26"/>
+            <line x1="195" y1="30" x2="195" y2="26"/><line x1="230" y1="30" x2="230" y2="24"/>
+            <line x1="30"  y1="30" x2="30"  y2="24"/><line x1="270" y1="30" x2="270" y2="24"/>
+          </g>
+          <g font-family="IBM Plex Mono" font-size="8.5" fill="#8e9091" text-anchor="middle">
+            <text x="30" y="41">−30</text><text x="70" y="41">−14</text><text x="105" y="41">−7</text>
+            <text x="195" y="41">+7</text><text x="230" y="41">+14</text><text x="270" y="41">+30</text>
+          </g>
+          <line x1="80" y1="12" x2="80" y2="30" stroke="#c81f10" stroke-width="2"/>
+          <rect x="75" y="8" width="10" height="10" fill="#c81f10"/>
+        </svg>
+        <div>
+          <div class="mono" style="font-size:26px;font-weight:600;color:var(--alert);letter-spacing:-.03em">−16 d</div>
+          <div class="mono" style="font-size:9.5px;letter-spacing:.16em;color:var(--ink-3);margin-top:3px">LATE · SWEPT 2026-07-11</div>
+        </div>
+      </div>
+    </div>
+    <div class="sect">
+      <div class="sh">NOTE</div>
+      <div class="note-panel">
+        <ul>
+          <li>Neigen dazu jetzt zu oft in die audience zu gucken. Mehr auch zum Partner</li>
+          <li>Look at Judges ~50% of the time</li>
+          <li>Kilian: Head back</li>
+        </ul>
+      </div>
+    </div>
+    <div class="sect">
+      <div class="sh">FAMILY</div>
+      <div class="fam"><span>NO PARENT</span><span style="color:var(--rule)">│</span><span>0 PARTS</span><span style="flex:1"></span><span style="color:var(--sig)">+ ADD PART</span></div>
+    </div>
+    <div class="acts"><div class="pri">PRACTISE</div><div>EDIT</div><div>MOVE</div><div>ARCHIVE</div></div>
+  </div>
+</div>
+
+<!-- ═══ PRACTICE FOCUS ═══════════════════════════════════════ -->
+<div class="cap">05 · Practice focus · phone 390px</div>
+<div class="stage">
+  <div class="phone">
+    <div class="pracbar"><span>PRACTICE</span><span style="flex:1"></span><span>03 / 12</span><span style="color:var(--alert)">6 OVERDUE</span></div>
+    <div style="display:flex;height:3px">
+      <i style="flex:2;background:#0e0f10"></i><i style="flex:1;background:#1236cf"></i><i style="flex:9;background:#e6e7e2"></i>
+    </div>
+    <div class="pracmain">
+      <div class="devbig">
+        <span class="n">−53</span><span class="u">DAYS · LATE</span>
+        <span style="flex:1"></span>
+        <svg width="96" height="24">
+          <line x1="0" y1="18" x2="96" y2="18" stroke="#0e0f10"/>
+          <line x1="48" y1="4" x2="48" y2="22" stroke="#1236cf"/>
+          <line x1="6" y1="6" x2="6" y2="18" stroke="#c81f10" stroke-width="2"/>
+          <rect x="2" y="2" width="9" height="9" fill="#c81f10"/>
+        </svg>
+      </div>
+      <div class="pracname">Drops</div>
+      <a class="lnk" style="margin-bottom:12px;font-size:10px">↗ team.jive.berlin/s/anYHTeT958GzQc4</a>
+      <div class="pracnote">
+        <div class="h">General Cues</div>
+        Drop on the beat, not before. Weight fully into the leader's frame before the release — the
+        follower's line stays long. Recover through the standing leg, never the arm.
+      </div>
+    </div>
+
+    <div class="rulewrap">
+      <div class="rulehead">
+        <span class="lab">FILE INTO — SET CURSOR</span>
+        <span class="val"><b id="rDest">2 WÖCHENTLICH</b> · <span id="rDate">2026-08-10</span></span>
+      </div>
+      <div class="slide" id="slide">
+        <div class="slidestock"></div>
+        <div class="ticks" id="ticks"></div>
+        <div class="cursor" id="cursor" style="left:50%"></div>
+      </div>
+    </div>
+    <div class="pracact"><div class="skip">SKIP</div><div class="go">FILE &amp; NEXT</div></div>
+  </div>
+</div>
+
+<script>
+const U='team.jive.berlin/s/';
+const COLS=[
+{n:'ZIELE (COC)',iv:null,ct:5,cards:[
+ {n:'Connection Weiter mit allem private Feedback - Play und Moves fluidisieren'},
+ {n:'Präsentation weiterentwickeln. Spezifische Bewegungen und Instant feedback mit Spiegel'},
+ {n:'Paraden Competition ready machen.'},
+ {n:'Transitions. Move übergänge. Wie haben die sich entwickelt?'},
+ {n:'Dynamics weiterentwickeln',note:[['b','ganz gut'],['b','DT Intros funktionieren in FS und Comps']]}]},
+{n:'INBOX',iv:null,ct:7,cards:[
+ {n:'Dance and Videofeedback - Lee training cycle'},
+ {n:'Privates J&A M&C notes hier einfügen'},
+ {n:'Caine connection'},
+ {n:'Quick-add smoke test'},
+ {n:'Family Test Spare'},
+ {n:'Toe position',anc:'Family Test Root › Prep',note:[['p','Toe detail line.']]},
+ {n:'dro'}]},
+{n:'TODAY',iv:0,ct:12,cards:[
+ {n:'Drops',note:[['u',U+'anYHTeT958GzQc4'],['h','General Cues']],d:-53},
+ {n:'Blindfold',lb:['Drill'],d:-50},
+ {n:'Paraden',lb:['Skill Block'],d:-27},
+ {n:'Inside turn followups',lb:['Skill Block'],note:[['u',U+'kFxmJwDbPb6ewpc']],d:-20},
+ {n:'Gaze & Facing Cues',lb:['Skill Block'],note:[['b','Neigen dazu jetzt zu oft in die audience zu gucken. Mehr auch zum Partner'],['b','Look at Judges ~50% of the time'],['b','Kilian: Head back']],d:-16},
+ {n:'OFS',lb:['Skill Block'],note:[['p','One foot spins, Spot Turns, Pirouette turns'],['h','Variants']],d:-13}]},
+{n:'WÖCHENTLICH',iv:7,ct:8,cards:[
+ {n:'Exits',lb:['Skill Block'],anc:'OFS',note:[['u',U+'q3TxkR2m8W'],['u',U+'Lp9dEr4Nq2']],d:6},
+ {n:'Seducers',lb:['Skill Block'],note:[['p','Styling:'],['u',U+'Zk4mQpT7bR'],['p','Exits:']],d:6},
+ {n:'Pinguin',lb:['Move'],note:[['p','focus on keeping right inner foot stable']],d:6},
+ {n:'Take more space during Dancing',lb:['60s practise'],note:[['p','Scrolls, Open Scroll, humpa scroll'],['p','Eternity, carousels']],d:6},
+ {n:'Pidgeon',lb:['Move'],note:[['u',U+'Vd8sHm3Xt5']],d:6}]},
+{n:'2 WÖCHENTLICH',iv:14,ct:5,cards:[
+ {n:'Hip Posting - J in die Connection rein gehen',lb:['Learning'],d:13},
+ {n:'Scrolls',lb:['Move'],note:[['p','Frame sehr short. Linken Schritt früher machen und mit Judith schneller mitdrehen. Rechts außen rum und nach dem Rumtreten']],d:13},
+ {n:'Levlosa collects',lb:['Move'],note:[['u',U+'Bn6yWc9Kd1'],['p','Arm nahe am Körper erst nach unten, dann zum follower führen']],d:13},
+ {n:'Leader Turnout',anc:'Scrolls',note:[['b','Achten wieder im Slot zu landen'],['b','drehen wenn vor Judith']],d:13,parts:1},
+ {n:'Hammers',lb:['Move Complex'],note:[['b','Arm nach unten für initiierung der Bewegung, dann kurve für den Throw'],['b','Schoulder sway hammer: K']],d:13}]},
+{n:'3 WÖCHENTLICH',iv:21,ct:4,cards:[
+ {n:'Rides',lb:['Skill Block','Move Complex'],note:[['u',U+'Rt2fJq8Lm4'],['u',U+'Wp5nGx1Zc7']],d:20},
+ {n:'Step-over Scroll (Humpa-Scroll)',lb:['Move'],note:[['u',U+'Hm3vTd6Ks9'],['u',U+'Nq8bYr4Fj2']],d:20},
+ {n:'DT-Intros',lb:['Skill Block'],note:[['h','General'],['b','Arme kurz und Stabil'],['b','Alle Intros funktionieren mit …']],d:20},
+ {n:'Second Arm',lb:['60s practise'],note:[['b','An die Hüfte anlegen'],['b','Hinter den Rücken einklappen'],['b','Faust nach unten gerichtet'],['b','Arm dynamisch zur Seite']],d:20}]},
+{n:'MONATLICH',iv:30,ct:5,cards:[
+ {n:'Tuck turn pulse',lb:['Move'],note:[['u',U+'Cx7pLd2Wq5']],d:6},
+ {n:'Walks',lb:['Move'],note:[['p','Hop Walks'],['u',U+'Ky4tRb8Nm3']],d:6},
+ {n:'First Move Lunge / Lunges Allgemein / Legwork -> Mehr in den Knien tanzen',lb:['60s practise'],note:[['u',U+'Ds9mVk1Pq6']],d:7},
+ {n:'Shoulder & Posture Cues',lb:['60s practise','Im Hinterkopf'],note:[['b','Schultern auf einer Höhe lassen während ich mich drehe'],['b','Shultern öffnen, mehr Platz im Körper. Ich sehe oft']],d:29},
+ {n:'Copy&Elevate',lb:['Drill'],d:7}]}
+];
+
+/* ── scale band: to-scale day rulers (4 px = 1 day) ─────── */
+document.getElementById('scalerow').innerHTML=COLS.map(c=>{
+  const iv=c.iv, P=7;
+  let ticks='';
+  if(iv!==null&&iv>0){
+    for(let d=1;d<=iv;d++){
+      ticks+='<i style="left:'+(d*P)+'px;height:'+(d%7===0?11:(d%7===0?9:5))+'px"></i>';
+    }
+    ticks+='<div class="seg" style="width:'+(iv*P)+'px"></div>';
+  }
+  return '<div class="scell'+(iv===0?' origin':'')+'">'
+   +'<div class="snum'+(iv===null?' na':'')+'">'+(iv===null?'——':(iv===0?'0':'+'+iv))+'<small>'+(iv===null?'NO INTERVAL':'DAYS')+'</small></div>'
+   +'<div class="ruler"><div class="base"></div><div class="zero"></div>'+ticks+'</div>'
+   +'<div class="srange">'+(iv===null?'UNSCHEDULED':(iv===0?'ORIGIN · SWEEP TARGET':'FILE HERE → DUE '+dstr(iv)))+'</div>'
+  +'</div>';
+}).join('');
+function dstr(iv){const d=new Date(2026,6,27+iv);return d.toISOString().slice(0,10);}
+
+/* ── deviation meter ───────────────────────────────────── */
+function dev(d){
+  if(d===undefined||d===null) return '<svg width="72" height="16"><line x1="0" y1="12" x2="72" y2="12" stroke="#d2d3cd"/><line x1="36" y1="5" x2="36" y2="14" stroke="#d2d3cd"/></svg>';
+  const f=Math.min(33,20*Math.log10(1+Math.abs(d)));
+  const x=d<0?36-f:36+f;
+  const head=d<0
+    ?'<rect x="'+(x-3.5)+'" y="1" width="7" height="7" fill="#c81f10"/>'
+    :'<rect x="'+(x-3)+'" y="1.5" width="6" height="6" fill="#fff" stroke="#0e0f10"/>';
+  return '<svg width="72" height="16">'
+   +'<line x1="0" y1="12" x2="72" y2="12" stroke="#0e0f10"/>'
+   +'<line x1="16" y1="9" x2="16" y2="12" stroke="#c8c9c3"/><line x1="56" y1="9" x2="56" y2="12" stroke="#c8c9c3"/>'
+   +'<line x1="36" y1="4" x2="36" y2="15" stroke="#1236cf"/>'
+   +'<line x1="'+x+'" y1="6" x2="'+x+'" y2="12" stroke="'+(d<0?'#c81f10':'#0e0f10')+'" stroke-width="1.5"/>'
+   +head+'</svg>';
+}
+function noteHTML(note){
+  if(!note) return '';
+  return '<div class="nt">'+note.slice(0,2).map(([t,v])=>{
+    if(t==='u') return '<a class="lnk">↗ '+v.replace(U,'')+'</a>';
+    if(t==='h') return '<span class="h">'+v+'</span>';
+    if(t==='b') return '<span class="b clip">'+v+'</span>';
+    return '<span class="clip">'+v+'</span>';
+  }).join('')+'</div>';
+}
+function rowHTML(c){
+  const late=c.d<0;
+  const num=(c.d===undefined||c.d===null)?'<span class="devnum none">— —</span>'
+    :'<span class="devnum'+(late?' late':'')+'">'+(late?'−':'+')+Math.abs(c.d)+' d</span>';
+  return '<div class="row'+(late?' late':'')+'">'
+   +(c.anc?'<div class="anc">'+c.anc+' ›</div>':'')
+   +'<div class="nm">'+c.n+'</div>'
+   +noteHTML(c.note)
+   +'<div class="rfoot"><span class="lbl">'+((c.lb||[]).join(' · ')||(c.parts?c.parts+' part':''))+'</span>'
+   +'<span class="dev">'+dev(c.d)+num+'</span></div>'
+  +'</div>';
+}
+document.getElementById('board').innerHTML=COLS.map(c=>
+ '<div class="col'+(c.iv===0?' origin':'')+'">'
+  +'<div class="chead"><span class="cname">'+c.n+'</span><span class="cct"><b>'+c.ct+'</b> cards</span></div>'
+  +c.cards.map(rowHTML).join('')
+  +'<div class="colfoot">'+(c.cards.length<c.ct?'+ '+(c.ct-c.cards.length)+' MORE':'END')+'</div>'
+ +'</div>').join('');
+
+document.getElementById('phonelist').innerHTML=COLS[2].cards.map(rowHTML).join('');
+document.getElementById('pscale').innerHTML=COLS.map((c,i)=>'<div class="'+(i===2?'on':'')+'">'+(c.iv===null?(i===0?'ZIEL':'IN'):(c.iv===0?'0':'+'+c.iv))+'</div>').join('');
+
+/* ── slide-rule cursor ─────────────────────────────────── */
+const STOPS=[{x:6,n:'ZIELE (COC)',iv:null},{x:15,n:'INBOX',iv:null},{x:26,n:'TODAY',iv:0},
+             {x:45,n:'WÖCHENTLICH',iv:7},{x:62,n:'2 WÖCHENTLICH',iv:14},
+             {x:78,n:'3 WÖCHENTLICH',iv:21},{x:94,n:'MONATLICH',iv:30}];
+let th='';
+STOPS.forEach((s,i)=>{
+  th+='<i class="maj" style="left:'+s.x+'%"></i>';
+  th+='<span class="maj" style="left:'+s.x+'%">'+(s.iv===null?(i===0?'Z':'IN'):(s.iv===0?'0':'+'+s.iv))+'</span>';
+});
+for(let d=1;d<=30;d++){ if([0,7,14,21,30].includes(d))continue;
+  const x=26+(94-26)*(Math.log10(1+d)/Math.log10(31));
+  th+='<i style="left:'+x+'%"></i>';
+}
+document.getElementById('ticks').innerHTML=th;
+const slide=document.getElementById('slide'),cur=document.getElementById('cursor');
+STOPS.forEach((s,i)=>{
+  const h=document.createElement('div');
+  h.className='hit';
+  h.style.left=(i===0?0:(STOPS[i-1].x+s.x)/2)+'%';
+  h.style.width=((i===6?100:(STOPS[i+1].x+s.x)/2)-(i===0?0:(STOPS[i-1].x+s.x)/2))+'%';
+  h.onclick=()=>set(i);
+  slide.appendChild(h);
+});
+function set(i){
+  const s=STOPS[i];
+  cur.style.left=s.x+'%';
+  document.getElementById('rDest').textContent=s.n;
+  document.getElementById('rDate').textContent=s.iv===null?'no due date':dstr(s.iv);
+}
+set(4);
+</script>
+</body>
+</html>

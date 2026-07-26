@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAFEL — Dance Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&family=Public+Sans:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TAFEL — the measured plate
+   the board is a time axis · every card is dimensioned against today
+   ============================================================ */
+:root{
+  --sheet:#FCFCFA;
+  --field:#F1F1EE;
+  --ink:#17181C;
+  --ink-2:#41444C;
+  --mute:#6A6E78;
+  --faint:#9BA0AA;
+  --line:#B7BAC2;
+  --line-2:#DEE0E4;
+  --blue:#1B44E0;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  background:var(--field);
+  color:var(--ink);
+  font-family:'Public Sans',system-ui,sans-serif;
+  font-size:15px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+ul,ol{list-style:none;}
+.nrw{font-family:'Archivo Narrow',sans-serif;}
+.mn{font-family:'Roboto Mono',ui-monospace,monospace;}
+
+/* ---------- judge banner ---------- */
+.banner{background:#1b1b1e;color:#e8e8e4;padding:14px 22px;display:flex;flex-wrap:wrap;gap:6px 26px;align-items:baseline;font-family:ui-monospace,'Roboto Mono',monospace;font-size:12px;letter-spacing:.02em;}
+.banner b{font-size:14px;letter-spacing:.18em;color:#fff;}
+.banner .lens{color:#9a9a93;}
+.banner .thesis{color:#c9c9c1;flex:1 1 420px;}
+
+/* ---------- section markers ---------- */
+.sec{padding:0 26px 44px;}
+.sec-mark{display:flex;align-items:center;gap:12px;padding:34px 0 16px;}
+.sec-mark span:first-child{font-family:'Roboto Mono',monospace;font-size:11px;color:var(--faint);}
+.sec-mark span:nth-child(2){font-family:'Archivo Narrow',sans-serif;font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);}
+.sec-mark i{flex:1;height:1px;background:var(--line);display:block;}
+
+/* ============================================================
+   SHEET
+   ============================================================ */
+.sheet{background:var(--sheet);border:1px solid var(--ink);position:relative;padding:0;}
+.sheet::before,.sheet::after{content:"";position:absolute;width:14px;height:14px;border:1px solid var(--ink);}
+.sheet::before{top:-1px;left:-1px;border-right:0;border-bottom:0;}
+.sheet::after{bottom:-1px;right:-1px;border-left:0;border-top:0;}
+
+.tblock{display:flex;align-items:stretch;border-bottom:1px solid var(--ink);}
+.tblock .tb{padding:9px 16px;border-right:1px solid var(--line);}
+.tblock .tb:last-child{border-right:0;margin-left:auto;text-align:right;}
+.tblock .k{font-family:'Archivo Narrow',sans-serif;font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);display:block;}
+.tblock .v{font-family:'Roboto Mono',monospace;font-size:12.5px;margin-top:3px;display:block;}
+.tblock .v.big{font-family:'Archivo Narrow',sans-serif;font-size:17px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+
+.scroll{overflow-x:auto;}
+.plate{width:1876px;}
+
+/* ---------- axis ---------- */
+svg .ax-lab{font-family:'Archivo Narrow',sans-serif;font-size:10px;font-weight:600;letter-spacing:.14em;fill:var(--mute);}
+svg .ax-blue{font-family:'Archivo Narrow',sans-serif;font-size:10px;font-weight:600;letter-spacing:.14em;fill:var(--blue);}
+svg .ax-st{font-family:'Roboto Mono',monospace;font-size:12px;fill:var(--ink);}
+svg .ax-datum{font-family:'Archivo Narrow',sans-serif;font-size:11px;font-weight:700;letter-spacing:.16em;fill:var(--ink);}
+svg .ax-dim{font-family:'Roboto Mono',monospace;font-size:10.5px;fill:var(--blue);}
+svg .ax-rom{font-family:'Archivo Narrow',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;fill:var(--blue);}
+
+/* ---------- columns ---------- */
+.board{display:flex;}
+.col{width:268px;flex:0 0 268px;border-right:1px solid var(--line);padding:0 0 16px;}
+.col:last-child{border-right:0;}
+.col--off{background:repeating-linear-gradient(-45deg,rgba(23,24,28,.028) 0 2px,transparent 2px 9px);}
+.col--due{background:var(--sheet);}
+
+.chd{padding:12px 14px 10px;border-bottom:2px solid var(--ink);}
+.chd--thin{border-bottom-width:1px;}
+.chd--off{border-bottom:1px dashed var(--line);}
+.chd-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+.chd-st{font-family:'Archivo Narrow',sans-serif;font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--blue);}
+.chd-ct{font-family:'Roboto Mono',monospace;font-size:11.5px;color:var(--mute);}
+.chd-nm{font-family:'Archivo Narrow',sans-serif;font-size:19px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:5px;line-height:1.1;}
+.chd-iv{display:flex;align-items:baseline;gap:8px;margin-top:6px;}
+.chd-iv .n{font-family:'Roboto Mono',monospace;font-size:22px;font-weight:400;letter-spacing:-.02em;}
+.chd-iv .u{font-family:'Archivo Narrow',sans-serif;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);}
+.chd-note{font-family:'Archivo Narrow',sans-serif;font-size:10.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:8px;}
+
+/* ---------- items ---------- */
+.items{padding:0 14px;}
+.it{display:grid;grid-template-columns:24px 1fr;column-gap:8px;padding:11px 0 10px;border-bottom:1px solid var(--line-2);}
+.it:last-child{border-bottom:0;}
+.it-no{font-family:'Roboto Mono',monospace;font-size:11px;color:var(--faint);padding-top:2px;}
+.it-nm{font-size:14.5px;font-weight:600;line-height:1.25;letter-spacing:-.005em;overflow-wrap:anywhere;}
+.it--late .it-nm{font-weight:700;font-size:15.5px;}
+.it-anc{font-family:'Roboto Mono',monospace;font-size:10px;color:var(--faint);display:block;margin-bottom:2px;}
+.it-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;align-items:center;}
+.tg{font-family:'Archivo Narrow',sans-serif;font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);border-bottom:1px solid var(--line);}
+.rf{font-family:'Roboto Mono',monospace;font-size:9.5px;color:var(--blue);border:1px solid var(--blue);padding:0 3px;}
+.pt{font-family:'Roboto Mono',monospace;font-size:9.5px;color:var(--mute);border:1px solid var(--line);padding:0 3px;}
+.it-nt{font-size:12.5px;line-height:1.45;color:var(--ink-2);margin-top:6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.it-nt b{font-weight:500;color:var(--ink);}
+.it-due{font-family:'Roboto Mono',monospace;font-size:11px;color:var(--mute);margin-top:6px;}
+
+/* the dimension: hatched bar terminating on the datum */
+.msr{display:flex;justify-content:flex-end;margin-top:8px;border-right:3px solid var(--ink);height:17px;}
+.bar{height:17px;border:1px solid var(--ink);border-right:0;
+  background:repeating-linear-gradient(-45deg,var(--ink) 0 1px,transparent 1px 6px);
+  display:flex;align-items:center;justify-content:center;min-width:34px;}
+.bar b{background:var(--sheet);font-family:'Roboto Mono',monospace;font-size:9.5px;font-weight:500;padding:0 4px;letter-spacing:-.02em;}
+.msr-lab{font-family:'Archivo Narrow',sans-serif;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);text-align:right;margin-top:3px;}
+
+.tail{font-family:'Archivo Narrow',sans-serif;font-size:10.5px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:12px 0 0;}
+
+/* legend under the plate */
+.lgd{display:flex;flex-wrap:wrap;gap:8px 30px;border-top:1px solid var(--ink);margin-top:14px;padding-top:10px;font-family:'Archivo Narrow',sans-serif;font-size:11px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);}
+.lgd b{color:var(--ink);font-weight:700;}
+.lgd .sw{display:inline-block;width:26px;height:11px;border:1px solid var(--ink);vertical-align:-1px;margin-right:5px;
+  background:repeating-linear-gradient(-45deg,var(--ink) 0 1px,transparent 1px 6px);}
+
+/* ============================================================
+   PHONE
+   ============================================================ */
+.frames{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start;}
+.phone{width:390px;flex:0 0 390px;background:var(--sheet);border:1px solid var(--ink);position:relative;}
+.statusbar{display:flex;justify-content:space-between;padding:8px 16px 6px;font-family:'Roboto Mono',monospace;font-size:10px;color:var(--faint);}
+.p-tb{display:flex;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);}
+.p-tb .tb{padding:7px 14px;border-right:1px solid var(--line);}
+.p-tb .tb:last-child{border-right:0;margin-left:auto;text-align:right;}
+.p-body{padding:0 16px 18px;}
+.p-hd{padding:14px 0 10px;border-bottom:3px solid var(--ink);}
+.p-hd .chd-nm{font-size:26px;}
+.p-axis{margin:0 -16px;padding:12px 16px 6px;border-bottom:1px solid var(--line);}
+.p-act{display:block;width:100%;margin-top:16px;padding:13px;background:var(--ink);color:var(--sheet);border:0;font-family:'Archivo Narrow',sans-serif;font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;}
+.p-act.gh{background:transparent;color:var(--ink);border:1px solid var(--ink);}
+.p-act.bl{background:var(--blue);color:#fff;}
+
+/* ============================================================
+   DETAIL
+   ============================================================ */
+.d-nav{display:flex;justify-content:space-between;padding:9px 16px;border-top:1px solid var(--ink);border-bottom:1px solid var(--line);font-family:'Roboto Mono',monospace;font-size:11px;color:var(--mute);}
+.d-desig{padding:16px 16px 0;}
+.d-desig .k{font-family:'Archivo Narrow',sans-serif;font-size:9.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);}
+.d-desig h2{font-family:'Archivo Narrow',sans-serif;font-size:34px;font-weight:700;letter-spacing:.01em;text-transform:uppercase;line-height:1.02;margin-top:6px;}
+.d-msr{margin:14px 16px 0;}
+.d-rule{height:3px;background:var(--ink);margin:14px 16px 0;}
+.d-tbl{margin:0 16px;}
+.d-tbl div{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid var(--line-2);}
+.d-tbl dt{font-family:'Archivo Narrow',sans-serif;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--mute);padding-top:3px;}
+.d-tbl dd{font-family:'Roboto Mono',monospace;font-size:12.5px;text-align:right;}
+.blk{margin:22px 16px 0;}
+.blk h4{font-family:'Archivo Narrow',sans-serif;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--ink);padding-bottom:5px;}
+.body{font-size:15.5px;line-height:1.6;margin-top:12px;}
+.body li{display:grid;grid-template-columns:20px 1fr;margin-bottom:8px;}
+.body li .n{font-family:'Roboto Mono',monospace;font-size:10.5px;color:var(--blue);padding-top:4px;}
+.asm{margin-top:12px;border:1px solid var(--line);padding:14px;background:repeating-linear-gradient(-45deg,rgba(23,24,28,.02) 0 2px,transparent 2px 9px);}
+.asm .cap{font-family:'Archivo Narrow',sans-serif;font-size:9.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--mute);margin-top:9px;text-align:center;}
+.d-acts{display:flex;gap:10px;margin:20px 16px 20px;}
+.d-acts .p-act{margin-top:0;}
+
+/* ============================================================
+   PRACTICE
+   ============================================================ */
+.pr-prog{display:flex;gap:2px;border-top:1px solid var(--ink);}
+.pr-prog i{flex:1;height:4px;background:var(--line-2);}
+.pr-prog i.on{background:var(--blue);}
+.pr-nav{display:flex;justify-content:space-between;padding:9px 16px;border-bottom:1px solid var(--line);font-family:'Roboto Mono',monospace;font-size:11px;color:var(--mute);}
+.pr-hd{padding:18px 16px 0;}
+.pr-hd .k{font-family:'Archivo Narrow',sans-serif;font-size:9.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);}
+.pr-hd h2{font-family:'Archivo Narrow',sans-serif;font-size:52px;font-weight:700;letter-spacing:.01em;text-transform:uppercase;line-height:.98;margin-top:6px;}
+.pr-body{margin:18px 16px 0;padding-top:12px;border-top:3px solid var(--ink);}
+.pr-body h4{font-family:'Archivo Narrow',sans-serif;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:5px;}
+.pr-body p{font-size:15px;line-height:1.6;margin-top:10px;}
+.pr-body .none{color:var(--faint);font-family:'Roboto Mono',monospace;font-size:12px;}
+.pr-body .lk{font-family:'Roboto Mono',monospace;font-size:11.5px;color:var(--blue);border:1px solid var(--blue);padding:2px 5px;display:inline-block;margin-top:12px;}
+.fl{margin:24px 16px 0;}
+.fl h4{font-family:'Archivo Narrow',sans-serif;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;border-bottom:1px solid var(--ink);padding-bottom:5px;margin-bottom:4px;}
+.fl .hint{font-family:'Archivo Narrow',sans-serif;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:8px 0 2px;}
+.stations{display:flex;margin-top:2px;}
+.stations button{flex:1;background:transparent;border:0;border-top:2px solid var(--line);padding:8px 2px 0;cursor:pointer;text-align:center;font-family:'Archivo Narrow',sans-serif;}
+.stations button .r{display:block;font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--faint);}
+.stations button .n{display:block;font-family:'Roboto Mono',monospace;font-size:15px;margin-top:4px;color:var(--ink);}
+.stations button .d{display:block;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:3px;}
+.stations button.sel{border-top:4px solid var(--blue);}
+.stations button.sel .r{color:var(--blue);}
+.pr-acts{display:flex;gap:10px;margin:20px 16px 20px;}
+.pr-acts .p-act{margin-top:0;}
+
+@media (max-width:900px){ .sec{padding:0 16px 32px;} }
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <b>TAFEL</b>
+  <span class="lens">LENS — THE ARCHIVE</span>
+  <span class="thesis">An engineering plate: the board is a measured time axis with the Leitner intervals as labelled stations, and every overdue skill is dimensioned against the datum of today with a hatched bar — no colour needed to make lateness scream.</span>
+</div>
+
+<!-- ============================================================
+     01 — BOARD, DESKTOP
+     ============================================================ -->
+<div class="sec">
+  <div class="sec-mark"><span>01</span><span>Board — Desktop</span><i></i></div>
+
+  <div class="sheet">
+    <div class="tblock">
+      <div class="tb"><span class="k">Tafel</span><span class="v big">Test board</span></div>
+      <div class="tb"><span class="k">Verfahren</span><span class="v">Leitner · 7 Fächer</span></div>
+      <div class="tb"><span class="k">Datum / Sweep</span><span class="v">2026-07-27 · 04:00</span></div>
+      <div class="tb"><span class="k">Karten</span><span class="v">46 · 12 fällig</span></div>
+      <div class="tb"><span class="k">Massstab</span><span class="v">Stationen — n. maßstäblich</span></div>
+    </div>
+
+    <div class="scroll">
+      <div class="plate">
+
+        <!-- ============ THE AXIS ============ -->
+        <svg viewBox="0 0 1876 104" width="1876" height="104" role="img" aria-label="Zeitachse der Fächer">
+          <defs>
+            <pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="7" stroke="#17181C" stroke-width="1"/>
+            </pattern>
+          </defs>
+
+          <!-- off-scale band: unscheduled columns -->
+          <line x1="24" y1="48" x2="516" y2="48" stroke="#B7BAC2" stroke-width="1" stroke-dasharray="5 5"/>
+          <line x1="24" y1="40" x2="24" y2="56" stroke="#B7BAC2" stroke-width="1"/>
+          <text x="34" y="38" class="ax-lab">OHNE TERMIN — NICHT AUF DER ACHSE</text>
+
+          <!-- break symbol -->
+          <path d="M524 48 L536 32 L546 64 L558 48" fill="none" stroke="#17181C" stroke-width="1.6"/>
+
+          <!-- overdue zone -->
+          <rect x="572" y="36" width="96" height="24" fill="url(#hatch)" opacity=".55"/>
+          <rect x="572" y="36" width="96" height="24" fill="none" stroke="#17181C" stroke-width="1"/>
+          <text x="620" y="28" text-anchor="middle" class="ax-lab">ÜBERFÄLLIG</text>
+
+          <!-- baseline -->
+          <line x1="670" y1="48" x2="1810" y2="48" stroke="#17181C" stroke-width="1"/>
+          <path d="M1810 44 L1822 48 L1810 52 Z" fill="#17181C"/>
+
+          <!-- datum -->
+          <line x1="670" y1="12" x2="670" y2="66" stroke="#17181C" stroke-width="3"/>
+          <text x="600" y="16" text-anchor="middle" class="ax-rom">I</text>
+          <text x="678" y="21" class="ax-datum">0 · HEUTE</text>
+          <text x="670" y="80" text-anchor="middle" class="ax-st">0</text>
+
+          <!-- stations -->
+          <line x1="938" y1="36" x2="938" y2="60" stroke="#1B44E0" stroke-width="2"/>
+          <text x="938" y="28" text-anchor="middle" class="ax-rom">II</text>
+          <text x="938" y="80" text-anchor="middle" class="ax-st">+7</text>
+
+          <line x1="1206" y1="36" x2="1206" y2="60" stroke="#1B44E0" stroke-width="2"/>
+          <text x="1206" y="28" text-anchor="middle" class="ax-rom">III</text>
+          <text x="1206" y="80" text-anchor="middle" class="ax-st">+14</text>
+
+          <line x1="1474" y1="36" x2="1474" y2="60" stroke="#1B44E0" stroke-width="2"/>
+          <text x="1474" y="28" text-anchor="middle" class="ax-rom">IV</text>
+          <text x="1474" y="80" text-anchor="middle" class="ax-st">+21</text>
+
+          <line x1="1742" y1="36" x2="1742" y2="60" stroke="#1B44E0" stroke-width="2"/>
+          <text x="1742" y="28" text-anchor="middle" class="ax-rom">V</text>
+          <text x="1742" y="80" text-anchor="middle" class="ax-st">+30</text>
+
+          <!-- dimension chain -->
+          <g stroke="#1B44E0" stroke-width="1">
+            <line x1="670" y1="94" x2="938" y2="94"/>
+            <line x1="938" y1="94" x2="1206" y2="94"/>
+            <line x1="1206" y1="94" x2="1474" y2="94"/>
+            <line x1="1474" y1="94" x2="1742" y2="94"/>
+            <line x1="666" y1="99" x2="674" y2="89"/>
+            <line x1="934" y1="99" x2="942" y2="89"/>
+            <line x1="1202" y1="99" x2="1210" y2="89"/>
+            <line x1="1470" y1="99" x2="1478" y2="89"/>
+            <line x1="1738" y1="99" x2="1746" y2="89"/>
+            <line x1="670" y1="88" x2="670" y2="100"/>
+            <line x1="1742" y1="88" x2="1742" y2="100"/>
+          </g>
+          <g>
+            <rect x="782" y="87" width="44" height="14" fill="#FCFCFA"/><text x="804" y="97" text-anchor="middle" class="ax-dim">+7 T</text>
+            <rect x="1050" y="87" width="44" height="14" fill="#FCFCFA"/><text x="1072" y="97" text-anchor="middle" class="ax-dim">+7 T</text>
+            <rect x="1318" y="87" width="44" height="14" fill="#FCFCFA"/><text x="1340" y="97" text-anchor="middle" class="ax-dim">+7 T</text>
+            <rect x="1586" y="87" width="44" height="14" fill="#FCFCFA"/><text x="1608" y="97" text-anchor="middle" class="ax-dim">+9 T</text>
+          </g>
+        </svg>
+
+        <!-- ============ COLUMNS ============ -->
+        <div class="board">
+
+          <!-- ZIELE -->
+          <section class="col col--off">
+            <div class="chd chd--off">
+              <div class="chd-top"><span class="chd-st" style="color:var(--faint)">OHNE STATION</span><span class="chd-ct">5</span></div>
+              <h2 class="chd-nm">Ziele (COC)</h2>
+              <div class="chd-iv"><span class="n">—</span><span class="u">kein Intervall</span></div>
+              <div class="chd-note">Langfristig · nie fällig</div>
+            </div>
+            <ol class="items">
+              <li class="it"><span class="it-no">01</span><div><h3 class="it-nm">Connection Weiter mit allem private Feedback – Play und Moves fluidisieren</h3></div></li>
+              <li class="it"><span class="it-no">02</span><div><h3 class="it-nm">Präsentation weiterentwickeln. Spezifische Bewegungen und Instant feedback mit Spiegel</h3></div></li>
+              <li class="it"><span class="it-no">03</span><div><h3 class="it-nm">Paraden Competition ready machen.</h3></div></li>
+              <li class="it"><span class="it-no">04</span><div><h3 class="it-nm">Transitions. Move übergänge. Wie haben die sich entwickelt?</h3></div></li>
+              <li class="it"><span class="it-no">05</span><div><h3 class="it-nm">Dynamics weiterentwickeln</h3>
+                <p class="it-nt">ganz gut · DT Intros funktionieren in FS und Comps</p></div></li>
+            </ol>
+          </section>
+
+          <!-- INBOX -->
+          <section class="col col--off">
+            <div class="chd chd--off">
+              <div class="chd-top"><span class="chd-st" style="color:var(--faint)">OHNE STATION</span><span class="chd-ct">7</span></div>
+              <h2 class="chd-nm">Inbox</h2>
+              <div class="chd-iv"><span class="n">—</span><span class="u">kein Intervall</span></div>
+              <div class="chd-note">Eingang · zu sortieren</div>
+            </div>
+            <ol class="items">
+              <li class="it"><span class="it-no">01</span><div><h3 class="it-nm">Dance and Videofeedback – Lee training cycle</h3></div></li>
+              <li class="it"><span class="it-no">02</span><div><h3 class="it-nm">Privates J&amp;A M&amp;C notes hier einfügen</h3></div></li>
+              <li class="it"><span class="it-no">03</span><div><h3 class="it-nm">Caine connection</h3></div></li>
+              <li class="it"><span class="it-no">04</span><div><h3 class="it-nm">Quick-add smoke test</h3></div></li>
+              <li class="it"><span class="it-no">05</span><div><h3 class="it-nm">Family Test Spare</h3></div></li>
+              <li class="it"><span class="it-no">06</span><div>
+                <span class="it-anc">Family Test Root › Prep</span>
+                <h3 class="it-nm">Toe position</h3>
+                <p class="it-nt">Toe detail line.</p></div></li>
+              <li class="it"><span class="it-no">07</span><div><h3 class="it-nm">dro</h3></div></li>
+            </ol>
+          </section>
+
+          <!-- TODAY -->
+          <section class="col col--due">
+            <div class="chd">
+              <div class="chd-top"><span class="chd-st">STATION I · DATUM</span><span class="chd-ct">12</span></div>
+              <h2 class="chd-nm">Today</h2>
+              <div class="chd-iv"><span class="n">0</span><span class="u">Tage · Sweep-Ziel</span></div>
+              <div class="chd-note">Alle Positionen überfällig</div>
+            </div>
+            <ol class="items">
+              <li class="it it--late"><span class="it-no">01</span><div>
+                <h3 class="it-nm">Drops</h3>
+                <div class="it-tags"><span class="rf">REF 01</span><span class="tg">General Cues</span></div>
+                <div class="msr"><span class="bar" style="width:118px"><b>53 T</b></span></div>
+                <div class="msr-lab">überfällig seit 04.06.</div>
+              </div></li>
+
+              <li class="it it--late"><span class="it-no">02</span><div>
+                <h3 class="it-nm">Blindfold</h3>
+                <div class="it-tags"><span class="tg">Drill</span></div>
+                <div class="msr"><span class="bar" style="width:112px"><b>50 T</b></span></div>
+                <div class="msr-lab">überfällig seit 07.06.</div>
+              </div></li>
+
+              <li class="it it--late"><span class="it-no">03</span><div>
+                <h3 class="it-nm">Paraden</h3>
+                <div class="it-tags"><span class="tg">Skill Block</span></div>
+                <div class="msr"><span class="bar" style="width:64px"><b>27 T</b></span></div>
+                <div class="msr-lab">überfällig seit 30.06.</div>
+              </div></li>
+
+              <li class="it it--late"><span class="it-no">04</span><div>
+                <h3 class="it-nm">Inside turn followups</h3>
+                <div class="it-tags"><span class="tg">Skill Block</span><span class="rf">REF 02</span></div>
+                <div class="msr"><span class="bar" style="width:50px"><b>20 T</b></span></div>
+                <div class="msr-lab">überfällig seit 07.07.</div>
+              </div></li>
+
+              <li class="it it--late"><span class="it-no">05</span><div>
+                <h3 class="it-nm">Gaze &amp; Facing Cues</h3>
+                <div class="it-tags"><span class="tg">Skill Block</span></div>
+                <p class="it-nt">Neigen dazu jetzt zu oft in die audience zu gucken. Mehr auch zum Partner · Look at Judges ~50 % of the time · Kilian: Head back</p>
+                <div class="msr"><span class="bar" style="width:42px"><b>16 T</b></span></div>
+                <div class="msr-lab">überfällig seit 11.07.</div>
+              </div></li>
+
+              <li class="it it--late"><span class="it-no">06</span><div>
+                <h3 class="it-nm">OFS</h3>
+                <div class="it-tags"><span class="tg">Skill Block</span></div>
+                <p class="it-nt">One foot spins, Spot Turns, Pirouette turns · <b>Variants</b></p>
+                <div class="msr"><span class="bar" style="width:36px"><b>13 T</b></span></div>
+                <div class="msr-lab">überfällig seit 14.07.</div>
+              </div></li>
+
+              <li class="tail">+ 6 weitere Positionen</li>
+            </ol>
+          </section>
+
+          <!-- WÖCHENTLICH -->
+          <section class="col">
+            <div class="chd">
+              <div class="chd-top"><span class="chd-st">STATION II</span><span class="chd-ct">8</span></div>
+              <h2 class="chd-nm">Wöchentlich</h2>
+              <div class="chd-iv"><span class="n">+7</span><span class="u">Tage</span></div>
+              <div class="chd-note">Alle Positionen fällig in 6 T</div>
+            </div>
+            <ol class="items">
+              <li class="it"><span class="it-no">01</span><div>
+                <span class="it-anc">OFS ›</span>
+                <h3 class="it-nm">Exits</h3>
+                <div class="it-tags"><span class="tg">Skill Block</span><span class="rf">REF 03</span><span class="rf">REF 04</span></div>
+              </div></li>
+              <li class="it"><span class="it-no">02</span><div>
+                <h3 class="it-nm">Seducers</h3>
+                <div class="it-tags"><span class="tg">Skill Block</span><span class="rf">REF 05</span></div>
+                <p class="it-nt"><b>Styling:</b> … · <b>Exits:</b> …</p>
+              </div></li>
+              <li class="it"><span class="it-no">03</span><div>
+                <h3 class="it-nm">Pinguin</h3>
+                <div class="it-tags"><span class="tg">Move</span></div>
+                <p class="it-nt">focus on keeping right inner foot stable</p>
+              </div></li>
+              <li class="it"><span class="it-no">04</span><div>
+                <h3 class="it-nm">Take more space during Dancing</h3>
+                <div class="it-tags"><span class="tg">60s practise</span></div>
+                <p class="it-nt">Scrolls, Open Scroll, humpa scroll · Eternity, carousels</p>
+              </div></li>
+              <li class="it"><span class="it-no">05</span><div>
+                <h3 class="it-nm">Pidgeon</h3>
+                <div class="it-tags"><span class="tg">Move</span><span class="rf">REF 06</span></div>
+              </div></li>
+              <li class="tail">+ 3 weitere Positionen</li>
+            </ol>
+          </section>
+
+          <!-- 2 WÖCHENTLICH -->
+          <section class="col">
+            <div class="chd chd--thin">
+              <div class="chd-top"><span class="chd-st">STATION III</span><span class="chd-ct">5</span></div>
+              <h2 class="chd-nm">2 Wöchentlich</h2>
+              <div class="chd-iv"><span class="n">+14</span><span class="u">Tage</span></div>
+              <div class="chd-note">Alle Positionen fällig in 13 T</div>
+            </div>
+            <ol class="items">
+              <li class="it"><span class="it-no">01</span><div>
+                <h3 class="it-nm">Hip Posting – J in die Connection rein gehen</h3>
+                <div class="it-tags"><span class="tg">Learning</span></div>
+              </div></li>
+              <li class="it"><span class="it-no">02</span><div>
+                <h3 class="it-nm">Scrolls</h3>
+                <div class="it-tags"><span class="tg">Move</span></div>
+                <p class="it-nt">Frame sehr short. Linken Schritt früher machen und mit Judith schneller mitdrehen. Rechts außen rum …</p>
+              </div></li>
+              <li class="it"><span class="it-no">03</span><div>
+                <h3 class="it-nm">Levlosa collects</h3>
+                <div class="it-tags"><span class="tg">Move</span><span class="rf">REF 07</span></div>
+                <p class="it-nt">Arm nahe am Körper erst nach unten, dann zum follower führen</p>
+              </div></li>
+              <li class="it"><span class="it-no">04</span><div>
+                <span class="it-anc">Scrolls ›</span>
+                <h3 class="it-nm">Leader Turnout</h3>
+                <div class="it-tags"><span class="pt">1 TEIL</span></div>
+                <p class="it-nt">Achten wieder im Slot zu landen · drehen wenn vor Judith</p>
+              </div></li>
+              <li class="it"><span class="it-no">05</span><div>
+                <h3 class="it-nm">Hammers</h3>
+                <div class="it-tags"><span class="tg">Move Complex</span></div>
+                <p class="it-nt">Arm nach unten für initiierung der Bewegung, dann kurve für den Throw</p>
+              </div></li>
+            </ol>
+          </section>
+
+          <!-- 3 WÖCHENTLICH -->
+          <section class="col">
+            <div class="chd chd--thin">
+              <div class="chd-top"><span class="chd-st">STATION IV</span><span class="chd-ct">4</span></div>
+              <h2 class="chd-nm">3 Wöchentlich</h2>
+              <div class="chd-iv"><span class="n">+21</span><span class="u">Tage</span></div>
+              <div class="chd-note">Alle Positionen fällig in 20 T</div>
+            </div>
+            <ol class="items">
+              <li class="it"><span class="it-no">01</span><div>
+                <h3 class="it-nm">Rides</h3>
+                <div class="it-tags"><span class="tg">Skill Block</span><span class="tg">Move Complex</span><span class="rf">REF 08</span></div>
+              </div></li>
+              <li class="it"><span class="it-no">02</span><div>
+                <h3 class="it-nm">Step-over Scroll (Humpa-Scroll)</h3>
+                <div class="it-tags"><span class="tg">Move</span><span class="rf">REF 09</span></div>
+              </div></li>
+              <li class="it"><span class="it-no">03</span><div>
+                <h3 class="it-nm">DT-Intros</h3>
+                <div class="it-tags"><span class="tg">Skill Block</span></div>
+                <p class="it-nt"><b>General</b> · Arme kurz und Stabil · Alle Intros funktionieren mit …</p>
+              </div></li>
+              <li class="it"><span class="it-no">04</span><div>
+                <h3 class="it-nm">Second Arm</h3>
+                <div class="it-tags"><span class="tg">60s practise</span></div>
+                <p class="it-nt">An die Hüfte anlegen · Hinter den Rücken einklappen · Faust nach unten gerichtet</p>
+              </div></li>
+            </ol>
+          </section>
+
+          <!-- MONATLICH -->
+          <section class="col">
+            <div class="chd chd--thin">
+              <div class="chd-top"><span class="chd-st">STATION V</span><span class="chd-ct">5</span></div>
+              <h2 class="chd-nm">Monatlich</h2>
+              <div class="chd-iv"><span class="n">+30</span><span class="u">Tage</span></div>
+              <div class="chd-note">Termine einzeln — siehe Position</div>
+            </div>
+            <ol class="items">
+              <li class="it"><span class="it-no">01</span><div><h3 class="it-nm">Tuck turn pulse</h3>
+                <div class="it-tags"><span class="tg">Move</span><span class="rf">REF 10</span></div>
+                <div class="it-due">fällig in 6 T · 02.08.</div></div></li>
+              <li class="it"><span class="it-no">02</span><div><h3 class="it-nm">Walks</h3>
+                <div class="it-tags"><span class="tg">Move</span><span class="rf">REF 11</span></div>
+                <div class="it-due">fällig in 6 T · 02.08.</div></div></li>
+              <li class="it"><span class="it-no">03</span><div><h3 class="it-nm">First Move Lunge / Lunges Allgemein / Legwork → Mehr in den Knien tanzen</h3>
+                <div class="it-tags"><span class="tg">60s practise</span><span class="rf">REF 12</span></div>
+                <div class="it-due">fällig in 7 T · 03.08.</div></div></li>
+              <li class="it"><span class="it-no">04</span><div><h3 class="it-nm">Shoulder &amp; Posture Cues</h3>
+                <div class="it-tags"><span class="tg">60s practise</span><span class="tg">Im Hinterkopf</span></div>
+                <div class="it-due">fällig in 29 T · 25.08.</div></div></li>
+              <li class="it"><span class="it-no">05</span><div><h3 class="it-nm">Copy&amp;Elevate</h3>
+                <div class="it-tags"><span class="tg">Drill</span></div>
+                <div class="it-due">fällig in 7 T · 03.08.</div></div></li>
+            </ol>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lgd">
+    <span><b>Legende</b></span>
+    <span><i class="sw"></i>Überfällig — Länge = Tage vor dem Datum</span>
+    <span><b>|</b> Datum = heute</span>
+    <span>Station = Leitner-Fach, vom Nutzer gewählt</span>
+    <span>REF nn = angehängter Link</span>
+    <span>Schraffur = ohne Termin</span>
+  </div>
+</div>
+
+<!-- ============================================================
+     02 — PHONE BOARD
+     ============================================================ -->
+<div class="sec">
+  <div class="sec-mark"><span>02</span><span>Phone board — TODAY — 390px</span><i></i></div>
+  <div class="frames">
+
+  <div class="phone">
+    <div class="statusbar"><span>09:41</span><span>TAFEL</span><span>100 %</span></div>
+    <div class="p-tb">
+      <div class="tb"><span class="k">Tafel</span><span class="v">Test board</span></div>
+      <div class="tb"><span class="k">Datum</span><span class="v">2026-07-27</span></div>
+    </div>
+
+    <div class="p-body">
+      <!-- mini axis -->
+      <div class="p-axis">
+        <svg viewBox="0 0 358 58" width="358" height="58">
+          <defs>
+            <pattern id="h2" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="6" stroke="#17181C" stroke-width="1"/>
+            </pattern>
+          </defs>
+          <rect x="6" y="16" width="52" height="18" fill="url(#h2)" opacity=".5"/>
+          <rect x="6" y="16" width="52" height="18" fill="none" stroke="#17181C" stroke-width="1"/>
+          <text x="32" y="11" text-anchor="middle" class="ax-lab" style="font-size:8.5px">ÜBERFÄLLIG</text>
+          <line x1="58" y1="25" x2="344" y2="25" stroke="#17181C" stroke-width="1"/>
+          <line x1="58" y1="8" x2="58" y2="42" stroke="#17181C" stroke-width="3"/>
+          <text x="63" y="47" class="ax-datum" style="font-size:9px">0 HEUTE</text>
+          <line x1="130" y1="18" x2="130" y2="32" stroke="#1B44E0" stroke-width="2"/>
+          <text x="130" y="47" text-anchor="middle" class="ax-st" style="font-size:10px">+7</text>
+          <line x1="202" y1="18" x2="202" y2="32" stroke="#1B44E0" stroke-width="2"/>
+          <text x="202" y="47" text-anchor="middle" class="ax-st" style="font-size:10px">+14</text>
+          <line x1="274" y1="18" x2="274" y2="32" stroke="#1B44E0" stroke-width="2"/>
+          <text x="274" y="47" text-anchor="middle" class="ax-st" style="font-size:10px">+21</text>
+          <line x1="340" y1="18" x2="340" y2="32" stroke="#1B44E0" stroke-width="2"/>
+          <text x="340" y="47" text-anchor="middle" class="ax-st" style="font-size:10px">+30</text>
+        </svg>
+      </div>
+
+      <div class="p-hd">
+        <div class="chd-top"><span class="chd-st">STATION I · DATUM</span><span class="chd-ct">12 Positionen</span></div>
+        <h2 class="chd-nm">Today</h2>
+        <div class="chd-note">Alle Positionen überfällig</div>
+      </div>
+
+      <ol class="items" style="padding:0">
+        <li class="it it--late"><span class="it-no">01</span><div>
+          <h3 class="it-nm" style="font-size:17px">Drops</h3>
+          <div class="it-tags"><span class="rf">REF 01</span><span class="tg">General Cues</span></div>
+          <div class="msr"><span class="bar" style="width:150px"><b>53 T</b></span></div>
+        </div></li>
+        <li class="it it--late"><span class="it-no">02</span><div>
+          <h3 class="it-nm" style="font-size:17px">Blindfold</h3>
+          <div class="it-tags"><span class="tg">Drill</span></div>
+          <div class="msr"><span class="bar" style="width:142px"><b>50 T</b></span></div>
+        </div></li>
+        <li class="it it--late"><span class="it-no">03</span><div>
+          <h3 class="it-nm" style="font-size:17px">Paraden</h3>
+          <div class="it-tags"><span class="tg">Skill Block</span></div>
+          <div class="msr"><span class="bar" style="width:80px"><b>27 T</b></span></div>
+        </div></li>
+        <li class="it it--late"><span class="it-no">04</span><div>
+          <h3 class="it-nm" style="font-size:17px">Inside turn followups</h3>
+          <div class="it-tags"><span class="tg">Skill Block</span><span class="rf">REF 02</span></div>
+          <div class="msr"><span class="bar" style="width:62px"><b>20 T</b></span></div>
+        </div></li>
+        <li class="it it--late"><span class="it-no">05</span><div>
+          <h3 class="it-nm" style="font-size:17px">Gaze &amp; Facing Cues</h3>
+          <div class="it-tags"><span class="tg">Skill Block</span></div>
+          <p class="it-nt">Neigen dazu jetzt zu oft in die audience zu gucken. Mehr auch zum Partner · Look at Judges ~50 % of the time</p>
+          <div class="msr"><span class="bar" style="width:52px"><b>16 T</b></span></div>
+        </div></li>
+        <li class="it it--late"><span class="it-no">06</span><div>
+          <h3 class="it-nm" style="font-size:17px">OFS</h3>
+          <div class="it-tags"><span class="tg">Skill Block</span></div>
+          <p class="it-nt">One foot spins, Spot Turns, Pirouette turns · <b>Variants</b></p>
+          <div class="msr"><span class="bar" style="width:44px"><b>13 T</b></span></div>
+        </div></li>
+        <li class="tail">+ 6 weitere Positionen</li>
+      </ol>
+
+      <button class="p-act bl">Übung starten — 12</button>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     03 — CARD DETAIL
+     ============================================================ -->
+<div class="sec">
+  <div class="sec-mark"><span>03</span><span>Card detail — Gaze &amp; Facing Cues</span><i></i></div>
+  <div class="frames">
+
+  <div class="phone">
+    <div class="statusbar"><span>09:41</span><span>TAFEL</span><span>100 %</span></div>
+    <div class="d-nav"><span>← Today</span><span>Position 05 / 12</span></div>
+
+    <div class="d-desig">
+      <span class="k">Station I · Today · Position 05</span>
+      <h2>Gaze &amp; Facing Cues</h2>
+    </div>
+
+    <div class="d-msr">
+      <div class="msr" style="height:22px"><span class="bar" style="width:132px;height:22px"><b>16 T ÜBERFÄLLIG</b></span></div>
+      <div class="msr-lab">Termin 11.07. · Datum heute 27.07.</div>
+    </div>
+
+    <div class="d-rule"></div>
+    <dl class="d-tbl">
+      <div><dt>Fach</dt><dd>Today · 0 T</dd></div>
+      <div><dt>Termin</dt><dd>2026-07-11</dd></div>
+      <div><dt>Label</dt><dd>Skill Block</dd></div>
+      <div><dt>Geübt</dt><dd>7 × · zuletzt 2026-06-11</dd></div>
+      <div><dt>Teile</dt><dd>0</dd></div>
+    </dl>
+
+    <div class="blk">
+      <h4>Notiz</h4>
+      <ul class="body">
+        <li><span class="n">01</span><span>Neigen dazu jetzt zu oft in die audience zu gucken. Mehr auch zum Partner</span></li>
+        <li><span class="n">02</span><span>Look at Judges ~50 % of the time</span></li>
+        <li><span class="n">03</span><span>Kilian: Head back</span></li>
+      </ul>
+    </div>
+
+    <div class="blk">
+      <h4>Baugruppe</h4>
+      <div class="asm">
+        <svg viewBox="0 0 300 74" width="100%" height="74">
+          <rect x="90" y="14" width="120" height="34" fill="#FCFCFA" stroke="#17181C" stroke-width="1.5"/>
+          <text x="150" y="35" text-anchor="middle" style="font-family:'Archivo Narrow',sans-serif;font-size:11px;font-weight:700;letter-spacing:.09em;fill:#17181C">GAZE &amp; FACING CUES</text>
+          <line x1="150" y1="4" x2="150" y2="14" stroke="#B7BAC2" stroke-width="1" stroke-dasharray="3 3"/>
+          <line x1="150" y1="48" x2="150" y2="60" stroke="#B7BAC2" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="150" y="70" text-anchor="middle" style="font-family:'Roboto Mono',monospace;font-size:9.5px;fill:#9BA0AA">keine Unterteile</text>
+          <text x="150" y="10" text-anchor="middle" style="font-family:'Roboto Mono',monospace;font-size:9.5px;fill:#9BA0AA">kein Stammteil</text>
+        </svg>
+        <div class="cap">Einzelteil — kann in Teile zerlegt werden</div>
+      </div>
+    </div>
+
+    <div class="d-acts">
+      <button class="p-act gh" style="flex:1">Umsetzen</button>
+      <button class="p-act" style="flex:1.5">Jetzt üben</button>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+<!-- ============================================================
+     04 — PRACTICE FOCUS
+     ============================================================ -->
+<div class="sec">
+  <div class="sec-mark"><span>04</span><span>Practice focus — Drops</span><i></i></div>
+  <div class="frames">
+
+  <div class="phone">
+    <div class="statusbar"><span>09:41</span><span>ÜBUNG</span><span>100 %</span></div>
+    <div class="pr-prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>
+    <div class="pr-nav"><span>← Sitzung beenden</span><span>03 / 07</span></div>
+
+    <div class="pr-hd">
+      <span class="k">Aus Station I · Today</span>
+      <h2>Drops</h2>
+    </div>
+
+    <div style="margin:14px 16px 0">
+      <div class="msr" style="height:22px"><span class="bar" style="width:190px;height:22px"><b>53 T ÜBERFÄLLIG</b></span></div>
+      <div class="msr-lab">Termin 04.06.</div>
+    </div>
+
+    <div class="pr-body">
+      <h4>General Cues</h4>
+      <p class="none">— keine Einträge unter dieser Überschrift —</p>
+      <span class="lk">REF 01 · team.jive.berlin/s/anYHTeT958GzQc4</span>
+    </div>
+
+    <div class="fl">
+      <h4>Danach absetzen auf Station</h4>
+      <div class="hint">Intervall wird von Hand gewählt</div>
+      <div class="stations">
+        <button><span class="r">I</span><span class="n">0</span><span class="d">morgen</span></button>
+        <button class="sel"><span class="r">II</span><span class="n">+7</span><span class="d">03.08.</span></button>
+        <button><span class="r">III</span><span class="n">+14</span><span class="d">10.08.</span></button>
+        <button><span class="r">IV</span><span class="n">+21</span><span class="d">17.08.</span></button>
+        <button><span class="r">V</span><span class="n">+30</span><span class="d">26.08.</span></button>
+      </div>
+    </div>
+
+    <div class="pr-acts">
+      <button class="p-act gh" style="flex:1">Notiz</button>
+      <button class="p-act bl" style="flex:1.7">Absetzen &amp; weiter</button>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+</body>
+</html>

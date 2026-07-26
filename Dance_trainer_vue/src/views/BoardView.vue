@@ -709,12 +709,16 @@ function onBoardPointerUp(e: PointerEvent) {
 </template>
 
 <style scoped>
+/* Fills the #app flex column rather than measuring the viewport itself. It was
+   `height: 100dvh` — correct, but it left the *document* free to scroll behind
+   it on Chrome Android; the lock now lives on html/body/#app in App.vue, and
+   sizing against the parent here keeps one source of truth for the height. */
 .board-view {
   position: relative;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
+  flex: 1;
+  min-height: 0;
 }
 
 .topbar {

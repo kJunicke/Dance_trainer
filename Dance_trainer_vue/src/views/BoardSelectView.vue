@@ -147,7 +147,12 @@ async function onImportFile(event: Event) {
 </template>
 
 <style scoped>
+/* This view is a fragment — this bar and the <main> below are both direct
+   children of the #app flex column, so the bar holds its height and the list
+   takes the rest and scrolls inside itself. The document can't scroll any more
+   (see App.vue), so a view that needs scrolling has to ask for it. */
 .topbar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -184,7 +189,11 @@ async function onImportFile(event: Event) {
 }
 
 .boards {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   max-width: 560px;
+  width: 100%;
   margin: 0 auto;
   padding: 24px 16px;
 }

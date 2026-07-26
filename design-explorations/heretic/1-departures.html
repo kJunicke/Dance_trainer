@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DEPARTURES — Dance Trainer / Heretic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Archivo:wght@400;500;600;700&family=Martian+Mono:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E7E6E0;
+  --panel:#FBFAF7;
+  --panel-2:#F2F1EC;
+  --ink:#13161A;
+  --ink-2:#5C6266;
+  --ink-3:#8B9095;
+  --rule:#CDCCC4;
+  --rule-hard:#13161A;
+  --late:#C51F14;
+  --board:#101317;
+  --sans:'Archivo',system-ui,sans-serif;
+  --cond:'Barlow Condensed',system-ui,sans-serif;
+  --mono:'Martian Mono','SFMono-Regular',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+
+/* ─────────── JUDGING BANNER (deliberately outside the design) ─────────── */
+.banner{background:#22232a;color:#e9e9ec;padding:14px 22px;font:400 13px/1.5 ui-monospace,SFMono-Regular,monospace;display:flex;flex-wrap:wrap;gap:6px 26px;align-items:baseline;border-bottom:3px solid #52535e}
+.banner b{font-weight:700;font-size:15px;letter-spacing:.06em;color:#fff}
+.banner .lens{color:#a5a6b0}
+.banner .thesis{color:#c9cad2;flex:1 1 420px;min-width:0}
+.seg{background:#dad9d2;border-top:1px solid #b9b8b0;border-bottom:1px solid #b9b8b0;padding:9px 22px;font:400 11px/1 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:#5a5952;margin-top:44px}
+.seg:first-of-type{margin-top:0}
+.wrap{padding:26px 22px 52px}
+
+/* ─────────── SERVICE STRIP (the Leitner ladder, always on screen) ─────────── */
+.strip{display:flex;align-items:stretch;border:1.5px solid var(--rule-hard);background:var(--panel);margin-bottom:22px;overflow:hidden}
+.strip-lab{background:var(--rule-hard);color:#fff;font:600 11px/1 var(--mono);letter-spacing:.1em;padding:0 14px;display:flex;align-items:center;white-space:nowrap}
+.strip-items{display:flex;flex:1;min-width:0;overflow-x:auto}
+.sp{flex:1 0 auto;min-width:112px;padding:9px 12px 8px;border-right:1px solid var(--rule);display:flex;flex-direction:column;gap:2px}
+.sp:last-child{border-right:0}
+.sp .k{font:600 10px/1 var(--cond);letter-spacing:.18em;color:var(--ink-3);text-transform:uppercase}
+.sp .v{font:700 15px/1 var(--mono);letter-spacing:-.02em}
+.sp .n{font:500 10px/1 var(--cond);letter-spacing:.14em;color:var(--ink-2);text-transform:uppercase}
+.sp.now{background:var(--rule-hard)}
+.sp.now .k{color:#8d9298}.sp.now .v{color:#fff}.sp.now .n{color:#c9ccd0}
+.sp.sid{background:repeating-linear-gradient(135deg,transparent 0 5px,rgba(19,22,26,.055) 5px 10px)}
+
+/* ─────────── BOARD ─────────── */
+.boardscroll{overflow-x:auto;border:1.5px solid var(--rule-hard);background:var(--panel-2);padding-bottom:2px}
+.board{display:flex;min-width:max-content;align-items:stretch}
+.col{width:272px;flex:0 0 272px;border-right:1px solid var(--rule);background:var(--panel);display:flex;flex-direction:column}
+.col:last-child{border-right:0}
+
+/* platform sign — ink coverage decays left→right = the ladder */
+.sign{padding:10px 13px 11px;border-bottom:1.5px solid var(--rule-hard)}
+.sign .row1{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sign .plat{font:700 11px/1 var(--mono);letter-spacing:.02em}
+.sign .cnt{font:500 11px/1 var(--mono)}
+.sign .nm{font:600 21px/1.05 var(--cond);letter-spacing:.045em;text-transform:uppercase;margin:6px 0 5px;overflow-wrap:anywhere}
+.sign .dep{font:500 10px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase}
+
+.sign.s0{background:var(--rule-hard);color:#fff}
+.sign.s0 .plat{color:#fff}.sign.s0 .cnt{color:#9aa0a6}.sign.s0 .dep{color:#e2662f}
+.sign.s1{background:#2C3237;color:#fff}
+.sign.s1 .cnt{color:#9aa0a6}.sign.s1 .dep{color:#aeb4b9}
+.sign.s2{background:#5B6266;color:#fff}
+.sign.s2 .cnt{color:#cfd3d5}.sign.s2 .dep{color:#cfd3d5}
+.sign.s3{background:#B4B7B4;color:#13161A}
+.sign.s3 .cnt{color:#4c5155}.sign.s3 .dep{color:#4c5155}
+.sign.s4{background:var(--panel);color:var(--ink);border-bottom:1.5px solid var(--rule-hard)}
+.sign.s4 .cnt,.sign.s4 .dep{color:var(--ink-2)}
+.sign.sid{background:repeating-linear-gradient(135deg,#F2F1EC 0 6px,#E4E3DC 6px 12px);color:var(--ink);border-bottom:1.5px dashed var(--ink-2)}
+.sign.sid .cnt,.sign.sid .dep{color:var(--ink-2)}
+
+.rows{flex:1}
+.r{display:grid;grid-template-columns:58px 1fr;gap:10px;padding:11px 13px 12px;border-bottom:1px solid var(--rule);align-items:start}
+.r:last-child{border-bottom:0}
+.r:hover{background:#F4F2ED}
+
+/* split-flap counter chip */
+.flap{position:relative;font:700 13px/1 var(--mono);letter-spacing:-.04em;text-align:center;padding:7px 2px 8px;border:1px solid var(--rule-hard);background:var(--panel);white-space:nowrap}
+.flap::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--rule-hard);opacity:.35}
+.flap.late{background:var(--rule-hard);color:#fff;border-color:var(--rule-hard)}
+.flap.late::after{background:#fff;opacity:.28}
+.flap.hot{background:var(--late);border-color:var(--late);color:#fff}
+.flap.hot::after{background:#fff;opacity:.3}
+.flap.sched{background:transparent;color:var(--ink-2);border-style:dashed;border-color:var(--ink-3)}
+.flap.none{border-style:dotted;color:var(--ink-3);background:transparent}
+.flap .u{display:block;font:500 8px/1 var(--cond);letter-spacing:.16em;margin-top:4px;opacity:.72;text-transform:uppercase}
+
+.nm2{font:600 15px/1.24 var(--sans);letter-spacing:-.008em;overflow-wrap:anywhere}
+.anc{font:500 10px/1.3 var(--cond);letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:5px;font:400 10px/1.2 var(--mono);letter-spacing:-.02em;color:var(--ink-2)}
+.meta .lb{text-transform:uppercase;font:500 9.5px/1.2 var(--cond);letter-spacing:.15em;color:var(--ink);border-bottom:1.5px solid var(--ink);padding-bottom:1px}
+.note{margin-top:7px;font:400 12.5px/1.45 var(--sans);color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.note .h{font:600 9.5px/1.2 var(--cond);letter-spacing:.16em;text-transform:uppercase;color:var(--ink);display:inline-block;margin-right:6px;border:1px solid var(--rule);padding:1px 4px}
+.lnk{display:inline-flex;align-items:center;gap:4px;font:400 10.5px/1 var(--mono);letter-spacing:-.03em;color:var(--ink-2);border:1px solid var(--rule);padding:3px 5px;background:var(--panel-2);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.status-tag{font:600 9px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase;color:var(--late)}
+
+/* ─────────── PHONE ─────────── */
+.phones{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}
+.phone{width:390px;flex:0 0 390px;border:1.5px solid var(--rule-hard);background:var(--panel);overflow:hidden;box-shadow:10px 10px 0 rgba(19,22,26,.10)}
+.ph-top{background:var(--board);color:#fff;padding:12px 15px 13px}
+.ph-top .l1{display:flex;justify-content:space-between;align-items:baseline;font:500 10px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase;color:#8e949a}
+.ph-top .l2{display:flex;justify-content:space-between;align-items:flex-end;margin-top:7px}
+.ph-top h2{font:600 30px/1 var(--cond);letter-spacing:.05em;text-transform:uppercase}
+.ph-top .dl{font:700 12px/1 var(--mono);color:#fff;background:var(--late);padding:5px 7px}
+.ph-nav{display:flex;overflow-x:auto;border-bottom:1.5px solid var(--rule-hard);background:var(--panel-2)}
+.ph-nav span{flex:0 0 auto;padding:8px 12px;font:600 10px/1 var(--cond);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);border-right:1px solid var(--rule);white-space:nowrap}
+.ph-nav span.on{background:var(--rule-hard);color:#fff}
+.ph-nav span i{font-style:normal;font-family:var(--mono);font-size:9px;letter-spacing:-.02em;opacity:.65;margin-left:5px}
+.pr{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:13px 15px 14px;border-bottom:1px solid var(--rule);align-items:start}
+.pr .nm2{font-size:17px}
+.ph-foot{display:flex;border-top:1.5px solid var(--rule-hard)}
+.ph-foot button{flex:1;border:0;border-right:1px solid var(--rule);background:var(--panel-2);font:600 11px/1 var(--cond);letter-spacing:.18em;text-transform:uppercase;padding:15px 4px;color:var(--ink);cursor:pointer}
+.ph-foot button:last-child{border-right:0;background:var(--rule-hard);color:#fff}
+
+/* ─────────── DETAIL ─────────── */
+.detail{max-width:760px;border:1.5px solid var(--rule-hard);background:var(--panel);box-shadow:12px 12px 0 rgba(19,22,26,.10)}
+.d-head{background:var(--board);color:#fff;padding:16px 20px 18px}
+.d-head .brd{display:flex;justify-content:space-between;font:500 10px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase;color:#8e949a;padding-bottom:11px;border-bottom:1px solid #2b3036}
+.d-head h1{font:600 40px/1.02 var(--cond);letter-spacing:.035em;text-transform:uppercase;margin:14px 0 0}
+.d-facts{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1.5px solid var(--rule-hard)}
+.d-facts div{padding:11px 14px 12px;border-right:1px solid var(--rule)}
+.d-facts div:last-child{border-right:0}
+.d-facts .k{font:500 9.5px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+.d-facts .v{font:700 15px/1.1 var(--mono);letter-spacing:-.03em;margin-top:6px}
+.d-facts .v small{font:500 10px/1 var(--cond);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);display:block;margin-top:5px}
+.d-sec{padding:18px 20px 22px;border-bottom:1px solid var(--rule)}
+.d-sec:last-child{border-bottom:0}
+.d-sec h3{font:600 10px/1 var(--cond);letter-spacing:.24em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+.notebody{font:400 15.5px/1.6 var(--sans);color:var(--ink)}
+.notebody li{margin:0 0 7px 0;list-style:none;padding-left:19px;position:relative}
+.notebody li::before{content:"";position:absolute;left:0;top:.62em;width:9px;height:1.5px;background:var(--ink)}
+.notebody .nh{font:600 11px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase;background:var(--ink);color:#fff;padding:4px 8px;display:inline-block;margin:4px 0 11px}
+.empty{border:1.5px dashed var(--rule);padding:15px;background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(19,22,26,.035) 6px 12px)}
+.empty p{font:500 12px/1.4 var(--cond);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.empty button{margin-top:11px;border:1.5px solid var(--ink);background:transparent;font:600 10px/1 var(--cond);letter-spacing:.18em;text-transform:uppercase;padding:8px 12px;cursor:pointer;color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font:500 10px/1 var(--cond);letter-spacing:.17em;text-transform:uppercase;border:1.5px solid var(--ink);padding:5px 8px}
+
+/* ─────────── PRACTICE FOCUS ─────────── */
+.focus{background:var(--board);color:#F3F2EE}
+.f-top{padding:13px 16px;border-bottom:1px solid #2b3036;display:flex;justify-content:space-between;align-items:center}
+.f-top .q{font:500 10px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase;color:#8e949a}
+.f-top .prog{font:600 11px/1 var(--mono);color:#F3F2EE}
+.f-body{padding:20px 16px 22px}
+.f-body .dl{display:inline-block;background:var(--late);color:#fff;font:700 12px/1 var(--mono);padding:6px 8px;position:relative}
+.f-body .dl::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#fff;opacity:.3}
+.f-body h1{font:600 52px/.95 var(--cond);letter-spacing:.03em;text-transform:uppercase;margin:14px 0 4px}
+.f-body .sub{font:500 10px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase;color:#8e949a}
+.f-note{margin-top:20px;background:#F3F2EE;color:var(--ink);padding:15px 15px 17px}
+.f-note .nh{font:600 10px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase;background:var(--ink);color:#fff;padding:4px 7px;display:inline-block;margin-bottom:10px}
+.f-note .lnk{background:#fff}
+.f-note p{font:400 15px/1.55 var(--sans)}
+.f-file{border-top:1.5px solid #2b3036;padding:16px 16px 20px}
+.f-file .lab{font:500 10px/1 var(--cond);letter-spacing:.2em;text-transform:uppercase;color:#8e949a;margin-bottom:12px}
+.plats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:#2b3036;border:1px solid #2b3036}
+.plats button{background:#171B1F;border:0;color:#F3F2EE;text-align:left;padding:12px 12px 13px;cursor:pointer;display:flex;flex-direction:column;gap:5px}
+.plats button:hover{background:#F3F2EE;color:var(--ink)}
+.plats .pn{font:700 11px/1 var(--mono);letter-spacing:-.02em;color:#e2662f}
+.plats button:hover .pn{color:var(--late)}
+.plats .pl{font:600 13px/1.1 var(--cond);letter-spacing:.1em;text-transform:uppercase}
+.plats .pi{font:400 10px/1 var(--mono);opacity:.6}
+.plats .wide{grid-column:1/-1}
+@media(max-width:900px){.d-facts{grid-template-columns:repeat(2,1fr)}.d-facts div:nth-child(2){border-right:0}}
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <b>DEPARTURES</b>
+  <span class="lens">LENS — THE HERETIC</span>
+  <span class="thesis">A practice queue is a timetable, not a workspace: render the board as the thing the world already perfected for “what’s late, and from which platform does it leave.”</span>
+</div>
+
+<!-- ══════════════ 1. BOARD, DESKTOP ══════════════ -->
+<div class="seg">01 — Board · desktop · seven columns · horizontally scrollable</div>
+<div class="wrap">
+
+  <div class="strip">
+    <div class="strip-lab">SERVICE&nbsp;LADDER</div>
+    <div class="strip-items">
+      <div class="sp sid"><span class="k">Siding A</span><span class="v">∅</span><span class="n">Ziele · 5</span></div>
+      <div class="sp sid"><span class="k">Siding B</span><span class="v">∅</span><span class="n">Inbox · 7</span></div>
+      <div class="sp now"><span class="k">Platform 1</span><span class="v">NOW</span><span class="n">Today · 12</span></div>
+      <div class="sp"><span class="k">Platform 2</span><span class="v">+07d</span><span class="n">Wöchentl. · 8</span></div>
+      <div class="sp"><span class="k">Platform 3</span><span class="v">+14d</span><span class="n">2 Wöchentl. · 5</span></div>
+      <div class="sp"><span class="k">Platform 4</span><span class="v">+21d</span><span class="n">3 Wöchentl. · 4</span></div>
+      <div class="sp"><span class="k">Platform 5</span><span class="v">+30d</span><span class="n">Monatlich · 5</span></div>
+    </div>
+  </div>
+
+  <div class="boardscroll"><div class="board">
+
+    <!-- ZIELE -->
+    <div class="col">
+      <div class="sign sid">
+        <div class="row1"><span class="plat">SIDING A</span><span class="cnt">05</span></div>
+        <div class="nm">Ziele (COC)</div>
+        <div class="dep">Not in service · no due date</div>
+      </div>
+      <div class="rows">
+        <div class="r"><div class="flap none">—<span class="u">held</span></div><div>
+          <div class="nm2">Connection Weiter mit allem private Feedback — Play und Moves fluidisieren</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">held</span></div><div>
+          <div class="nm2">Präsentation weiterentwickeln. Spezifische Bewegungen und Instant feedback mit Spiegel</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">held</span></div><div>
+          <div class="nm2">Paraden Competition ready machen.</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">held</span></div><div>
+          <div class="nm2">Transitions. Move übergänge. Wie haben die sich entwickelt?</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">held</span></div><div>
+          <div class="nm2">Dynamics weiterentwickeln</div>
+          <div class="note">— ganz gut · — DT Intros funktionieren in FS und Comps</div></div></div>
+      </div>
+    </div>
+
+    <!-- INBOX -->
+    <div class="col">
+      <div class="sign sid">
+        <div class="row1"><span class="plat">SIDING B</span><span class="cnt">07</span></div>
+        <div class="nm">Inbox</div>
+        <div class="dep">Unscheduled · awaiting platform</div>
+      </div>
+      <div class="rows">
+        <div class="r"><div class="flap none">—<span class="u">new</span></div><div><div class="nm2">Dance and Videofeedback — Lee training cycle</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">new</span></div><div><div class="nm2">Privates J&amp;A M&amp;C notes hier einfügen</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">new</span></div><div><div class="nm2">Caine connection</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">new</span></div><div><div class="nm2">Quick-add smoke test</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">new</span></div><div><div class="nm2">Family Test Spare</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">new</span></div><div>
+          <div class="anc">Family Test Root › Prep</div>
+          <div class="nm2">Toe position</div>
+          <div class="note">Toe detail line.</div></div></div>
+        <div class="r"><div class="flap none">—<span class="u">new</span></div><div><div class="nm2">dro</div></div></div>
+      </div>
+    </div>
+
+    <!-- TODAY -->
+    <div class="col">
+      <div class="sign s0">
+        <div class="row1"><span class="plat">PLATFORM 1</span><span class="cnt">12</span></div>
+        <div class="nm">Today</div>
+        <div class="dep">Departing now · all delayed</div>
+      </div>
+      <div class="rows">
+        <div class="r"><div class="flap hot">−53d<span class="u">delayed</span></div><div>
+          <div class="nm2">Drops</div>
+          <div class="meta"><span>last 12 MAR</span><span>×4</span></div>
+          <div class="note"><span class="lnk">▸ team.jive.berlin/s/anYH…</span></div>
+          <div class="note"><span class="h">General Cues</span></div></div></div>
+        <div class="r"><div class="flap hot">−50d<span class="u">delayed</span></div><div>
+          <div class="nm2">Blindfold</div>
+          <div class="meta"><span class="lb">Drill</span><span>×2</span></div></div></div>
+        <div class="r"><div class="flap late">−27d<span class="u">delayed</span></div><div>
+          <div class="nm2">Paraden</div>
+          <div class="meta"><span class="lb">Skill Block</span><span>×9</span></div></div></div>
+        <div class="r"><div class="flap late">−20d<span class="u">delayed</span></div><div>
+          <div class="nm2">Inside turn followups</div>
+          <div class="meta"><span class="lb">Skill Block</span><span>×3</span></div>
+          <div class="note"><span class="lnk">▸ team.jive.berlin/s/kFxm…</span></div></div></div>
+        <div class="r"><div class="flap late">−16d<span class="u">delayed</span></div><div>
+          <div class="nm2">Gaze &amp; Facing Cues</div>
+          <div class="meta"><span class="lb">Skill Block</span><span>×6</span></div>
+          <div class="note">— Neigen dazu jetzt zu oft in die audience zu gucken. Mehr auch zum Partner — Look at Judges ~50% of the time</div></div></div>
+        <div class="r"><div class="flap late">−13d<span class="u">delayed</span></div><div>
+          <div class="nm2">OFS</div>
+          <div class="meta"><span class="lb">Skill Block</span><span>×11</span></div>
+          <div class="note">One foot spins, Spot Turns, Pirouette turns</div></div></div>
+      </div>
+    </div>
+
+    <!-- WÖCHENTLICH -->
+    <div class="col">
+      <div class="sign s1">
+        <div class="row1"><span class="plat">PLATFORM 2</span><span class="cnt">08</span></div>
+        <div class="nm">Wöchentlich</div>
+        <div class="dep">Departs +7 days</div>
+      </div>
+      <div class="rows">
+        <div class="r"><div class="flap sched">+6d<span class="u">sched</span></div><div>
+          <div class="anc">OFS ›</div>
+          <div class="nm2">Exits</div>
+          <div class="meta"><span class="lb">Skill Block</span></div>
+          <div class="note"><span class="lnk">▸ 2 links</span></div></div></div>
+        <div class="r"><div class="flap sched">+6d<span class="u">sched</span></div><div>
+          <div class="nm2">Seducers</div>
+          <div class="meta"><span class="lb">Skill Block</span></div>
+          <div class="note">Styling: <span class="lnk">▸ link</span> Exits:</div></div></div>
+        <div class="r"><div class="flap sched">+6d<span class="u">sched</span></div><div>
+          <div class="nm2">Pinguin</div>
+          <div class="meta"><span class="lb">Move</span></div>
+          <div class="note">focus on keeping right inner foot stable</div></div></div>
+        <div class="r"><div class="flap sched">+6d<span class="u">sched</span></div><div>
+          <div class="nm2">Take more space during Dancing</div>
+          <div class="meta"><span class="lb">60s practise</span></div>
+          <div class="note">Scrolls, Open Scroll, humpa scroll · Eternity, carousels</div></div></div>
+        <div class="r"><div class="flap sched">+6d<span class="u">sched</span></div><div>
+          <div class="nm2">Pidgeon</div>
+          <div class="meta"><span class="lb">Move</span></div>
+          <div class="note"><span class="lnk">▸ team.jive.berlin/s/…</span></div></div></div>
+      </div>
+    </div>
+
+    <!-- 2 WÖCHENTLICH -->
+    <div class="col">
+      <div class="sign s2">
+        <div class="row1"><span class="plat">PLATFORM 3</span><span class="cnt">05</span></div>
+        <div class="nm">2 Wöchentlich</div>
+        <div class="dep">Departs +14 days</div>
+      </div>
+      <div class="rows">
+        <div class="r"><div class="flap sched">+13d<span class="u">sched</span></div><div>
+          <div class="nm2">Hip Posting — J in die Connection rein gehen</div>
+          <div class="meta"><span class="lb">Learning</span></div></div></div>
+        <div class="r"><div class="flap sched">+13d<span class="u">sched</span></div><div>
+          <div class="nm2">Scrolls</div>
+          <div class="meta"><span class="lb">Move</span></div>
+          <div class="note">Frame sehr short. Linken Schritt früher machen und mit Judith schneller mitdrehen. Rechts außen rum…</div></div></div>
+        <div class="r"><div class="flap sched">+13d<span class="u">sched</span></div><div>
+          <div class="nm2">Levlosa collects</div>
+          <div class="meta"><span class="lb">Move</span></div>
+          <div class="note"><span class="lnk">▸ link</span> Arm nahe am Körper erst nach unten…</div></div></div>
+        <div class="r"><div class="flap sched">+13d<span class="u">sched</span></div><div>
+          <div class="anc">Scrolls ›</div>
+          <div class="nm2">Leader Turnout</div>
+          <div class="meta"><span>1 part</span></div>
+          <div class="note">— Achten wieder im Slot zu landen — drehen wenn vor Judith</div></div></div>
+        <div class="r"><div class="flap sched">+13d<span class="u">sched</span></div><div>
+          <div class="nm2">Hammers</div>
+          <div class="meta"><span class="lb">Move Complex</span></div>
+          <div class="note">— Arm nach unten für initiierung der Bewegung, dann kurve für den Throw</div></div></div>
+      </div>
+    </div>
+
+    <!-- 3 WÖCHENTLICH -->
+    <div class="col">
+      <div class="sign s3">
+        <div class="row1"><span class="plat">PLATFORM 4</span><span class="cnt">04</span></div>
+        <div class="nm">3 Wöchentlich</div>
+        <div class="dep">Departs +21 days</div>
+      </div>
+      <div class="rows">
+        <div class="r"><div class="flap sched">+20d<span class="u">sched</span></div><div>
+          <div class="nm2">Rides</div>
+          <div class="meta"><span class="lb">Skill Block</span><span class="lb">Move Complex</span></div>
+          <div class="note"><span class="lnk">▸ 2 links</span></div></div></div>
+        <div class="r"><div class="flap sched">+20d<span class="u">sched</span></div><div>
+          <div class="nm2">Step-over Scroll (Humpa-Scroll)</div>
+          <div class="meta"><span class="lb">Move</span></div>
+          <div class="note"><span class="lnk">▸ 2 links</span></div></div></div>
+        <div class="r"><div class="flap sched">+20d<span class="u">sched</span></div><div>
+          <div class="nm2">DT-Intros</div>
+          <div class="meta"><span class="lb">Skill Block</span></div>
+          <div class="note"><span class="h">General</span>— Arme kurz und Stabil — Alle Intros funktionieren mit …</div></div></div>
+        <div class="r"><div class="flap sched">+20d<span class="u">sched</span></div><div>
+          <div class="nm2">Second Arm</div>
+          <div class="meta"><span class="lb">60s practise</span></div>
+          <div class="note">— An die Hüfte anlegen — Hinter den Rücken einklappen — Faust nach unten gerichtet</div></div></div>
+      </div>
+    </div>
+
+    <!-- MONATLICH -->
+    <div class="col">
+      <div class="sign s4">
+        <div class="row1"><span class="plat">PLATFORM 5</span><span class="cnt">05</span></div>
+        <div class="nm">Monatlich</div>
+        <div class="dep">Departs +30 days</div>
+      </div>
+      <div class="rows">
+        <div class="r"><div class="flap sched">+6d<span class="u">sched</span></div><div>
+          <div class="nm2">Tuck turn pulse</div>
+          <div class="meta"><span class="lb">Move</span></div>
+          <div class="note"><span class="lnk">▸ team.jive.berlin/s/…</span></div></div></div>
+        <div class="r"><div class="flap sched">+6d<span class="u">sched</span></div><div>
+          <div class="nm2">Walks</div>
+          <div class="meta"><span class="lb">Move</span></div>
+          <div class="note">Hop Walks <span class="lnk">▸ link</span></div></div></div>
+        <div class="r"><div class="flap sched">+7d<span class="u">sched</span></div><div>
+          <div class="nm2">First Move Lunge / Lunges Allgemein / Legwork → Mehr in den Knien tanzen</div>
+          <div class="meta"><span class="lb">60s practise</span></div></div></div>
+        <div class="r"><div class="flap sched">+29d<span class="u">sched</span></div><div>
+          <div class="nm2">Shoulder &amp; Posture Cues</div>
+          <div class="meta"><span class="lb">60s practise</span><span class="lb">Im Hinterkopf</span></div>
+          <div class="note">— Schultern auf einer Höhe lassen während ich mich drehe — Shultern öffnen, mehr Platz im Körper.</div></div></div>
+        <div class="r"><div class="flap sched">+7d<span class="u">sched</span></div><div>
+          <div class="nm2">Copy&amp;Elevate</div>
+          <div class="meta"><span class="lb">Drill</span></div></div></div>
+      </div>
+    </div>
+
+  </div></div>
+</div>
+
+<!-- ══════════════ 2 & 3. PHONE BOARD + CARD DETAIL ══════════════ -->
+<div class="seg">02 — Phone board · 390px · TODAY&nbsp;&nbsp;/&nbsp;&nbsp;03 — Card detail</div>
+<div class="wrap">
+  <div class="phones">
+
+    <div class="phone">
+      <div class="ph-top">
+        <div class="l1"><span>Modern Jive · Board</span><span>SA 27 JUL</span></div>
+        <div class="l2"><h2>Today</h2><span class="dl">12 DELAYED</span></div>
+      </div>
+      <div class="ph-nav">
+        <span class="on">Today <i>12</i></span>
+        <span>Wöch <i>+7</i></span>
+        <span>2 Wöch <i>+14</i></span>
+        <span>3 Wöch <i>+21</i></span>
+        <span>Monat <i>+30</i></span>
+        <span>Inbox <i>∅</i></span>
+      </div>
+      <div class="rows">
+        <div class="pr"><div class="flap hot">−53d<span class="u">delayed</span></div><div>
+          <div class="nm2">Drops</div>
+          <div class="meta"><span>last 12 MAR</span><span>×4</span></div>
+          <div class="note"><span class="lnk">▸ team.jive.berlin/s/anYH…</span></div></div></div>
+        <div class="pr"><div class="flap hot">−50d<span class="u">delayed</span></div><div>
+          <div class="nm2">Blindfold</div>
+          <div class="meta"><span class="lb">Drill</span><span>×2</span></div></div></div>
+        <div class="pr"><div class="flap late">−27d<span class="u">delayed</span></div><div>
+          <div class="nm2">Paraden</div>
+          <div class="meta"><span class="lb">Skill Block</span><span>×9</span></div></div></div>
+        <div class="pr"><div class="flap late">−20d<span class="u">delayed</span></div><div>
+          <div class="nm2">Inside turn followups</div>
+          <div class="meta"><span class="lb">Skill Block</span></div>
+          <div class="note"><span class="lnk">▸ team.jive.berlin/s/kFxm…</span></div></div></div>
+        <div class="pr"><div class="flap late">−16d<span class="u">delayed</span></div><div>
+          <div class="nm2">Gaze &amp; Facing Cues</div>
+          <div class="meta"><span class="lb">Skill Block</span></div>
+          <div class="note">— Neigen dazu jetzt zu oft in die audience zu gucken. Mehr auch zum Partner</div></div></div>
+        <div class="pr"><div class="flap late">−13d<span class="u">delayed</span></div><div>
+          <div class="nm2">OFS</div>
+          <div class="meta"><span class="lb">Skill Block</span></div>
+          <div class="note">One foot spins, Spot Turns, Pirouette turns</div></div></div>
+      </div>
+      <div class="ph-foot">
+        <button>+ Add</button><button>Board</button><button>Start practice</button>
+      </div>
+    </div>
+
+    <div class="detail">
+      <div class="d-head">
+        <div class="brd"><span>Platform 1 · Today</span><span>Delayed 16 days</span></div>
+        <h1>Gaze &amp; Facing Cues</h1>
+      </div>
+      <div class="d-facts">
+        <div><div class="k">Platform</div><div class="v">01<small>Today · now</small></div></div>
+        <div><div class="k">Due</div><div class="v">11 JUL<small>−16d delayed</small></div></div>
+        <div><div class="k">Practised</div><div class="v">×06<small>last 09 Jul</small></div></div>
+        <div><div class="k">Family</div><div class="v">—<small>no connections</small></div></div>
+      </div>
+      <div class="d-sec">
+        <h3>Classification</h3>
+        <div class="chips"><span class="chip">Skill Block</span></div>
+      </div>
+      <div class="d-sec">
+        <h3>Notice</h3>
+        <div class="notebody">
+          <ul>
+            <li>Neigen dazu jetzt zu oft in die audience zu gucken. Mehr auch zum Partner</li>
+            <li>Look at Judges ~50&nbsp;% of the time</li>
+            <li>Kilian: Head back</li>
+          </ul>
+        </div>
+      </div>
+      <div class="d-sec">
+        <h3>Connecting services</h3>
+        <div class="empty">
+          <p>No parent skill · no parts</p>
+          <button>Attach a family →</button>
+        </div>
+      </div>
+      <div class="d-sec">
+        <h3>Re-platform</h3>
+        <div class="plats" style="background:var(--rule);border:1px solid var(--rule-hard)">
+          <button style="background:var(--panel);color:var(--ink)"><span class="pn" style="color:var(--late)">P1</span><span class="pl">Today</span><span class="pi">stay · now</span></button>
+          <button style="background:var(--panel);color:var(--ink)"><span class="pn" style="color:var(--late)">P2</span><span class="pl">Wöchentlich</span><span class="pi">+7 days</span></button>
+          <button style="background:var(--panel);color:var(--ink)"><span class="pn" style="color:var(--late)">P3</span><span class="pl">2 Wöchentlich</span><span class="pi">+14 days</span></button>
+          <button style="background:var(--panel);color:var(--ink)"><span class="pn" style="color:var(--late)">P4</span><span class="pl">3 Wöchentlich</span><span class="pi">+21 days</span></button>
+          <button class="wide" style="background:var(--panel);color:var(--ink)"><span class="pn" style="color:var(--late)">P5</span><span class="pl">Monatlich</span><span class="pi">+30 days</span></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ 4. PRACTICE FOCUS ══════════════ -->
+<div class="seg">04 — Practice focus · phone · Drops</div>
+<div class="wrap">
+  <div class="phone focus">
+    <div class="f-top"><span class="q">Session · card 1 of 6</span><span class="prog">■□□□□□</span></div>
+    <div class="f-body">
+      <span class="dl">−53d DELAYED</span>
+      <h1>Drops</h1>
+      <div class="sub">Platform 1 · Today · last practised 12 Mar</div>
+      <div class="f-note">
+        <span class="lnk">▸ team.jive.berlin/s/anYHTeT958GzQc4</span>
+        <div style="height:12px"></div>
+        <span class="nh">General Cues</span>
+        <p>Keep the frame low through the entry. Weight stays back until the catch.</p>
+      </div>
+    </div>
+    <div class="f-file">
+      <div class="lab">Practised — select departure platform</div>
+      <div class="plats">
+        <button><span class="pn">P1</span><span class="pl">Today</span><span class="pi">again tomorrow</span></button>
+        <button><span class="pn">P2</span><span class="pl">Wöchentlich</span><span class="pi">+7 days</span></button>
+        <button><span class="pn">P3</span><span class="pl">2 Wöchentlich</span><span class="pi">+14 days</span></button>
+        <button><span class="pn">P4</span><span class="pl">3 Wöchentlich</span><span class="pi">+21 days</span></button>
+        <button class="wide"><span class="pn">P5</span><span class="pl">Monatlich</span><span class="pi">+30 days · furthest out</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

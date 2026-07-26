@@ -343,6 +343,14 @@ rotation.
 A `z-index` ladder is in use and should be extended, not bypassed: drag affordances 20 → sticky
 column chrome 60 → search panel 95 → modal backdrop 100 → toasts 1000.
 
+**The Shell-Never-Scrolls Rule.** `html`, `body` and `#app` are `overflow: hidden`, with `html` at
+an explicit `100dvh`; `#app` is the flex column every route lays out in. The document never
+scrolls — each view scrolls inside itself, via `flex: 1; min-height: 0; overflow-y: auto`. This is
+a clip rather than a height because Chrome for Android sizes the initial containing block to the
+*large* viewport and no `dvh` on a descendant can shrink it, which let the topbar be scrolled off
+screen on every route. A new full-height view that forgets its own scroller gets clipped content,
+not a scrollbar.
+
 ## Elevation & Depth
 
 **Tonal first, shadow second.** Depth is carried by the three-step lightness climb — board

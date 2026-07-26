@@ -115,11 +115,17 @@ async function onSubmit() {
 </template>
 
 <style scoped>
+/* Scrolls inside itself rather than scrolling the document — the document is
+   locked in App.vue. `min-height: 100vh` here was the last of the large-viewport
+   heights, and on a short phone with the keyboard up the card has to be
+   reachable, so this is the one view that genuinely needs its own scrollbar. */
 .auth {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 48px 16px;
 }
 
