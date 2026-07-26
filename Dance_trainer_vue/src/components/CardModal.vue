@@ -308,8 +308,18 @@ async function mergeUp() {
   await store.mergeCardIntoParent(childId, merged)
 }
 
+// A click fires on the nearest common ancestor of its mousedown and mouseup
+// targets, so dragging a text selection inside the modal and releasing outside
+// it lands a click on the backdrop — closing the card mid-selection. Only treat
+// it as a dismissal when the press started on the backdrop too.
+const pressedBackdrop = ref(false)
+
+function onBackdropPointerDown(event: PointerEvent) {
+  pressedBackdrop.value = event.target === event.currentTarget
+}
+
 function onBackdropClick(event: MouseEvent) {
-  if (event.target === event.currentTarget) closeModal()
+  if (event.target === event.currentTarget && pressedBackdrop.value) closeModal()
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -343,7 +353,14 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 </script>
 
 <template>
-  <div ref="backdropEl" class="backdrop" @click="onBackdropClick" @keydown="onKeydown" tabindex="-1">
+  <div
+    ref="backdropEl"
+    class="backdrop"
+    @pointerdown="onBackdropPointerDown"
+    @click="onBackdropClick"
+    @keydown="onKeydown"
+    tabindex="-1"
+  >
     <div v-if="card" class="modal">
       <div ref="modalActionsEl" class="modal-actions">
         <button class="menu-btn" title="More actions" @click="menuOpen = !menuOpen">⋯</button>
