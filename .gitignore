@@ -2,3 +2,7 @@
 
 # Logseq auto-generated backups — not content
 Dance_trainer_logseq/logseq/bak/
+
+# Impeccable hook cache — per-session, holds absolute /tmp paths and session UUIDs.
+# The design-system sidecar at the repo root (.impeccable/design.json) stays tracked.
+**/.impeccable/hook.cache.json
