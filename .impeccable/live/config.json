@@ -1,6 +1,0 @@
-{
-  "files": ["Dance_trainer_vue/index.html"],
-  "insertBefore": "</body>",
-  "commentSyntax": "html",
-  "cspChecked": true
-}
