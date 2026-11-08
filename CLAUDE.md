@@ -1,0 +1,1 @@
+- Mobile First also immer im kleinst möglichsten Viewport und mit mobile gesten fokus und touch fokus entwickeln sowie testen.
