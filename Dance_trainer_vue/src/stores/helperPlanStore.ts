@@ -1,19 +1,23 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import {
   assembleRows,
   cleanName,
+  knownNames as namesOnPlan,
+  sameName,
   type CellField,
   type HelperMeta,
   type HelperPage,
   type HelperRow,
   type HelperRowRecord,
   type HelperSignupRecord,
-  type ImportRow,
+  type ImportPayloadRow,
   type RowType,
+  type ToggleColumn,
 } from '@/lib/helperPlan'
+import { commonTimes as timesOnPlan, knownRooms as roomsOnPlan } from '@/lib/helperBoards'
 import { useToastStore } from './toastStore'
 
 const GUEST_NAME_KEY = 'helper-guest-name'
@@ -22,20 +26,21 @@ const LIVE_TABLES = ['helper_plan', 'helper_pages', 'helper_rows', 'helper_signu
 const REFETCH_DEBOUNCE_MS = 300
 const FALLBACK_REFRESH_MS = 60_000
 
-// Storage throws in some private-browsing modes; the plan still has to work,
-// the name just won't be remembered.
-function readStorage(storage: Storage, key: string): string | null {
+// Storage throws in some private-browsing modes, on merely reading the global when
+// it's fully blocked, hence the getter. The plan still has to work, the name just
+// won't be remembered.
+function readStorage(storage: () => Storage, key: string): string | null {
   try {
-    return storage.getItem(key)
+    return storage().getItem(key)
   } catch {
     return null
   }
 }
 
-function writeStorage(storage: Storage, key: string, value: string | null) {
+function writeStorage(storage: () => Storage, key: string, value: string | null) {
   try {
-    if (value === null) storage.removeItem(key)
-    else storage.setItem(key, value)
+    if (value === null) storage().removeItem(key)
+    else storage().setItem(key, value)
   } catch {
     // See readStorage.
   }
@@ -48,22 +53,33 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
   const loading = ref(false)
   // The last fetch failed, so what's on screen (if anything) may be out of date.
   const loadFailed = ref(false)
-  const guestName = ref(readStorage(localStorage, GUEST_NAME_KEY) ?? '')
+  const guestName = ref(readStorage(() => localStorage, GUEST_NAME_KEY) ?? '')
   // Starts false even with a stored PIN: admin controls appear once the server
   // has accepted it, not on the strength of what's in sessionStorage.
   const isAdmin = ref(false)
 
+  const rowById = (id: number) => Object.values(rowsByPage.value).flat().find((row) => row.id === id) ?? null
+
+  const knownNames = computed(() => namesOnPlan(rowsByPage.value))
+  const knownRooms = computed(() => roomsOnPlan(rowsByPage.value))
+  const commonTimes = computed(() => timesOnPlan(rowsByPage.value))
+
   const toast = useToastStore()
-  let adminPin = readStorage(sessionStorage, ADMIN_PIN_KEY)
+  let adminPin = readStorage(() => sessionStorage, ADMIN_PIN_KEY)
   let adminVerified = false
   let hasData = false
   let latestFetch = 0
+  let newestFetch: Promise<void> = Promise.resolve()
   let channel: RealtimeChannel | null = null
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let fallbackTimer: ReturnType<typeof setInterval> | null = null
 
-  async function fetchPlan(quiet: boolean) {
-    const fetchId = ++latestFetch
+  function fetchPlan(quiet: boolean): Promise<void> {
+    newestFetch = runFetch(++latestFetch, quiet)
+    return newestFetch
+  }
+
+  async function runFetch(fetchId: number, quiet: boolean): Promise<void> {
     if (!hasData) loading.value = true
     const [planResult, pagesResult, rowsResult, signupsResult] = await Promise.all([
       supabase.from('helper_plan').select('title, info').maybeSingle(),
@@ -75,8 +91,10 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
         .order('created_at')
         .order('id'),
     ])
-    // Overlapping fetches can land out of order; only the newest may paint.
-    if (fetchId !== latestFetch) return
+    // Overlapping fetches can land out of order; only the newest may paint. It
+    // started later, so it sees everything this one would have, and waiting for it
+    // is what keeps write()'s promise when this fetch was overtaken.
+    if (fetchId !== latestFetch) return newestFetch
     loading.value = false
 
     const error =
@@ -151,8 +169,9 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
   }
 
   function setGuestName(name: string) {
-    guestName.value = cleanName(name)
-    writeStorage(localStorage, GUEST_NAME_KEY, guestName.value || null)
+    // Typing "conny" when "Conny" is on the plan is the same person.
+    guestName.value = knownNames.value.find((known) => sameName(known, name)) ?? cleanName(name)
+    writeStorage(() => localStorage, GUEST_NAME_KEY, guestName.value || null)
   }
 
   // Awaits the refetch so that a caller resuming after `await` sees the new data.
@@ -161,7 +180,7 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
     if (error) {
       toast.show(error.message)
       // The usual refusal is "someone got there first": show what they did.
-      void fetchPlan(true)
+      await fetchPlan(true)
       return false
     }
     await load()
@@ -191,6 +210,10 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
     write('helper_unsign', { _row_id: rowId, _name: name })
   const setCell = (rowId: number, field: CellField, value: string) =>
     write('helper_set_cell', { _row_id: rowId, _field: field, _value: value })
+  const setExtra = (rowId: number, columnId: string, value: string) =>
+    write('helper_set_extra', { _row_id: rowId, _column_id: columnId, _value: value })
+  const setDone = (rowId: number, done: boolean) =>
+    write('helper_set_done', { _row_id: rowId, _done: done })
 
   async function adminLogin(pin: string): Promise<boolean> {
     const { data, error } = await supabase.rpc('helper_admin_check', { _pin: pin })
@@ -205,7 +228,7 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
     adminPin = pin
     adminVerified = true
     isAdmin.value = true
-    writeStorage(sessionStorage, ADMIN_PIN_KEY, pin)
+    writeStorage(() => sessionStorage, ADMIN_PIN_KEY, pin)
     return true
   }
 
@@ -213,7 +236,7 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
     adminPin = null
     adminVerified = false
     isAdmin.value = false
-    writeStorage(sessionStorage, ADMIN_PIN_KEY, null)
+    writeStorage(() => sessionStorage, ADMIN_PIN_KEY, null)
   }
 
   const setMeta = (title: string, info: string) =>
@@ -225,6 +248,11 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
   }
   const renamePage = (id: number, name: string) =>
     adminWrite('helper_admin_rename_page', { _page_id: id, _name: name })
+  const setColumnShown = (id: number, column: ToggleColumn, shown: boolean) =>
+    adminWrite('helper_admin_set_column_shown', { _page_id: id, _column: column, _shown: shown })
+  const addColumn = (id: number, name: string) => adminWrite('helper_admin_add_column', { _page_id: id, _name: name })
+  const deleteColumn = (id: number, columnId: string) =>
+    adminWrite('helper_admin_delete_column', { _page_id: id, _column_id: columnId })
   const deletePage = (id: number) => adminWrite('helper_admin_delete_page', { _page_id: id })
   const movePage = (id: number, delta: number) =>
     adminWrite('helper_admin_move_page', { _page_id: id, _delta: delta })
@@ -238,6 +266,7 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
       where: string
       needed: number
       comment: string
+      extra: Record<string, string>
     },
   ) =>
     adminWrite('helper_admin_add_row', {
@@ -248,11 +277,12 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
       _where: row.where,
       _needed: row.needed,
       _comment: row.comment,
+      _extra: row.extra,
     })
   const deleteRow = (id: number) => adminWrite('helper_admin_delete_row', { _row_id: id })
   const moveRow = (id: number, delta: number) =>
     adminWrite('helper_admin_move_row', { _row_id: id, _delta: delta })
-  const importRows = (pageId: number, rows: ImportRow[], replace: boolean) =>
+  const importRows = (pageId: number, rows: ImportPayloadRow[], replace: boolean) =>
     adminWrite('helper_admin_import_rows', { _page_id: pageId, _rows: rows, _replace: replace })
 
   return {
@@ -262,6 +292,10 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
     loading,
     loadFailed,
     guestName,
+    knownNames,
+    knownRooms,
+    commonTimes,
+    rowById,
     isAdmin,
     load,
     startLive,
@@ -270,11 +304,16 @@ export const useHelperPlanStore = defineStore('helperPlan', () => {
     signUp,
     removeName,
     setCell,
+    setExtra,
+    setDone,
     adminLogin,
     adminLogout,
     setMeta,
     addPage,
     renamePage,
+    setColumnShown,
+    addColumn,
+    deleteColumn,
     deletePage,
     movePage,
     addRow,

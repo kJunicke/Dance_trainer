@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useHelperPlanStore } from '@/stores/helperPlanStore'
-import { visibleRows } from '@/lib/helperPlan'
-import type { HelperPage } from '@/lib/helperPlan'
+import { printSheets } from '@/lib/helperPlan'
 import HelperPrintDialog from './HelperPrintDialog.vue'
 import HelperPrintSheets from './HelperPrintSheets.vue'
 
@@ -22,20 +21,23 @@ const printedAt = ref(new Date())
 const activePage = computed(() => store.pages.find((p) => p.id === props.activePageId) ?? null)
 const onlyOpenNow = computed(() => chosen.value?.onlyOpen ?? props.onlyOpen)
 
-function sheetFor(page: HelperPage) {
-  return { page, rows: visibleRows(store.rowsByPage[page.id] ?? [], onlyOpenNow.value) }
-}
-
-const sheets = computed(() => {
-  if (chosen.value?.allTabs) return store.pages.map(sheetFor).filter((s) => s.rows.length > 0)
-  return activePage.value ? [sheetFor(activePage.value)] : []
-})
+const sheets = computed(() =>
+  printSheets(store.pages, store.rowsByPage, activePage.value, {
+    allTabs: chosen.value?.allTabs ?? false,
+    onlyOpen: onlyOpenNow.value,
+  }),
+)
 
 const printedAtLabel = computed(() =>
   printedAt.value.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }),
 )
 
 const signupUrl = `${new URL(import.meta.env.BASE_URL, window.location.origin).href}#/helpers`
+
+function openDialog() {
+  printedAt.value = new Date()
+  dialogOpen.value = true
+}
 
 async function printChoice(choice: { allTabs: boolean; onlyOpen: boolean }) {
   chosen.value = choice
@@ -75,11 +77,13 @@ onUnmounted(() => {
 
 <template>
   <div class="helper-print-controls">
-    <button type="button" class="print-btn" :disabled="!activePage" @click="dialogOpen = true">Print / Export</button>
+    <button type="button" class="print-btn" :disabled="!activePage" @click="openDialog">Print / Export</button>
     <HelperPrintDialog
       v-if="dialogOpen && activePage"
-      :tab-name="activePage.name"
+      :active-page="activePage"
       :only-open="onlyOpen"
+      :printed-at="printedAtLabel"
+      :signup-url="signupUrl"
       @close="dialogOpen = false"
       @print="printChoice"
     />

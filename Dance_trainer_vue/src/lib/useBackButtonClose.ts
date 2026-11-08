@@ -30,3 +30,16 @@ export function useBackButtonClose(close: () => void) {
     }
   })
 }
+
+// On the document, because focus falls to <body> when the button holding it is
+// removed and Escape still has to work then. Only the sheet on top answers.
+export function useEscapeClose(sheet: () => HTMLElement | null, close: () => void) {
+  function onKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Escape') return
+    const open = document.querySelectorAll('.helper-sheet-backdrop')
+    if (open[open.length - 1] === sheet()) close()
+  }
+
+  onMounted(() => document.addEventListener('keydown', onKeydown))
+  onUnmounted(() => document.removeEventListener('keydown', onKeydown))
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useHelperPlanStore } from '@/stores/helperPlanStore'
 import { useToastStore } from '@/stores/toastStore'
 import {
@@ -8,6 +8,9 @@ import {
   findTabPage,
   sheetsToTabImports,
   tsvToImportRows,
+  unmatchedColumns,
+  withColumnIds,
+  type HelperPage,
   type ImportRow,
 } from '@/lib/helperPlan'
 import type { WorkbookSheet } from '@/lib/helperSpreadsheet'
@@ -21,7 +24,7 @@ const props = defineProps<{
   pageName: string
 }>()
 
-const emit = defineEmits<{ done: [] }>()
+const emit = defineEmits<{ done: []; dirty: [value: boolean] }>()
 
 const store = useHelperPlanStore()
 const toast = useToastStore()
@@ -41,6 +44,11 @@ const fileError = ref('')
 const scope = ref<'one' | 'all'>('all')
 const chosenTab = ref('')
 let readToken = 0
+
+watch(
+  () => text.value.trim() !== '' || workbook.value !== null,
+  (dirty) => emit('dirty', dirty),
+)
 
 async function onFilePicked(event: Event) {
   const input = event.target as HTMLInputElement
@@ -105,6 +113,10 @@ function existingRows(pageId: number | null): number {
   return pageId === null ? 0 : (store.rowsByPage[pageId]?.length ?? 0)
 }
 
+function pageOf(pageId: number | null): HelperPage | null {
+  return store.pages.find((page) => page.id === pageId) ?? null
+}
+
 function currentTabTarget(rows: ImportRow[]): Target {
   return { name: props.pageName, pageId: props.pageId, rows, existing: existingRows(props.pageId) }
 }
@@ -146,7 +158,12 @@ function summarize(rows: ImportRow[]): string {
 const allRows = computed(() => targets.value.flatMap((target) => target.rows))
 const preview = computed(() => summarize(allRows.value))
 const manyTargets = computed(() => targets.value.length > 1)
-const shortened = computed(() => countOverLimitCells(allRows.value))
+const shortened = computed(() =>
+  countOverLimitCells(targets.value.flatMap((target) => withColumnIds(target.rows, pageOf(target.pageId)))),
+)
+const skippedColumns = computed(() => [
+  ...new Set(targets.value.flatMap((target) => unmatchedColumns(target.rows, pageOf(target.pageId)))),
+])
 
 const oversized = computed(() => targets.value.filter((target) => target.rows.length > MAX_ROWS))
 const tooManyTabs = computed(() => targets.value.length > MAX_TABS)
@@ -176,7 +193,7 @@ async function submit() {
 
   for (const target of plan) {
     const pageId = target.pageId ?? (await store.addPage(target.name))
-    if (pageId === null || !(await store.importRows(pageId, target.rows, replace))) {
+    if (pageId === null || !(await store.importRows(pageId, withColumnIds(target.rows, pageOf(pageId)), replace))) {
       failedAt = target.name
       break
     }
@@ -278,6 +295,10 @@ async function submit() {
       {{ shortened === 1 ? '1 cell is' : `${shortened} cells are` }} longer than the limit and will be shortened.
     </p>
 
+    <p v-if="skippedColumns.length" class="ha-hint">
+      Not imported, because the tab has no column with that name: {{ skippedColumns.join(', ') }}.
+    </p>
+
     <p v-for="target in oversized" :key="target.name" class="ha-error" role="alert">
       {{ target.name }} has {{ target.rows.length }} rows; one import can hold at most {{ MAX_ROWS }} per tab. Nothing
       was cut off: split the file and import it in parts.
@@ -317,7 +338,7 @@ async function submit() {
   overflow-wrap: anywhere;
 }
 
-.paste {
+.ha-field .paste {
   font-family: var(--font-mono);
   white-space: pre;
   overflow-x: auto;

@@ -23,7 +23,7 @@ const emit = defineEmits<{
       Import into {{ activeTabName ?? 'tab' }}
     </button>
     <p v-if="!activeTabName" class="ha-hint">Add a tab first to put tasks on it.</p>
-    <button type="button" class="ha-btn item" @click="emit('tabs')">Manage tabs</button>
+    <button type="button" class="ha-btn item" @click="emit('tabs')">Add or remove tabs</button>
     <button type="button" class="ha-btn item" @click="emit('details')">Edit title and info</button>
     <button type="button" class="ha-btn item" @click="emit('logout')">Log out of admin</button>
   </div>
@@ -36,7 +36,8 @@ const emit = defineEmits<{
   gap: 8px;
 }
 
-.item {
+.menu .item {
+  justify-content: flex-start;
   width: 100%;
   min-height: 48px;
   text-align: left;

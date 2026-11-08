@@ -9,9 +9,11 @@
 
 import {
   EXPORT_COLUMNS,
+  exportHeader,
   findHeader,
   parseDelimited,
   plansToDelimited,
+  pageExportColumns,
   rowToExportCells,
   stripFormulaGuard,
   type HelperPage,
@@ -836,7 +838,22 @@ interface ExportSheet {
 }
 
 const EXCEL_SHEET_NAME_LIMIT = 31
-const COLUMN_WIDTHS = [48, 14, 20, 26, 32, 8, 9, 20]
+const COLUMN_WIDTHS = new Map([
+  ['Task', 48],
+  ['When', 14],
+  ['Where', 20],
+  ['Who', 26],
+  ['Done', 8],
+  ['Comment', 32],
+  ['Needed', 9],
+  ['Type', 9],
+  ['Tab', 20],
+])
+const CUSTOM_COLUMN_WIDTH = 24
+
+function columnWidth(header: string): number {
+  return COLUMN_WIDTHS.get(header) ?? CUSTOM_COLUMN_WIDTH
+}
 
 // Sheet names can't carry every tab name (31 characters, no []:*?/\). When one
 // had to change, the real name travels in a Tab column, which import prefers.
@@ -868,11 +885,13 @@ function exportSheets(pages: HelperPage[], rowsByPage: Record<number, HelperRow[
   const sheets = pages.map((page): ExportSheet => {
     const name = safeSheetName(page.name, used)
     const withTab = name !== page.name
+    const rows = rowsByPage[page.id] ?? []
+    const columns = pageExportColumns(page, rows)
     return {
       name,
-      header: withTab ? [...EXPORT_COLUMNS, 'Tab'] : [...EXPORT_COLUMNS],
-      rows: (rowsByPage[page.id] ?? []).map((row) => {
-        const cells = rowToExportCells(row)
+      header: withTab ? [...columns.map(exportHeader), 'Tab'] : columns.map(exportHeader),
+      rows: rows.map((row) => {
+        const cells = rowToExportCells(row, columns)
         return withTab ? [...cells, page.name] : cells
       }),
     }
@@ -944,7 +963,7 @@ function buildXlsx(sheets: ExportSheet[]): Uint8Array<ArrayBuffer> {
 
   const worksheets = sheets.map((sheet) => {
     const cols = sheet.header
-      .map((_, i) => `<col min="${i + 1}" max="${i + 1}" width="${COLUMN_WIDTHS[i]}" customWidth="1"/>`)
+      .map((h, i) => `<col min="${i + 1}" max="${i + 1}" width="${columnWidth(h)}" customWidth="1"/>`)
       .join('')
     const headerRow = `<row r="1">${sheet.header.map((h, i) => cellXml(h, i, 1, STYLE_HEADER)).join('')}</row>`
     const bodyRows = sheet.rows
@@ -1036,10 +1055,13 @@ function odsParagraphs(text: string): string {
 }
 
 function buildOds(sheets: ExportSheet[]): Uint8Array<ArrayBuffer> {
-  const columnStyles = COLUMN_WIDTHS.map(
-    (width, i) =>
-      `<style:style style:name="co${i + 1}" style:family="table-column"><style:table-column-properties style:column-width="${(width * 0.19).toFixed(2)}cm"/></style:style>`,
-  ).join('')
+  const widths = new Set(sheets.flatMap((sheet) => sheet.header.map(columnWidth)))
+  const columnStyles = [...widths]
+    .map(
+      (width) =>
+        `<style:style style:name="co${width}" style:family="table-column"><style:table-column-properties style:column-width="${(width * 0.19).toFixed(2)}cm"/></style:style>`,
+    )
+    .join('')
   const cellStyles =
     '<style:style style:name="ceh" style:family="table-cell"><style:text-properties fo:font-weight="bold"/></style:style>' +
     '<style:style style:name="ceb" style:family="table-cell"><style:table-cell-properties fo:wrap-option="wrap" style:vertical-align="top"/></style:style>'
@@ -1054,7 +1076,7 @@ function buildOds(sheets: ExportSheet[]): Uint8Array<ArrayBuffer> {
 
   const tables = sheets
     .map((sheet) => {
-      const columns = sheet.header.map((_, i) => `<table:table-column table:style-name="co${i + 1}"/>`).join('')
+      const columns = sheet.header.map((h) => `<table:table-column table:style-name="co${columnWidth(h)}"/>`).join('')
       const headerRow = `<table:table-row>${sheet.header.map((h) => cellXml(h, 'ceh')).join('')}</table:table-row>`
       const bodyRows = sheet.rows
         .map((cells) => `<table:table-row>${cells.map((c) => cellXml(c, 'ceb')).join('')}</table:table-row>`)

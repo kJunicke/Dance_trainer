@@ -3,16 +3,29 @@
 
 export type RowType = 'task' | 'section'
 export type CellField = 'task' | 'when' | 'where' | 'needed' | 'comment'
+export type ExtraField = `extra:${string}`
+export type EditField = CellField | ExtraField
+export type ToggleColumn = 'when' | 'where' | 'done' | 'comment'
 
 export interface HelperMeta {
   title: string
   info: string
 }
 
+export interface CustomColumn {
+  id: string
+  name: string
+}
+
 export interface HelperPage {
   id: number
   name: string
   position: number
+  show_when: boolean
+  show_where: boolean
+  show_done: boolean
+  show_comment: boolean
+  custom_columns: CustomColumn[]
 }
 
 export interface HelperRow {
@@ -25,7 +38,11 @@ export interface HelperRow {
   where: string
   needed: number
   comment: string
+  // Counts only while the tab shows Done; what's stored is kept for when it's shown again.
+  done: boolean
+  storedDone: boolean
   who: string[]
+  extra: Record<string, string>
 }
 
 export interface ImportRow {
@@ -36,9 +53,14 @@ export interface ImportRow {
   who: string[]
   needed: number
   comment: string
+  done: boolean
+  // Values of the columns the file has beyond the built-in ones, by file heading.
+  custom: Map<string, string>
 }
 
-export type HelperRowRecord = Omit<HelperRow, 'who'>
+export type ImportPayloadRow = Omit<ImportRow, 'custom'> & { extra: Record<string, string> }
+
+export type HelperRowRecord = Omit<HelperRow, 'who' | 'storedDone'>
 
 export interface HelperSignupRecord {
   row_id: number
@@ -56,6 +78,9 @@ export const HELPER_LIMITS = {
   neededMin: 1,
   neededMax: 50,
   page: 40,
+  columnName: 40,
+  customColumns: 10,
+  extra: 1000,
   importRowsPerTab: 500,
 } as const
 
@@ -68,7 +93,26 @@ export function sameName(a: string, b: string): boolean {
   return cleanName(a).toLowerCase() === cleanName(b).toLowerCase()
 }
 
+export function extraField(columnId: string): ExtraField {
+  return `extra:${columnId}`
+}
+
+export function isExtraField(field: string): field is ExtraField {
+  return field.startsWith('extra:')
+}
+
+export function extraColumnId(field: ExtraField): string {
+  return field.slice('extra:'.length)
+}
+
+// Task and Who are always there.
+export function pageColumnCount(page: HelperPage): number {
+  const toggled = [page.show_when, page.show_where, page.show_done, page.show_comment].filter(Boolean).length
+  return 2 + toggled + page.custom_columns.length
+}
+
 export function openPlaces(row: HelperRow): number {
+  if (row.done) return 0
   return row.type === 'task' ? Math.max(0, row.needed - row.who.length) : 0
 }
 
@@ -76,10 +120,70 @@ export function countOpen(rows: HelperRow[]): number {
   return rows.reduce((sum, row) => sum + openPlaces(row), 0)
 }
 
+// How many places a drop moves `id` in the full order. `before` is the shown item
+// it lands above, null past the last one; `shown` can be a filtered part of `all`.
+export function reorderDelta(all: number[], shown: number[], id: number, before: number | null): number {
+  const from = all.indexOf(id)
+  const shownAt = shown.indexOf(id)
+  // Landing on the next shown item is where it already appears.
+  if (from === -1 || (before !== null && shownAt !== -1 && shown[shownAt + 1] === before)) return 0
+  const insertAt = before === null ? all.indexOf(shown.at(-1) ?? -1) + 1 : all.indexOf(before)
+  if (insertAt === -1 || (before === null && insertAt === 0)) return 0
+  return (insertAt > from ? insertAt - 1 : insertAt) - from
+}
+
 // With "only open", a section heading survives only if an open task follows it
 // before the next heading; a heading over nothing would read as an open slot.
 export function visibleRows(rows: HelperRow[], onlyOpen: boolean): HelperRow[] {
-  if (!onlyOpen) return rows
+  return onlyOpen ? keepWithHeadings(rows, (row) => openPlaces(row) > 0) : rows
+}
+
+export interface PrintSheet {
+  page: HelperPage
+  rows: HelperRow[]
+}
+
+// "All tabs" leaves out a tab with nothing to show rather than printing an empty
+// page, so with every task covered there may be no sheets at all. A single chosen
+// tab always prints, saying it is empty.
+export function printSheets(
+  pages: HelperPage[],
+  rowsByPage: Record<number, HelperRow[]>,
+  activePage: HelperPage | null,
+  choice: { allTabs: boolean; onlyOpen: boolean },
+): PrintSheet[] {
+  const sheetFor = (page: HelperPage) => ({ page, rows: visibleRows(rowsByPage[page.id] ?? [], choice.onlyOpen) })
+  if (choice.allTabs) return pages.map(sheetFor).filter((sheet) => sheet.rows.length > 0)
+  return activePage ? [sheetFor(activePage)] : []
+}
+
+export function myRows(rows: HelperRow[], me: string): HelperRow[] {
+  return keepWithHeadings(rows, (row) => row.who.some((name) => sameName(name, me)))
+}
+
+// Everyone on the plan, one spelling each, the first one seen.
+export function knownNames(rowsByPage: Record<number, HelperRow[]>): string[] {
+  const byPerson = new Map<string, string>()
+  for (const rows of Object.values(rowsByPage)) {
+    for (const row of rows) {
+      for (const name of row.who) {
+        const person = cleanName(name).toLowerCase()
+        if (!byPerson.has(person)) byPerson.set(person, name)
+      }
+    }
+  }
+  return [...byPerson.values()].sort((a, b) => a.localeCompare(b))
+}
+
+// Names starting with what was typed come before names merely containing it.
+export function suggestNames(names: string[], typed: string, limit = 6): string[] {
+  const query = cleanName(typed).toLowerCase()
+  const starts = names.filter((name) => name.toLowerCase().startsWith(query))
+  const contains = names.filter((name) => !name.toLowerCase().startsWith(query) && name.toLowerCase().includes(query))
+  return [...starts, ...contains].slice(0, limit)
+}
+
+function keepWithHeadings(rows: HelperRow[], keep: (row: HelperRow) => boolean): HelperRow[] {
   const out: HelperRow[] = []
   let pendingSection: HelperRow | null = null
   for (const row of rows) {
@@ -87,7 +191,7 @@ export function visibleRows(rows: HelperRow[], onlyOpen: boolean): HelperRow[] {
       pendingSection = row
       continue
     }
-    if (openPlaces(row) === 0) continue
+    if (!keep(row)) continue
     if (pendingSection) {
       out.push(pendingSection)
       pendingSection = null
@@ -111,9 +215,18 @@ export function assembleRows(
     else namesByRow.set(signup.row_id, [signup.name])
   }
   const byPage: Record<number, HelperRow[]> = {}
-  for (const page of pages) byPage[page.id] = []
+  const showsDone = new Set<number>()
+  for (const page of pages) {
+    byPage[page.id] = []
+    if (page.show_done) showsDone.add(page.id)
+  }
   for (const row of rows) {
-    byPage[row.page_id]?.push({ ...row, who: namesByRow.get(row.id) ?? [] })
+    byPage[row.page_id]?.push({
+      ...row,
+      done: row.done && showsDone.has(row.page_id),
+      storedDone: row.done,
+      who: namesByRow.get(row.id) ?? [],
+    })
   }
   return byPage
 }
@@ -157,7 +270,7 @@ export function parseTSV(text: string): string[][] {
   return parseDelimited(text, '\t')
 }
 
-const IMPORT_COLUMNS = ['task', 'when', 'where', 'who', 'comment', 'needed', 'type', 'tab'] as const
+const IMPORT_COLUMNS = ['task', 'when', 'where', 'who', 'done', 'comment', 'needed', 'type', 'tab'] as const
 type ImportColumn = (typeof IMPORT_COLUMNS)[number]
 type ColumnMap = Partial<Record<ImportColumn, number>>
 
@@ -172,15 +285,20 @@ function isImportColumn(name: string): name is ImportColumn {
 // task. A lone "Task" only counts in the very first cell (the pasted-header case
 // this always handled); anywhere else it needs a second column name beside it,
 // because the rows above a header are free text.
-export function findHeader(table: string[][]): { index: number; columns: ColumnMap } | null {
+export function findHeader(
+  table: string[][],
+): { index: number; columns: ColumnMap; custom: { name: string; position: number }[] } | null {
   for (let index = 0; index < Math.min(HEADER_SEARCH_ROWS, table.length); index++) {
     const columns: ColumnMap = {}
+    const custom: { name: string; position: number }[] = []
     ;(table[index] ?? []).forEach((cell, position) => {
       const name = cell.trim().toLowerCase()
-      if (isImportColumn(name) && columns[name] === undefined) columns[name] = position
+      if (isImportColumn(name)) {
+        if (columns[name] === undefined) columns[name] = position
+      } else if (name) custom.push({ name: cell.trim(), position })
     })
     if (columns.task === undefined) continue
-    if (Object.keys(columns).length >= 2 || (index === 0 && columns.task === 0)) return { index, columns }
+    if (Object.keys(columns).length >= 2 || (index === 0 && columns.task === 0)) return { index, columns, custom }
   }
   return null
 }
@@ -205,6 +323,9 @@ export function namesToCell(names: string[]): string {
   if (!names.some((name) => name.includes(','))) return names.join(', ')
   return names.length === 1 ? `${names[0]}\n` : names.join('\n')
 }
+
+// What a ticked Done cell looks like: our own export, or a sheet's checkbox.
+const DONE_CELL = /^\s*(x|✓|✔|yes|ja|true|wahr|1|done)\s*$/i
 
 interface ParsedRow extends ImportRow {
   tab: string
@@ -233,6 +354,11 @@ function parseTable(
       ? /^\s*(section|heading)\s*$/i.test(read(cells, 'type'))
       : opts.sectionsFromEmpty && !where.trim() && who.length === 0
     const asked = Number.parseInt(read(cells, 'needed'), 10)
+    const custom = new Map<string, string>()
+    for (const { name, position } of header?.custom ?? []) {
+      const value = cells[position] ?? ''
+      if (value.trim() && !custom.has(name)) custom.set(name, value)
+    }
     rows.push({
       type: section ? 'section' : 'task',
       task,
@@ -245,6 +371,8 @@ function parseTable(
         section ? 1 : who.length,
       ),
       comment: read(cells, 'comment'),
+      done: !section && DONE_CELL.test(read(cells, 'done')),
+      custom,
       tab: read(cells, 'tab').trim(),
     })
   }
@@ -290,8 +418,15 @@ function isOverLimit(text: string, limit: number): boolean {
   return text.length > limit && Array.from(text).length > limit
 }
 
+// A write the server would cut short, measured the way countOverLimitCells does.
+export function cellOverLimit(field: 'when' | 'where', text: string): boolean {
+  return field === 'when'
+    ? isOverLimit(cleanLine(text), HELPER_LIMITS.when)
+    : isOverLimit(cleanMultiline(text), HELPER_LIMITS.where)
+}
+
 // Measured after the same whitespace cleanup the server does before it cuts.
-export function countOverLimitCells(rows: ImportRow[]): number {
+export function countOverLimitCells(rows: ImportPayloadRow[]): number {
   let count = 0
   for (const row of rows) {
     if (isOverLimit(cleanMultiline(row.task), HELPER_LIMITS.task)) count++
@@ -299,8 +434,34 @@ export function countOverLimitCells(rows: ImportRow[]): number {
     if (isOverLimit(cleanMultiline(row.where), HELPER_LIMITS.where)) count++
     if (isOverLimit(cleanMultiline(row.comment), HELPER_LIMITS.comment)) count++
     for (const name of row.who) if (isOverLimit(cleanLine(name), HELPER_LIMITS.name)) count++
+    for (const value of Object.values(row.extra)) if (isOverLimit(cleanMultiline(value), HELPER_LIMITS.extra)) count++
   }
   return count
+}
+
+function columnKey(name: string): string {
+  return cleanLine(name).toLowerCase()
+}
+
+// A file's extra columns land in the tab's custom columns of the same name; the
+// rest are left out, listed by unmatchedColumns.
+export function withColumnIds(rows: ImportRow[], page: HelperPage | null): ImportPayloadRow[] {
+  const idByName = new Map((page?.custom_columns ?? []).map((column) => [columnKey(column.name), column.id]))
+  return rows.map(({ custom, ...row }) => {
+    const extra: Record<string, string> = {}
+    for (const [name, value] of custom) {
+      const id = idByName.get(columnKey(name))
+      if (id && extra[id] === undefined) extra[id] = value
+    }
+    return { ...row, extra }
+  })
+}
+
+export function unmatchedColumns(rows: ImportRow[], page: HelperPage | null): string[] {
+  const known = new Set((page?.custom_columns ?? []).map((column) => columnKey(column.name)))
+  const missing = new Set<string>()
+  for (const row of rows) for (const name of row.custom.keys()) if (!known.has(columnKey(name))) missing.add(name)
+  return [...missing]
 }
 
 export interface TabImport {
@@ -333,18 +494,47 @@ export function sheetsToTabImports(
   return { tabs: [...byName.values()], usedTabColumn }
 }
 
-export const EXPORT_COLUMNS = ['Task', 'When', 'Where', 'Who', 'Comment', 'Needed', 'Type'] as const
+export const EXPORT_COLUMNS = ['Task', 'When', 'Where', 'Who', 'Done', 'Comment', 'Needed', 'Type'] as const
+type BuiltInExportColumn = (typeof EXPORT_COLUMNS)[number]
+export type ExportColumn = BuiltInExportColumn | CustomColumn
 
-export function rowToExportCells(row: HelperRow): (string | number)[] {
-  return [
-    row.task,
-    row.when,
-    row.where,
-    namesToCell(row.who),
-    row.comment,
-    row.type === 'task' ? row.needed : '',
-    row.type,
-  ]
+const HIDEABLE_COLUMNS: Partial<Record<BuiltInExportColumn, keyof HelperPage>> = {
+  When: 'show_when',
+  Where: 'show_where',
+  Done: 'show_done',
+  Comment: 'show_comment',
+}
+
+// A sheet per tab carries that tab's columns; the flat CSV/TSV needs them all. A
+// hidden column still goes in while it holds anything, or a Replace import of the
+// file would delete what hiding promised to keep.
+export function pageExportColumns(page: HelperPage, rows: HelperRow[]): ExportColumn[] {
+  const builtIn = EXPORT_COLUMNS.filter((column) => {
+    const flag = HIDEABLE_COLUMNS[column]
+    return !flag || page[flag] || rows.some((row) => String(rowToExportCells(row, [column])[0]).trim() !== '')
+  })
+  return [...builtIn, ...page.custom_columns]
+}
+
+export function exportHeader(column: ExportColumn): string {
+  return typeof column === 'string' ? column : column.name
+}
+
+export function rowToExportCells(
+  row: HelperRow,
+  columns: readonly ExportColumn[] = EXPORT_COLUMNS,
+): (string | number)[] {
+  const cells: Record<BuiltInExportColumn, string | number> = {
+    Task: row.task,
+    When: row.when,
+    Where: row.where,
+    Who: namesToCell(row.who),
+    Done: row.storedDone ? 'x' : '',
+    Comment: row.comment,
+    Needed: row.type === 'task' ? row.needed : '',
+    Type: row.type,
+  }
+  return columns.map((column) => (typeof column === 'string' ? cells[column] : (row.extra[column.id] ?? '')))
 }
 
 // Anyone with the link can write these cells and an admin opens the export in a
@@ -369,11 +559,21 @@ export function plansToDelimited(
   rowsByPage: Record<number, HelperRow[]>,
   delimiter: ',' | '\t',
 ): string {
-  const lines = [['Tab', ...EXPORT_COLUMNS].join(delimiter)]
+  // Tabs that share a custom column's name share its column in the flat file.
+  const customHeaders = new Map<string, string>()
   for (const page of pages) {
+    for (const column of page.custom_columns) {
+      if (!customHeaders.has(columnKey(column.name))) customHeaders.set(columnKey(column.name), column.name)
+    }
+  }
+  const header = ['Tab', ...EXPORT_COLUMNS, ...customHeaders.values()]
+  const lines = [header.map((cell) => delimitedCell(cell, delimiter)).join(delimiter)]
+  for (const page of pages) {
+    const idByName = new Map(page.custom_columns.map((column) => [columnKey(column.name), column.id]))
     for (const row of rowsByPage[page.id] ?? []) {
+      const custom = [...customHeaders.keys()].map((key) => row.extra[idByName.get(key) ?? ''] ?? '')
       lines.push(
-        [page.name, ...rowToExportCells(row)].map((cell) => delimitedCell(cell, delimiter)).join(delimiter),
+        [page.name, ...rowToExportCells(row), ...custom].map((cell) => delimitedCell(cell, delimiter)).join(delimiter),
       )
     }
   }

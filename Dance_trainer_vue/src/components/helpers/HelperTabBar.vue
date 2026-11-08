@@ -6,6 +6,7 @@ const props = defineProps<{
   pages: HelperPage[]
   activeId: number | null
   openByPage: Record<number, number>
+  badgeWord: string
 }>()
 
 const emit = defineEmits<{
@@ -42,7 +43,7 @@ watch(
       @click="emit('select', page.id)"
     >
       <span class="tab-name">{{ page.name }}</span>
-      <span v-if="openByPage[page.id]" class="badge" :aria-label="`${openByPage[page.id]} open`">
+      <span v-if="openByPage[page.id]" class="badge" :aria-label="`${openByPage[page.id]} ${badgeWord}`">
         {{ openByPage[page.id] }}
       </span>
     </button>
@@ -54,12 +55,13 @@ watch(
   position: relative;
   display: flex;
   gap: 6px;
-  padding: 2px 12px;
+  padding: var(--hp-1) var(--hp-3);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
+  /* Fades the strip's edges so a half-hidden tab reads as more to scroll to. */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 12px, #000 calc(100% - 12px), transparent);
 }
 
 .tabs::-webkit-scrollbar {
@@ -72,23 +74,40 @@ watch(
   align-items: center;
   gap: 6px;
   max-width: 80%;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  min-height: var(--hp-tap);
+  padding: 0 var(--hp-3);
+  border: 1px solid transparent;
+  border-radius: var(--hp-r-m);
   background: var(--color-surface);
   color: var(--color-ink);
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   cursor: pointer;
   touch-action: manipulation;
+  transition:
+    background-color var(--hp-fast) var(--hp-ease),
+    border-color var(--hp-fast) var(--hp-ease),
+    transform var(--hp-fast) var(--hp-ease);
+}
+
+.tab:active {
+  transform: scale(0.97);
 }
 
 .tab[aria-selected='true'] {
-  border-color: var(--color-ink);
   background: var(--hp-amber);
+}
+
+.tab:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  .tab:hover:not([aria-selected='true']) {
+    background: var(--color-surface-light);
+  }
 }
 
 .tab-name {
@@ -99,15 +118,21 @@ watch(
 
 .badge {
   flex: none;
-  min-width: 22px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--color-overdue);
-  color: #fff;
+  min-width: 20px;
+  padding: 0 5px;
+  border-radius: var(--hp-r-full);
+  background: var(--color-border);
+  color: var(--color-ink);
   font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 22px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tab[aria-selected='true'] .badge {
+  background: var(--color-ink);
+  color: var(--hp-amber-soft);
 }
 </style>

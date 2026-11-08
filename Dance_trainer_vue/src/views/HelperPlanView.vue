@@ -1,7 +1,18 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import { countOpen, HELPER_LIMITS, visibleRows, type CellField } from '@/lib/helperPlan'
+import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue'
+import {
+  countOpen,
+  extraColumnId,
+  HELPER_LIMITS,
+  isExtraField,
+  myRows,
+  visibleRows,
+  type EditField,
+} from '@/lib/helperPlan'
+import { isRoomName } from '@/lib/helperBoards'
+import { ROW_REORDER, useDragReorder } from '@/lib/useDragReorder'
 import { useHelperPlanStore } from '@/stores/helperPlanStore'
+import { useToastStore } from '@/stores/toastStore'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import HelperTabBar from '@/components/helpers/HelperTabBar.vue'
 import HelperRowItem from '@/components/helpers/HelperRowItem.vue'
@@ -9,11 +20,18 @@ import HelperCellSheet from '@/components/helpers/HelperCellSheet.vue'
 import HelperNamePrompt from '@/components/helpers/HelperNamePrompt.vue'
 import HelperAdminBar from '@/components/helpers/HelperAdminBar.vue'
 import HelperPrintControls from '@/components/helpers/HelperPrintControls.vue'
+import HelperTimelineView from '@/components/helpers/HelperTimelineView.vue'
+import HelperRoomsView from '@/components/helpers/HelperRoomsView.vue'
+import HelperPeopleSheet from '@/components/helpers/HelperPeopleSheet.vue'
+import HelperDragOverlay from '@/components/helpers/HelperDragOverlay.vue'
+import '@/assets/helperUi.css'
 
 const ACTIVE_PAGE_KEY = 'helper-active-page'
 const ONLY_OPEN_KEY = 'helper-only-open'
+const VIEW_KEY = 'helper-view'
 
 const store = useHelperPlanStore()
+const toast = useToastStore()
 
 function remembered(key: string): string | null {
   try {
@@ -32,7 +50,22 @@ function remember(key: string, value: string) {
 }
 
 const chosenPageId = ref<number | null>(Number(remembered(ACTIVE_PAGE_KEY)) || null)
-const onlyOpen = ref(remembered(ONLY_OPEN_KEY) === '1')
+type PlanFilter = 'all' | 'open' | 'mine'
+const storedFilter = remembered(ONLY_OPEN_KEY)
+const filter = ref<PlanFilter>(storedFilter === '1' ? 'open' : storedFilter === 'mine' ? 'mine' : 'all')
+const onlyOpen = computed(() => filter.value === 'open')
+type PlanView = 'list' | 'time' | 'rooms'
+const VIEWS: { id: PlanView; label: string }[] = [
+  { id: 'list', label: 'List' },
+  { id: 'time', label: 'Timeline' },
+  { id: 'rooms', label: 'Rooms' },
+]
+const storedView = remembered(VIEW_KEY)
+const chosenView = ref<PlanView>(storedView === 'time' || storedView === 'rooms' ? storedView : 'list')
+function chooseView(view: PlanView) {
+  chosenView.value = view
+  remember(VIEW_KEY, view)
+}
 const renaming = ref(false)
 const infoOpen = ref(false)
 
@@ -44,7 +77,20 @@ const activePageId = computed(() => activePage.value?.id ?? null)
 const activeRows = computed(() =>
   activePage.value ? (store.rowsByPage[activePage.value.id] ?? []) : [],
 )
-const rows = computed(() => visibleRows(activeRows.value, onlyOpen.value))
+// Timeline needs When and Rooms needs Where. The choice is kept, so the next tab
+// that has the column goes back to it.
+const availableViews = computed(() =>
+  VIEWS.filter(
+    (view) =>
+      (view.id !== 'time' || activePage.value?.show_when) && (view.id !== 'rooms' || activePage.value?.show_where),
+  ),
+)
+const planView = computed<PlanView>(() =>
+  availableViews.value.some((view) => view.id === chosenView.value) ? chosenView.value : 'list',
+)
+const rows = computed(() =>
+  filter.value === 'mine' ? myRows(activeRows.value, store.guestName) : visibleRows(activeRows.value, onlyOpen.value),
+)
 
 const openByPage = computed(() => {
   const counts: Record<number, number> = {}
@@ -53,6 +99,33 @@ const openByPage = computed(() => {
 })
 const openHere = computed(() => (activePageId.value === null ? 0 : (openByPage.value[activePageId.value] ?? 0)))
 const openTotal = computed(() => Object.values(openByPage.value).reduce((a, b) => a + b, 0))
+
+const mineByPage = computed(() => {
+  const counts: Record<number, number> = {}
+  for (const page of store.pages) {
+    counts[page.id] = myRows(store.rowsByPage[page.id] ?? [], store.guestName).filter((r) => r.type === 'task').length
+  }
+  return counts
+})
+const mineHere = computed(() => (activePageId.value === null ? 0 : (mineByPage.value[activePageId.value] ?? 0)))
+const mineTotal = computed(() => Object.values(mineByPage.value).reduce((a, b) => a + b, 0))
+
+const emptyMessage = computed(() => {
+  if (filter.value === 'mine') {
+    return mineTotal.value ? 'None of your tasks are on this tab.' : "You haven't taken on any tasks yet."
+  }
+  return onlyOpen.value && activeRows.value.length
+    ? 'Nothing open on this tab. Every task has enough people.'
+    : 'No tasks on this tab yet.'
+})
+
+const rowList = ref<HTMLElement | null>(null)
+const rowReorder = useDragReorder({
+  list: () => rowList.value,
+  ids: () => activeRows.value.map((row) => row.id),
+  move: store.moveRow,
+})
+provide(ROW_REORDER, rowReorder)
 
 const scroller = ref<HTMLElement | null>(null)
 const band = ref<HTMLElement | null>(null)
@@ -69,18 +142,22 @@ function selectPage(id: number) {
   })
 }
 
-function toggleOnlyOpen() {
-  onlyOpen.value = !onlyOpen.value
-  remember(ONLY_OPEN_KEY, onlyOpen.value ? '1' : '0')
+function toggleFilter(choice: 'open' | 'mine') {
+  filter.value = filter.value === choice ? 'all' : choice
+  remember(ONLY_OPEN_KEY, filter.value === 'open' ? '1' : filter.value === 'mine' ? 'mine' : '0')
 }
 
 // The sheet belongs to the view, not the row: "only open" can remove a row from
 // the list the moment someone takes its last place, and the draft has to survive.
 interface OpenSheet {
   rowId: number
-  field: CellField | 'name'
+  field: Exclude<EditField, 'needed'>
   context: string
   initial: string
+  // A custom column's name, fixed when the sheet opens.
+  title?: string
+  // Where in a When cell the tapped time sits, when it came from the timeline.
+  occurrence?: number
 }
 
 const sheet = ref<OpenSheet | null>(null)
@@ -88,50 +165,79 @@ const saving = ref(false)
 
 const SHEET_SETUP = {
   task: { title: 'Task', kind: 'textarea', maxlength: HELPER_LIMITS.task },
-  when: { title: 'When', kind: 'input', maxlength: HELPER_LIMITS.when },
+  when: { title: 'When', kind: 'time', maxlength: HELPER_LIMITS.when },
   where: { title: 'Where', kind: 'textarea', maxlength: HELPER_LIMITS.where },
   comment: { title: 'Comment', kind: 'textarea', maxlength: HELPER_LIMITS.comment },
-  needed: { title: 'People needed', kind: 'number', maxlength: undefined },
-  name: { title: 'Add a name', kind: 'input', maxlength: HELPER_LIMITS.name },
 } as const
 
-const sheetSetup = computed(() => (sheet.value ? SHEET_SETUP[sheet.value.field] : null))
-
-// Read live, unlike the draft: if someone signs up while the stepper is open,
-// the lowest allowed number really has moved.
-const sheetSignups = computed(() => {
-  const id = sheet.value?.rowId
-  for (const pageRows of Object.values(store.rowsByPage)) {
-    const row = pageRows.find((r) => r.id === id)
-    if (row) return row.who.length
+const sheetSetup = computed(() => {
+  const current = sheet.value
+  if (!current) return null
+  if (isExtraField(current.field)) {
+    return { title: current.title ?? 'Column', kind: 'textarea' as const, maxlength: HELPER_LIMITS.extra }
   }
-  return 0
-})
-
-const sheetHint = computed(() => {
-  if (sheet.value?.field !== 'needed' || sheetSignups.value === 0) return undefined
-  const n = sheetSignups.value
-  return `${n} ${n === 1 ? 'person is' : 'people are'} signed up, so it can't go lower.`
+  return SHEET_SETUP[current.field]
 })
 
 function rowById(id: number) {
   return activeRows.value.find((r) => r.id === id)
 }
 
-function openCell(rowId: number, field: CellField) {
+// Another phone can delete the row or the column while the sheet is open.
+const sheetTargetGone = computed(() => {
+  const current = sheet.value
+  if (!current) return null
+  const row = store.rowById(current.rowId)
+  if (!row) return 'task'
+  if (!isExtraField(current.field)) return null
+  const id = extraColumnId(current.field)
+  return store.pages.find((page) => page.id === row.page_id)?.custom_columns.some((column) => column.id === id)
+    ? null
+    : 'column'
+})
+
+watch(sheetTargetGone, (gone) => {
+  if (!gone) return
+  sheet.value = null
+  toast.show(`Someone deleted this ${gone} while you were editing it.`)
+})
+
+const peopleRowId = ref<number | null>(null)
+
+// A room exists through the tasks in it, so a new one is only held here until
+// the first task is moved in.
+const extraRooms = ref<string[]>([])
+const addingRoom = ref(false)
+
+function addRoom(name: string) {
+  if (!isRoomName(name)) {
+    toast.show("A room name can't contain a comma or brackets: a cell would read it as several rooms or a note.")
+    return
+  }
+  extraRooms.value.push(name)
+  addingRoom.value = false
+}
+
+function openCell(rowId: number, field: EditField, occurrence?: number) {
+  if (field === 'needed') {
+    peopleRowId.value = rowId
+    return
+  }
   const row = rowById(rowId)
   if (!row) return
+  if (isExtraField(field)) {
+    const id = extraColumnId(field)
+    const title = activePage.value?.custom_columns.find((column) => column.id === id)?.name
+    sheet.value = { rowId, field, context: row.task, initial: row.extra[id] ?? '', title }
+    return
+  }
   sheet.value = {
     rowId,
     field,
     context: field === 'task' ? '' : row.task,
-    initial: String(row[field]),
+    initial: row[field],
+    occurrence,
   }
-}
-
-function openAddName(rowId: number) {
-  const row = rowById(rowId)
-  if (row) sheet.value = { rowId, field: 'name', context: row.task, initial: '' }
 }
 
 async function saveSheet(value: string) {
@@ -142,20 +248,26 @@ async function saveSheet(value: string) {
     return
   }
   saving.value = true
-  const ok =
-    current.field === 'name'
-      ? await store.signUp(current.rowId, value)
-      : await store.setCell(current.rowId, current.field, value)
+  const ok = isExtraField(current.field)
+    ? await store.setExtra(current.rowId, extraColumnId(current.field), value)
+    : await store.setCell(current.rowId, current.field, value)
   saving.value = false
   // A refusal keeps the sheet open, so what was typed isn't lost to the toast.
-  if (ok) sheet.value = null
+  if (ok && sheet.value === current) sheet.value = null
 }
+
+// iOS Safari only applies :active once something on the page listens for touches.
+function noop() {}
 
 onMounted(() => {
   void store.load()
   store.startLive()
+  document.addEventListener('touchstart', noop, { passive: true })
 })
-onUnmounted(() => store.stopLive())
+onUnmounted(() => {
+  store.stopLive()
+  document.removeEventListener('touchstart', noop)
+})
 </script>
 
 <template>
@@ -178,6 +290,7 @@ onUnmounted(() => store.stopLive())
       <h1 class="title">{{ store.meta.title }}</h1>
       <p v-if="store.meta.info" class="info" :class="{ open: infoOpen }">{{ store.meta.info }}</p>
     </header>
+    <div class="hp-perf head-perf" aria-hidden="true" />
 
     <div ref="band" class="band" :class="{ done: store.pages.length > 0 && openTotal === 0 }">
       <p class="band-text">
@@ -186,12 +299,21 @@ onUnmounted(() => store.stopLive())
           <span class="band-short">All covered!</span>
           <span class="band-long">Everything is covered. Thank you!</span>
         </template>
+        <template v-else-if="filter === 'mine'">
+          <span class="band-short"><b class="band-num">{{ mineTotal }}</b> yours</span>
+          <span class="band-long">{{ mineHere }} of your tasks on {{ activePage?.name }} · {{ mineTotal }} overall</span>
+        </template>
         <template v-else>
-          <span class="band-short">{{ openHere }} open · {{ openTotal }} overall</span>
+          <span class="band-short"><b class="band-num">{{ openHere }}</b> open</span>
           <span class="band-long">{{ openHere }} open on {{ activePage?.name }} · {{ openTotal }} open overall</span>
         </template>
       </p>
-      <button class="toggle" type="button" :aria-pressed="onlyOpen" @click="toggleOnlyOpen">Only open</button>
+      <button class="toggle hp-btn hp-btn--dark hp-btn--small" type="button" :aria-pressed="filter === 'open'" aria-label="Only open tasks" @click="toggleFilter('open')">
+        <span class="band-short">Open</span><span class="band-long">Only open</span>
+      </button>
+      <button class="toggle hp-btn hp-btn--dark hp-btn--small" type="button" :aria-pressed="filter === 'mine'" aria-label="Only my tasks" @click="toggleFilter('mine')">
+        <span class="band-short">Mine</span><span class="band-long">Only mine</span>
+      </button>
       <HelperPrintControls :active-page-id="activePageId" :only-open="onlyOpen" />
     </div>
 
@@ -199,7 +321,8 @@ onUnmounted(() => store.stopLive())
       <HelperTabBar
         :pages="store.pages"
         :active-id="activePageId"
-        :open-by-page="openByPage"
+        :open-by-page="filter === 'mine' ? mineByPage : openByPage"
+        :badge-word="filter === 'mine' ? 'yours' : 'open'"
         @select="selectPage"
       />
     </div>
@@ -211,38 +334,73 @@ onUnmounted(() => store.stopLive())
         Can't reach the plan right now. What you see may be out of date.
       </p>
 
+      <div v-if="activePage && availableViews.length > 1" class="view-switch" role="group" aria-label="How to show this tab">
+        <button
+          v-for="view in availableViews"
+          :key="view.id"
+          type="button"
+          class="view-btn"
+          :aria-pressed="planView === view.id"
+          @click="chooseView(view.id)"
+        >{{ view.label }}</button>
+      </div>
+
       <p v-if="store.loading" class="status"><LoadingSpinner :size="14" /> Loading the plan…</p>
       <div v-else-if="store.loadFailed && !store.pages.length" class="status column">
         <p>The plan didn't load. Check your connection and try again.</p>
-        <button class="retry" type="button" @click="store.load()">Try again</button>
+        <button class="hp-btn hp-btn--primary" type="button" @click="store.load()">Try again</button>
       </div>
-      <p v-else-if="!activePage" class="status">The team hasn't added any tabs yet.</p>
-      <p v-else-if="rows.length === 0" class="status">
-        {{ onlyOpen && activeRows.length ? 'Nothing open on this tab. Every task has enough people.' : 'No tasks on this tab yet.' }}
+      <p v-else-if="!activePage" class="status empty">The team hasn't added any tabs yet.</p>
+      <p v-else-if="rows.length === 0" class="status empty">
+        {{ emptyMessage }}
       </p>
 
+      <HelperTimelineView
+        v-else-if="planView === 'time'"
+        :rows="rows"
+        :scroller="scroller"
+        @edit="(rowId, occurrence) => openCell(rowId, 'when', occurrence)"
+      />
+      <HelperRoomsView
+        v-else-if="planView === 'rooms'"
+        :rows="rows"
+        :scroller="scroller"
+        :extra-rooms="extraRooms"
+        @edit="openCell($event, 'where')"
+        @add-room="addingRoom = true"
+      />
       <template v-else>
-        <p class="tap-hint">Tap any field to change it.</p>
-        <table class="plan">
-          <thead>
-            <tr>
-              <th class="th-task">Task</th>
-              <th class="th-when">When</th>
-              <th class="th-where">Where</th>
-              <th class="th-who">Who</th>
-              <th>Comment</th>
-            </tr>
-          </thead>
-          <tbody>
-            <HelperRowItem
-              v-for="row in rows"
-              :key="row.id"
-              :row="row"
-              @edit="openCell(row.id, $event)"
-              @add-name="openAddName(row.id)"
-            />
-          </tbody>
-        </table>
+        <p class="tap-hint hp-hint">Tap any field to change it.</p>
+        <div class="plan-scroll">
+          <table
+            class="plan"
+            :class="{ 'has-custom': activePage.custom_columns.length > 0 }"
+            :style="{ '--custom-columns': activePage.custom_columns.length }"
+          >
+            <thead>
+              <tr>
+                <th class="th-task">Task</th>
+                <th v-if="activePage.show_when" class="th-when">When</th>
+                <th v-if="activePage.show_where" class="th-where">Where</th>
+                <th class="th-who">Who</th>
+                <th v-if="activePage.show_done" class="th-done">Done</th>
+                <th v-if="activePage.show_comment">Comment</th>
+                <th v-for="column in activePage.custom_columns" :key="column.id">{{ column.name }}</th>
+              </tr>
+            </thead>
+            <tbody ref="rowList">
+              <HelperRowItem
+                v-for="row in rows"
+                :key="row.id"
+                :row="row"
+                :page="activePage"
+                @edit="openCell(row.id, $event)"
+                @add-name="peopleRowId = row.id"
+              />
+            </tbody>
+          </table>
+        </div>
+        <HelperDragOverlay :reorder="rowReorder" />
       </template>
 
       <HelperAdminBar v-if="!store.isAdmin" :active-page-id="activePageId" @select-page="selectPage" />
@@ -256,15 +414,31 @@ onUnmounted(() => store.stopLive())
       :kind="sheetSetup.kind"
       :initial="sheet.initial"
       :maxlength="sheetSetup.maxlength"
-      :min="sheet.field === 'needed' ? sheetSignups : undefined"
-      :max="HELPER_LIMITS.neededMax"
-      :required="sheet.field === 'task' || sheet.field === 'name'"
-      :hint="sheetHint"
-      :save-label="sheet.field === 'name' ? 'Add' : 'Save'"
+      :required="sheet.field === 'task'"
+      :suggestions="sheet.field === 'where' ? store.knownRooms : undefined"
+      :suggest-by-part="sheet.field === 'where'"
+      :presets="sheet.field === 'when' ? store.commonTimes : undefined"
+      :occurrence="sheet.occurrence"
+      :rows="sheet.field === 'where' ? 2 : undefined"
       :busy="saving"
       @save="saveSheet"
       @cancel="sheet = null"
     />
+
+    <HelperCellSheet
+      v-if="addingRoom"
+      title="New room"
+      context="Then move tasks into it."
+      kind="input"
+      initial=""
+      :maxlength="HELPER_LIMITS.where"
+      required
+      save-label="Add"
+      @save="addRoom"
+      @cancel="addingRoom = false"
+    />
+
+    <HelperPeopleSheet v-if="peopleRowId !== null" :row-id="peopleRowId" @close="peopleRowId = null" />
 
     <HelperNamePrompt v-if="!store.guestName || renaming" @close="renaming = false" />
   </div>
@@ -272,9 +446,6 @@ onUnmounted(() => store.stopLive())
 
 <style scoped>
 .helper-plan {
-  --hp-amber: #f0b429;
-  --hp-amber-soft: #fbe7b0;
-
   position: relative;
   flex: 1;
   min-height: 0;
@@ -283,9 +454,13 @@ onUnmounted(() => store.stopLive())
 }
 
 .head {
-  padding: 0 12px 4px;
+  padding: 0 var(--hp-3) var(--hp-1);
   background: var(--hp-amber);
   color: var(--color-ink);
+}
+
+.head :focus-visible {
+  outline-color: var(--color-ink);
 }
 
 .head-bar {
@@ -299,7 +474,7 @@ onUnmounted(() => store.stopLive())
   align-items: center;
   flex: none;
   gap: 6px;
-  min-height: 44px;
+  min-height: var(--hp-tap);
   border: none;
   background: transparent;
   color: var(--color-ink);
@@ -308,6 +483,12 @@ onUnmounted(() => store.stopLive())
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity var(--hp-fast) var(--hp-ease);
+}
+
+.head-link:active {
+  opacity: 0.6;
 }
 
 /* Only the name gives way: at 40 characters it would otherwise squeeze the
@@ -329,6 +510,7 @@ onUnmounted(() => store.stopLive())
   flex: none;
   font-weight: 400;
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .title {
@@ -341,9 +523,10 @@ onUnmounted(() => store.stopLive())
 }
 
 .info-toggle {
-  min-width: 44px;
+  min-width: var(--hp-tap);
   justify-content: center;
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .info {
@@ -359,14 +542,27 @@ onUnmounted(() => store.stopLive())
   display: block;
 }
 
+/* Tears off the amber into the band below it. */
+.head-perf {
+  background-color: var(--color-ink);
+}
+
+.helper-plan:has(.band.done) .head-perf {
+  background-color: var(--color-good);
+}
+
 /* The wristband: one dark strip with what's still needed and what to do about it. */
 .band {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 12px;
+  padding: 4px var(--hp-3) 6px;
   background: var(--color-ink);
   color: var(--hp-amber-soft);
+}
+
+.band :focus-visible {
+  outline-color: var(--hp-amber);
 }
 
 .band-text {
@@ -378,6 +574,13 @@ onUnmounted(() => store.stopLive())
   overflow-wrap: anywhere;
 }
 
+.band-num {
+  color: var(--hp-amber);
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 .band-long {
   display: none;
 }
@@ -387,75 +590,139 @@ onUnmounted(() => store.stopLive())
   color: var(--color-text-on-ember);
 }
 
-.sticky {
-  position: sticky;
-  top: 0;
-  z-index: 5;
+.band.done :focus-visible {
+  outline-color: var(--color-text-on-ember);
+}
+
+.band.done .band-num {
+  color: inherit;
+}
+
+.band.done .toggle {
+  border-color: var(--color-text-on-ember);
+  color: var(--color-text-on-ember);
+}
+
+.band.done .toggle[aria-pressed='true'] {
+  background: var(--color-text-on-ember);
+  color: var(--hp-amber-soft);
 }
 
 .toggle {
   flex: none;
-  min-height: 44px;
-  padding: 0 8px;
-  border: 1px solid currentColor;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: inherit;
-  font-size: 13px;
-  font-weight: 600;
   white-space: nowrap;
-  cursor: pointer;
-  touch-action: manipulation;
 }
 
-.toggle[aria-pressed='true'] {
-  background: var(--hp-amber-soft);
-  color: var(--color-ink);
+/* The print button belongs to the print builder's component; only its colours are
+   taken over here, so the band reads as one set of controls. */
+.band :deep(.print-btn) {
+  padding: 0 var(--hp-2);
+  border-color: rgba(251, 231, 176, 0.45);
+  border-radius: var(--hp-r-m);
+  background: transparent;
+  color: var(--hp-amber-soft);
+  touch-action: manipulation;
+  transition: background-color var(--hp-fast) var(--hp-ease);
+}
+
+.band :deep(.print-btn:active:not(:disabled)) {
+  background: rgba(251, 231, 176, 0.16);
+}
+
+.band.done :deep(.print-btn) {
+  border-color: var(--color-text-on-ember);
+  color: var(--color-text-on-ember);
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-bg);
+  box-shadow: 0 1px 0 var(--color-border), 0 3px 8px rgba(70, 55, 40, 0.06);
 }
 
 .body {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 6px 12px calc(32px + env(safe-area-inset-bottom));
+  padding: var(--hp-2) var(--hp-3) calc(32px + env(safe-area-inset-bottom));
+}
+
+.view-switch {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 2px;
+  max-width: 420px;
+  margin-bottom: var(--hp-2);
+  padding: 3px;
+  border-radius: var(--hp-r-m);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.view-btn {
+  min-height: var(--hp-tap);
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--hp-fast) var(--hp-ease),
+    color var(--hp-fast) var(--hp-ease),
+    transform var(--hp-fast) var(--hp-ease);
+}
+
+.view-btn:active {
+  transform: scale(0.97);
+}
+
+.view-btn[aria-pressed='true'] {
+  background: var(--color-ink);
+  color: var(--hp-amber-soft);
 }
 
 .tap-hint {
-  margin-bottom: 4px;
-  color: var(--color-ink-dim);
-  font-size: 12px;
-  line-height: 16px;
+  margin-bottom: var(--hp-1);
 }
 
 .status {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 0;
+  gap: var(--hp-2);
+  padding: var(--hp-3) 0;
   color: var(--color-ink-dim);
   font-size: 15px;
+}
+
+.status.empty {
+  justify-content: center;
+  margin-top: var(--hp-1);
+  padding: var(--hp-6) var(--hp-4);
+  border: 1.5px dashed var(--color-ink-dim);
+  border-radius: var(--hp-r-m);
+  color: var(--color-ink);
+  text-align: center;
 }
 
 .status.column {
   flex-direction: column;
   align-items: flex-start;
+  gap: var(--hp-3);
 }
 
 .status.stale {
-  padding: 0 0 10px;
-  color: var(--color-overdue);
+  margin-bottom: var(--hp-2);
+  padding: var(--hp-2) 10px;
+  border-left: 4px solid var(--color-overdue);
+  border-radius: var(--hp-r-s);
+  background: color-mix(in srgb, var(--color-overdue) 10%, var(--color-surface-light));
+  color: var(--color-ink);
   font-size: 13px;
-}
-
-.retry {
-  min-height: 44px;
-  padding: 0 16px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--color-ember);
-  color: var(--color-text-on-ember);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .plan,
@@ -469,11 +736,11 @@ onUnmounted(() => store.stopLive())
 
 @media (min-width: 760px) {
   .head {
-    padding: 8px 24px 20px;
+    padding: var(--hp-2) var(--hp-6) 20px;
   }
 
   .head-bar {
-    margin-bottom: 4px;
+    margin-bottom: var(--hp-1);
   }
 
   .title {
@@ -483,7 +750,7 @@ onUnmounted(() => store.stopLive())
   .info,
   .info.open {
     display: block;
-    margin-top: 8px;
+    margin-top: var(--hp-2);
   }
 
   .info-toggle {
@@ -491,7 +758,7 @@ onUnmounted(() => store.stopLive())
   }
 
   .band {
-    padding: 6px 24px;
+    padding: var(--hp-2) var(--hp-6) 10px;
     gap: 10px;
   }
 
@@ -508,7 +775,16 @@ onUnmounted(() => store.stopLive())
   }
 
   .body {
-    padding: 14px 24px 40px;
+    padding: 14px var(--hp-6) 40px;
+  }
+
+  .plan-scroll {
+    overflow-x: auto;
+  }
+
+  /* Past a few custom columns the table scrolls sideways rather than crushing them. */
+  .plan.has-custom {
+    min-width: calc(760px + var(--custom-columns) * 140px);
   }
 
   .plan {
@@ -519,8 +795,9 @@ onUnmounted(() => store.stopLive())
     border-spacing: 0;
     overflow: hidden;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--hp-r-m);
     background: var(--color-surface-light);
+    box-shadow: var(--shadow-card);
   }
 
   .plan thead {
@@ -533,12 +810,15 @@ onUnmounted(() => store.stopLive())
 
   .plan th {
     padding: 10px;
-    background: var(--hp-amber);
-    color: var(--color-ink);
-    font-family: var(--font-display);
-    font-size: 15px;
+    background: var(--color-ink);
+    color: var(--hp-amber-soft);
+    font-family: var(--font-mono);
+    font-size: 12px;
     font-weight: 700;
+    letter-spacing: 0.06em;
     text-align: left;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
   }
 
   .th-task {
@@ -555,6 +835,15 @@ onUnmounted(() => store.stopLive())
 
   .th-who {
     width: 24%;
+  }
+
+  .th-done {
+    width: 72px;
+    text-align: center;
+  }
+
+  .has-custom .th-task {
+    width: auto;
   }
 }
 </style>
@@ -580,5 +869,12 @@ html:has(.helper-sheet-backdrop) .toast-stack .toast {
 
 html:has(.toast-stack .toast) .helper-sheet-backdrop {
   padding-top: calc(112px + env(safe-area-inset-top));
+}
+
+/* Keyed on the drag ghost, which only exists mid-drag: a toast over a drop target
+   would swallow the drop. They come back when the finger lifts. */
+html:has(.hp-ghost) .toast-stack .toast {
+  opacity: 0;
+  pointer-events: none;
 }
 </style>

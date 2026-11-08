@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import { useBackButtonClose } from '@/lib/useBackButtonClose'
+import { useBackButtonClose, useEscapeClose } from '@/lib/useBackButtonClose'
 
 // The bottom sheet every admin view and the print dialog sit in.
 //
@@ -8,9 +8,12 @@ import { useBackButtonClose } from '@/lib/useBackButtonClose'
 // useBackButtonClose pops its history entry with an asynchronous history.back()
 // on unmount, so closing one overlay and opening another in the same tick lets
 // that popstate land on the new overlay and close it immediately.
-defineProps<{
+const props = defineProps<{
   title: string
   showBack?: boolean
+  wide?: boolean
+  // Something typed in the sheet: a stray tap outside must not throw it away.
+  keepOnBackdropTap?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -21,6 +24,7 @@ const emit = defineEmits<{
 useBackButtonClose(() => emit('close'))
 
 const backdropEl = ref<HTMLElement | null>(null)
+useEscapeClose(() => backdropEl.value, () => emit('close'))
 const opener = document.activeElement as HTMLElement | null
 
 // A fixed bottom sheet sits behind the on-screen keyboard: neither Android
@@ -35,8 +39,8 @@ function updateKeyboardInset() {
 }
 
 onMounted(() => {
-  // Escape only reaches the backdrop's handler if focus is inside it. A form
-  // that autofocused its first field already put it there.
+  // Tab has to start inside the sheet. A form that autofocused its first field
+  // already put focus there.
   if (!backdropEl.value?.contains(document.activeElement)) backdropEl.value?.focus()
   window.visualViewport?.addEventListener('resize', updateKeyboardInset)
   window.visualViewport?.addEventListener('scroll', updateKeyboardInset)
@@ -50,11 +54,7 @@ onUnmounted(() => {
 })
 
 function onBackdropClick(event: MouseEvent) {
-  if (event.target === event.currentTarget) emit('close')
-}
-
-function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') emit('close')
+  if (event.target === event.currentTarget && !props.keepOnBackdropTap) emit('close')
 }
 </script>
 
@@ -66,9 +66,8 @@ function onKeydown(event: KeyboardEvent) {
       tabindex="-1"
       :style="{ paddingBottom: `${keyboardInset}px` }"
       @click="onBackdropClick"
-      @keydown="onKeydown"
     >
-      <div class="ha-sheet" role="dialog" aria-modal="true" :aria-label="title">
+      <div class="ha-sheet" :class="{ wide }" role="dialog" aria-modal="true" :aria-label="title">
         <header class="ha-head">
           <button v-if="showBack" type="button" class="ha-icon-btn" aria-label="Back" @click="emit('back')">‹</button>
           <h2 class="ha-title">{{ title }}</h2>
@@ -76,6 +75,9 @@ function onKeydown(event: KeyboardEvent) {
         </header>
         <div class="ha-body">
           <slot />
+        </div>
+        <div v-if="$slots.footer" class="ha-foot">
+          <slot name="footer" />
         </div>
       </div>
     </div>
@@ -92,7 +94,8 @@ function onKeydown(event: KeyboardEvent) {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(42, 36, 32, 0.55);
+  animation: hp-backdrop-in 160ms ease-out;
 }
 
 .ha-sheet {
@@ -102,7 +105,10 @@ function onKeydown(event: KeyboardEvent) {
   max-height: calc(100% - 24px);
   background: var(--color-surface);
   color: var(--color-ink);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-radius: var(--hp-r-l) var(--hp-r-l) 0 0;
+  border-top: 6px solid var(--hp-amber);
+  overflow: hidden;
+  animation: hp-sheet-in 220ms var(--hp-ease);
   box-shadow: var(--shadow-modal);
 }
 
@@ -137,6 +143,13 @@ function onKeydown(event: KeyboardEvent) {
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
+  touch-action: manipulation;
+  border-radius: var(--hp-r-m);
+  transition: background-color var(--hp-fast) var(--hp-ease);
+}
+
+.ha-icon-btn:active {
+  background: var(--color-border);
 }
 
 .ha-body {
@@ -146,6 +159,14 @@ function onKeydown(event: KeyboardEvent) {
   overscroll-behavior: contain;
   padding: 16px;
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+.ha-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
 }
 
 .ha-sheet .ha-form {
@@ -164,17 +185,6 @@ function onKeydown(event: KeyboardEvent) {
   font-size: 13px;
   font-weight: 600;
   color: var(--color-ink-dim);
-}
-
-.ha-sheet .ha-input {
-  width: 100%;
-  min-height: 44px;
-  padding: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-light);
-  color: var(--color-ink);
-  font-size: 16px;
 }
 
 .ha-sheet textarea.ha-input {
@@ -205,36 +215,6 @@ function onKeydown(event: KeyboardEvent) {
   gap: 8px;
 }
 
-.ha-sheet .ha-btn {
-  min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-light);
-  color: var(--color-ink);
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.ha-sheet .ha-btn.primary {
-  border-color: var(--color-ember);
-  background: var(--color-ember);
-  color: var(--color-text-on-ember);
-  font-weight: 600;
-}
-
-.ha-sheet .ha-btn.danger {
-  border-color: var(--color-overdue);
-  background: var(--color-overdue);
-  color: #fff;
-  font-weight: 600;
-}
-
-.ha-sheet .ha-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
 .ha-sheet .ha-hint {
   font-size: 13px;
   color: var(--color-ink-dim);
@@ -246,6 +226,7 @@ function onKeydown(event: KeyboardEvent) {
   color: var(--color-ink);
   padding: 8px 10px;
   border-left: 4px solid var(--color-overdue);
+  border-radius: var(--hp-r-s);
   background: color-mix(in srgb, var(--color-overdue) 12%, transparent);
 }
 
@@ -254,6 +235,7 @@ function onKeydown(event: KeyboardEvent) {
   color: var(--color-ink);
   padding: 8px 10px;
   border-left: 4px solid var(--color-overdue);
+  border-radius: var(--hp-r-s);
   background: color-mix(in srgb, var(--color-overdue) 12%, transparent);
   overflow-wrap: anywhere;
 }
@@ -267,7 +249,11 @@ function onKeydown(event: KeyboardEvent) {
   .ha-sheet {
     max-width: 480px;
     max-height: calc(100% - 64px);
-    border-radius: var(--radius-lg);
+    border-radius: var(--hp-r-l);
+  }
+
+  .ha-sheet.wide {
+    max-width: 760px;
   }
 }
 </style>

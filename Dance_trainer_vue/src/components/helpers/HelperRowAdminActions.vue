@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useHelperPlanStore } from '@/stores/helperPlanStore'
 import type { HelperRow } from '@/lib/helperPlan'
+import { ROW_REORDER } from '@/lib/useDragReorder'
+import HelperDragHandle from './HelperDragHandle.vue'
 
 const SNIPPET_LENGTH = 60
 
@@ -10,11 +12,10 @@ const props = defineProps<{
 }>()
 
 const store = useHelperPlanStore()
+const reorder = inject(ROW_REORDER)
 const confirming = ref(false)
 const busy = ref(false)
 
-const siblings = computed(() => store.rowsByPage[props.row.page_id] ?? [])
-const index = computed(() => siblings.value.findIndex((r) => r.id === props.row.id))
 const label = computed(() => (props.row.type === 'section' ? 'heading' : 'task'))
 
 // Tasks run to 500 characters, and the confirm has to fit a phone-width card.
@@ -29,13 +30,6 @@ const consequence = computed(() => {
   if (n === 0) return ''
   return n === 1 ? '1 sign-up goes with it.' : `${n} sign-ups go with it.`
 })
-
-async function move(delta: number) {
-  if (busy.value) return
-  busy.value = true
-  await store.moveRow(props.row.id, delta)
-  busy.value = false
-}
 
 async function remove() {
   if (busy.value) return
@@ -54,26 +48,13 @@ async function remove() {
         Delete {{ label }} <strong>“{{ snippet }}”</strong>? {{ consequence }}
       </p>
       <div class="buttons">
-        <button type="button" class="btn" @click="confirming = false">Cancel</button>
-        <button type="button" class="btn danger" :disabled="busy" @click="remove">Delete</button>
+        <button type="button" class="hp-btn hp-btn--small" @click="confirming = false">Cancel</button>
+        <button type="button" class="hp-btn hp-btn--danger hp-btn--small" :disabled="busy" @click="remove">Delete</button>
       </div>
     </template>
     <div v-else class="buttons">
-      <button
-        type="button"
-        class="btn square"
-        :aria-label="`Move ${snippet} up`"
-        :disabled="index <= 0 || busy"
-        @click="move(-1)"
-      >↑</button>
-      <button
-        type="button"
-        class="btn square"
-        :aria-label="`Move ${snippet} down`"
-        :disabled="index === -1 || index === siblings.length - 1 || busy"
-        @click="move(1)"
-      >↓</button>
-      <button type="button" class="btn" :aria-label="`Delete ${snippet}`" @click="confirming = true">Delete</button>
+      <HelperDragHandle v-if="reorder" :reorder="reorder" :id="row.id" :label="snippet" />
+      <button type="button" class="hp-btn hp-btn--small" :aria-label="`Delete ${snippet}`" @click="confirming = true">Delete</button>
     </div>
   </div>
 </template>
@@ -95,35 +76,5 @@ async function remove() {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.btn {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-light);
-  color: var(--color-ink);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.btn.square {
-  width: 44px;
-  padding: 0;
-  font-size: 18px;
-}
-
-.btn.danger {
-  border-color: var(--color-overdue);
-  background: var(--color-overdue);
-  color: #fff;
-  font-weight: 600;
-}
-
-.btn:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 </style>

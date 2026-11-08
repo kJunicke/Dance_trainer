@@ -28,6 +28,8 @@ function save(name: string) {
     :maxlength="HELPER_LIMITS.name"
     required
     :locked="locked"
+    :suggestions="store.knownNames"
+    note-taken-name
     :save-label="locked ? 'Continue' : 'Save'"
     @save="save"
     @cancel="emit('close')"

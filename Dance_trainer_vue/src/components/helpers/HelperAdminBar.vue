@@ -57,11 +57,18 @@ watch(
   },
 )
 
-// A realtime delete from another admin can remove the tab a form is aimed at.
-watch(activePage, (page) => {
-  if (!page && (view.value === 'add-task' || view.value === 'add-section' || view.value === 'import')) {
-    view.value = 'menu'
-  }
+// A realtime delete from another admin can remove the tab a form is aimed at, and
+// the fallback tab must not quietly become its target.
+watch(
+  () => props.activePageId,
+  () => {
+    if (view.value === 'add-task' || view.value === 'add-section' || view.value === 'import') view.value = 'menu'
+  },
+)
+
+const formDirty = ref(false)
+watch(view, () => {
+  formDirty.value = false
 })
 
 function logout() {
@@ -74,12 +81,20 @@ function logout() {
   <div class="helper-admin-bar" :class="{ active: store.isAdmin }">
     <template v-if="store.isAdmin">
       <span class="state">Admin</span>
-      <button type="button" class="bar-btn" :disabled="!activePage" @click="view = 'add-task'">Add task</button>
-      <button type="button" class="bar-btn" @click="view = 'menu'">Manage</button>
+      <button type="button" class="hp-btn hp-btn--small bar-btn" :disabled="!activePage" @click="view = 'add-task'">Add task</button>
+      <button type="button" class="hp-btn hp-btn--small bar-btn" @click="view = 'tabs'">Tabs</button>
+      <button type="button" class="hp-btn hp-btn--small bar-btn" @click="view = 'menu'">Manage</button>
     </template>
-    <button v-else type="button" class="entry" @click="view = 'pin'">Admin</button>
+    <button v-else type="button" class="hp-btn hp-btn--ghost hp-btn--small entry" @click="view = 'pin'">Admin</button>
 
-    <HelperAdminSheet v-if="view" :title="title" :show-back="showBack" @close="close" @back="view = 'menu'">
+    <HelperAdminSheet
+      v-if="view"
+      :title="title"
+      :show-back="showBack"
+      :keep-on-backdrop-tap="formDirty"
+      @close="close"
+      @back="view = 'menu'"
+    >
       <HelperAdminPinForm v-if="view === 'pin'" @done="close" />
       <HelperAdminMenu
         v-else-if="view === 'menu'"
@@ -97,6 +112,7 @@ function logout() {
         :page-id="activePage.id"
         :type="view === 'add-task' ? 'task' : 'section'"
         @done="close"
+        @dirty="formDirty = $event"
       />
       <HelperAdminDetailsForm v-else-if="view === 'details'" @done="close" />
       <HelperAdminTabs
@@ -109,6 +125,7 @@ function logout() {
         :page-id="activePage.id"
         :page-name="activePage.name"
         @done="close"
+        @dirty="formDirty = $event"
       />
     </HelperAdminSheet>
   </div>
@@ -119,14 +136,14 @@ function logout() {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 0 12px;
+  gap: var(--hp-2);
+  padding: 0 var(--hp-3);
 }
 
 .helper-admin-bar.active {
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
-  padding: 4px 12px;
+  padding: var(--hp-1) var(--hp-3);
 }
 
 .state {
@@ -140,30 +157,10 @@ function logout() {
 }
 
 .entry {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 8px;
-  border: none;
-  background: transparent;
   color: var(--color-ink-dim);
-  font-size: 13px;
-  cursor: pointer;
 }
 
 .bar-btn {
   flex: none;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-light);
-  color: var(--color-ink);
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.bar-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 </style>

@@ -9,3 +9,6 @@ Dance_trainer_logseq/logseq/bak/
 
 # Supabase CLI cache — machine-local link details, rewritten by the CLI.
 supabase/.temp/
+
+# The team's source sheet: it holds people's names and this repo is public.
+/Weekender To Dos*.xlsx

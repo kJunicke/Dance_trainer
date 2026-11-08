@@ -76,6 +76,7 @@ const toastStore = useToastStore()
 }
 
 .toast-dismiss {
+  position: relative;
   flex-shrink: 0;
   width: 32px;
   height: 32px;
@@ -86,6 +87,13 @@ const toastStore = useToastStore()
   font-size: 0.85rem;
   line-height: 1;
   cursor: pointer;
+}
+
+/* The 44px hit area, without making the button look or take up any larger. */
+.toast-dismiss::after {
+  position: absolute;
+  inset: -6px;
+  content: '';
 }
 
 .toast-enter-active,
