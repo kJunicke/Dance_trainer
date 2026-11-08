@@ -6,3 +6,6 @@ Dance_trainer_logseq/logseq/bak/
 # Impeccable hook cache — per-session, holds absolute /tmp paths and session UUIDs.
 # The design-system sidecar at the repo root (.impeccable/design.json) stays tracked.
 **/.impeccable/hook.cache.json
+
+# Supabase CLI cache — machine-local link details, rewritten by the CLI.
+supabase/.temp/
