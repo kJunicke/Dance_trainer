@@ -96,6 +96,8 @@ async function onSubmit() {
         {{ mode === 'login' ? 'Need an account? Sign up' : 'Have an account? Log in' }}
       </button>
 
+      <RouterLink class="guest" :to="{ name: 'helpers' }">Continue as guest → Helper plan</RouterLink>
+
       <div v-if="isDev" class="dev">
         <span class="dev-label">dev quick login</span>
         <button
@@ -212,6 +214,21 @@ input:focus {
   font-size: 13px;
   text-decoration: underline;
   cursor: pointer;
+}
+
+.guest {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-ember);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
 }
 
 .dev {

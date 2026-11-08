@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import BoardSelectView from '@/views/BoardSelectView.vue'
 import BoardView from '@/views/BoardView.vue'
 import LoginView from '@/views/LoginView.vue'
+import HelperPlanView from '@/views/HelperPlanView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
@@ -10,6 +11,7 @@ const router = createRouter({
     { path: '/', name: 'boards', component: BoardSelectView, meta: { requiresAuth: true } },
     { path: '/board/:id', name: 'board', component: BoardView, meta: { requiresAuth: true } },
     { path: '/login', name: 'login', component: LoginView },
+    { path: '/helpers', name: 'helpers', component: HelperPlanView },
   ],
 })
 

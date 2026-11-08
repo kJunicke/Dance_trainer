@@ -86,6 +86,8 @@ async function onImportFile(event: Event) {
   <main class="boards">
     <h1>Your boards</h1>
 
+    <RouterLink class="helper-link" :to="{ name: 'helpers' }">Helper plan →</RouterLink>
+
     <form class="create" @submit.prevent="createBoard">
       <input v-model="newName" type="text" placeholder="New board name" :disabled="creating" />
       <button type="submit" :disabled="creating">
@@ -205,6 +207,16 @@ h1 {
   letter-spacing: -0.01em;
   color: var(--color-ink);
   margin-bottom: 16px;
+}
+
+.helper-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 12px;
+  color: var(--color-ember-text);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .create {
